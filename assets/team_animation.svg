@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" role="img" aria-labelledby="title desc">
+  <title id="title">KrishiNexus OS team</title>
+  <desc id="desc">Tanvir Hossin, Team Lead, Bangladesh. Md. Omar Faruk, AI/ML Engineer, Bangladesh. Md. Abdur Rahman, Full-Stack and Backend Developer, Bangladesh. Mohammed Mahmud Parvez, Full-Stack Developer, Bangladesh. Md. Morsalin, Full-Stack and Backend Developer, Bangladesh. Md Rifat, Domain Expert (Network Engineering), USA.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1a14"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#132a22"/>
+      <stop offset="1" stop-color="#111c2e"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34d399" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#6ee7b7" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="rule-clip">
+      <rect x="35" y="70" width="930" height="3" rx="1.5"/>
+    </clipPath>
+
+    <symbol id="flag-bd" viewBox="0 0 30 18">
+      <rect width="30" height="18" rx="2" fill="#006a4e"/>
+      <circle cx="13.5" cy="9" r="6" fill="#f42a41"/>
+    </symbol>
+    <symbol id="flag-us" viewBox="0 0 30 18">
+      <rect width="30" height="18" rx="2" fill="#ffffff"/>
+      <g fill="#b22234">
+        <rect y="0" width="30" height="1.385"/>
+        <rect y="2.77" width="30" height="1.385"/>
+        <rect y="5.54" width="30" height="1.385"/>
+        <rect y="8.31" width="30" height="1.385"/>
+        <rect y="11.08" width="30" height="1.385"/>
+        <rect y="13.85" width="30" height="1.385"/>
+        <rect y="16.62" width="30" height="1.38"/>
+      </g>
+      <rect width="12" height="9.7" fill="#3c3b6e"/>
+    </symbol>
+
+    <style>
+      .title { font: 700 26px "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; fill: #ecfdf5; }
+      .subtitle { font: 500 13px "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; fill: #6ee7b7; letter-spacing: 2px; }
+      .name { font: 700 17px "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; fill: #f8fafc; }
+      .role { font: 500 13px "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; fill: #a7f3d0; }
+      .country { font: 500 13px "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; fill: #cbd5e1; }
+      .frame { fill: url(#card); stroke: #1f4d3d; stroke-width: 1.2; }
+      .lead .frame { stroke: #34d399; stroke-width: 1.6; }
+
+      /* Cards rise and fade in one after another, then their accent bars breathe. */
+      .card {
+        animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .c1 { animation-delay: 0.15s; }
+      .c2 { animation-delay: 0.35s; }
+      .c3 { animation-delay: 0.55s; }
+      .c4 { animation-delay: 0.75s; }
+      .c5 { animation-delay: 0.95s; }
+      .c6 { animation-delay: 1.15s; }
+
+      .accent { fill: #34d399; animation: breathe 3.2s ease-in-out infinite; }
+      .c2 .accent { fill: #38bdf8; animation-delay: 0.5s; }
+      .c3 .accent { fill: #a78bfa; animation-delay: 1s; }
+      .c4 .accent { fill: #f59e0b; animation-delay: 1.5s; }
+      .c5 .accent { fill: #f472b6; animation-delay: 2s; }
+      .c6 .accent { fill: #60a5fa; animation-delay: 2.5s; }
+
+      .header { animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      .sweep { animation: sweep 4s linear infinite; }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes breathe {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 1; }
+      }
+      @keyframes sweep {
+        from { transform: translateX(-260px); }
+        to { transform: translateX(950px); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card, .header, .accent, .sweep { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect width="1000" height="440" rx="18" fill="url(#bg)"/>
+
+  <g class="header">
+    <text class="subtitle" x="35" y="34">AGRISPHERE AI · FARMMARKET</text>
+    <text class="title" x="35" y="60">KrishiNexus OS — Team</text>
+  </g>
+  <rect x="35" y="70" width="930" height="3" rx="1.5" fill="#1f4d3d"/>
+  <g clip-path="url(#rule-clip)">
+    <rect class="sweep" x="35" y="70" width="240" height="3" fill="url(#sweep)"/>
+  </g>
+
+  <!-- Row 1 -->
+  <g transform="translate(35 100)">
+    <g class="card c1 lead">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Tanvir Hossin</text>
+      <text class="role" x="24" y="72">Team Lead</text>
+      <use href="#flag-bd" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">Bangladesh</text>
+    </g>
+  </g>
+  <g transform="translate(350 100)">
+    <g class="card c2">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Md. Omar Faruk</text>
+      <text class="role" x="24" y="72">AI/ML Engineer</text>
+      <use href="#flag-bd" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">Bangladesh</text>
+    </g>
+  </g>
+  <g transform="translate(665 100)">
+    <g class="card c3">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Md. Abdur Rahman</text>
+      <text class="role" x="24" y="72">Full-Stack &amp; Backend Developer</text>
+      <use href="#flag-bd" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">Bangladesh</text>
+    </g>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(35 270)">
+    <g class="card c4">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Mohammed Mahmud Parvez</text>
+      <text class="role" x="24" y="72">Full-Stack Developer</text>
+      <use href="#flag-bd" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">Bangladesh</text>
+    </g>
+  </g>
+  <g transform="translate(350 270)">
+    <g class="card c5">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Md. Morsalin</text>
+      <text class="role" x="24" y="72">Full-Stack &amp; Backend Developer</text>
+      <use href="#flag-bd" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">Bangladesh</text>
+    </g>
+  </g>
+  <g transform="translate(665 270)">
+    <g class="card c6">
+      <rect class="frame" width="300" height="140" rx="14"/>
+      <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
+      <text class="name" x="24" y="44">Md Rifat</text>
+      <text class="role" x="24" y="72">Domain Expert (Network Engineering)</text>
+      <use href="#flag-us" x="24" y="96" width="30" height="18"/>
+      <text class="country" x="64" y="110">USA</text>
+    </g>
+  </g>
+</svg>

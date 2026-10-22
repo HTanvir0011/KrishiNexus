@@ -1,0 +1,16 @@
+fastapi>=0.115.0
+uvicorn>=0.32.0
+pydantic>=2.12.0
+httpx>=0.28.0
+numpy>=2.3.0
+python-dotenv>=1.0.1
+websockets>=14.0
+networkx>=3.4
+langgraph>=1.0
+pillow>=11.3
+# Optional upgrades (auto-detected; the backend runs fully without them):
+#   sentence-transformers  -> BAAI/bge-m3 dense embeddings + bge-reranker-large cross-encoder
+#                             (set KNX_EMBEDDING_MODEL / KNX_RERANKER_MODEL)
+#   faster-whisper          -> on-device Bangla speech-to-text (set KNX_WHISPER_MODEL)
+#   ultralytics             -> YOLO crop detector on uploaded photos (set KNX_YOLO_WEIGHTS)
+#   A running Ollama server (http://localhost:11434) is used automatically when reachable.
