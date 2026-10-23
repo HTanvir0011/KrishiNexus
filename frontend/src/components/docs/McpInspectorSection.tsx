@@ -71,7 +71,7 @@ export function McpInspectorSection() {
 
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="panel flex flex-col gap-2 p-3">
-          <label htmlFor="mcp-tool" className="text-[10px] uppercase tracking-wider text-slate-500">Tool</label>
+          <label htmlFor="mcp-tool" className="label text-[12px] text-slate-500">Tool</label>
           <select id="mcp-tool" value={tool} onChange={(e) => choose(e.target.value)}
             className="rounded-lg bg-ink-800 px-2 py-1.5 font-mono text-xs text-slate-100 ring-1 ring-ink-600">
             {servers.map((s) => (
@@ -81,7 +81,7 @@ export function McpInspectorSection() {
             ))}
           </select>
           <p className="text-xs leading-relaxed text-slate-400">{selected?.description}</p>
-          <label htmlFor="mcp-json" className="text-[10px] uppercase tracking-wider text-slate-500">params.arguments</label>
+          <label htmlFor="mcp-json" className="label text-[12px] text-slate-500">params.arguments</label>
           <textarea id="mcp-json" value={args} onChange={(e) => setArgs(e.target.value)} spellCheck={false}
             className="min-h-[150px] rounded-lg bg-black/40 p-2 font-mono text-[11px] text-slate-200 ring-1 ring-ink-600" />
           <Button variant="primary" onClick={execute} disabled={running}>
@@ -91,7 +91,7 @@ export function McpInspectorSection() {
         </div>
         <div className="panel flex min-h-[320px] flex-col gap-2 p-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500">Response</span>
+            <span className="label text-[12px] text-slate-500">Response</span>
             {result && <Badge tone={result.status === 200 ? "emerald" : "red"}>HTTP {result.status || "—"}</Badge>}
             {result && <Badge tone="sky"><Timer className="size-3" /> {result.latencyMs.toFixed(0)} ms round trip</Badge>}
             {outcome && <Badge tone={outcome === "success" ? "emerald" : "amber"}>{outcome}</Badge>}

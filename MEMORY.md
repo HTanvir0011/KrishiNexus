@@ -1,6 +1,6 @@
 # MEMORY.md — KrishiNexus OS Live State & Handover
 
-**Last updated:** 2026-10-22 (BDT) · **Status:** every file in the target tree is built. Docker files are statically validated but not yet run on a Docker host · **Next:** run `docker compose up --build` on a machine with Docker, then build `frontend/src/App.tsx` (lazy-load the Three.js views)
+**Last updated:** 2026-10-24 (BDT) · **Status:** every file in the target tree is built, including the immersive redesign (story at `/`, live OS at `/os`, whitepaper at `/docs`). Docker files are statically validated but not yet run on a Docker host. The redesign is published to GitHub `HTanvir0011/KrishiNexus` (2026-10-24) · **Next:** run `docker compose up --build` on a machine with Docker
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -11,7 +11,11 @@
 
 1. Read `AGENTS.md` (contract) then this file (state).
 2. Start the backend: `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000`
-3. Start the frontend: `npm --prefix frontend run dev` → open `http://localhost:5173` (judge mode) or `/docs`.
+3. Start the frontend: `npm --prefix frontend run dev` → open `http://localhost:5173`: the story at `/`, the live OS at
+   `/os` (judge mode; `/os/field`, `/os/coop`, `/os/market`), the whitepaper at `/docs`.
+   - If port 8000 is taken (on the dev PC `claude-science.exe serve` holds it), run the backend on another port and set
+     `KNX_BACKEND_URL` for Vite. In the desktop app the preview tool moves `krishinexus-backend` to a free port (8002
+     here), and `krishinexus-frontend-8002` serves the site on 5175 against it.
 4. Smoke test:
    - `curl http://localhost:8000/mcp/tools` → `count: 13`
    - `curl -X POST http://localhost:8000/evals/run-regression -H "Content-Type: application/json" -d '{"sample_size": 20}'` → 100 cases, 100% PASS
@@ -25,11 +29,12 @@
 
 | Item | Value |
 |---|---|
-| Repo root | `C:\Users\Asus\Downloads\congress\Claude\krishinexus-os` (not a git repository) |
+| Repo root | `C:\Users\Asus\Downloads\congress\Claude\krishinexus-os`, inside the git repo `C:\Users\Asus\Downloads\congress\Claude` (branch `main`, one commit `9b190e7`; `origin` is a placeholder URL; 42 `__pycache__` files are tracked). GitHub `HTanvir0011/KrishiNexus` is published from the separate folder `C:\Users\Asus\Downloads\congress\Claude to push`, whose root is this folder's contents plus `README.md`, `assets/` and `.gitignore`. To publish, mirror `backend/` and `frontend/` and copy the root files; never mirror the root, which would delete those three and `.git` |
 | Python | 3.14.6, venv `backend/.venv` — fastapi 0.159.1, uvicorn 0.54.0, pydantic 2.14.1, httpx 0.28.1, numpy 2.5.4, langgraph 1.2.16, networkx 3.7, pillow 13.0.0, websockets 16.1.1 |
-| Node | 26.7.0 / npm 11.19 — react 19.3, vite 8.3, typescript 7.0, three 0.186, tailwindcss 4.3 (`@tailwindcss/vite`), lucide-react 1.61 |
+| Node | 26.7.0 / npm 11.19 — react 19.3, vite 8.3, typescript 7.0, three 0.186, tailwindcss 4.3 (`@tailwindcss/vite`), lucide-react 1.61, `@fontsource-variable/anek-bangla` 5.3, `@fontsource/tiro-bangla` 5.3, dev `@types/node` 24 |
 | Ports | backend `8000`, frontend `5173`, WebSocket `/ws/agent-trace`; optional Ollama `11434`, llama.cpp `8080`, vLLM `8001` |
-| Launch configs | `C:\Users\Asus\Downloads\congress\Claude\.claude\launch.json`: `krishinexus-backend`, `krishinexus-frontend` |
+| Launch configs | `C:\Users\Asus\Downloads\congress\Claude\.claude\launch.json`: `krishinexus-backend`, `krishinexus-frontend`, `krishinexus-backend-8010` / `krishinexus-frontend-8010`, `krishinexus-frontend-8002` (5175 → backend 8002) |
+| Screenshots | The in-app browser pane is often hidden, which stops `requestAnimationFrame`. Use `puppeteer-core` with Chrome (`C:/Program Files/Google/Chrome/Application/chrome.exe`, `--enable-unsafe-swiftshader`). Edge's launcher exits at once, so puppeteer cannot drive it, and its CLI `--screenshot` returned blank frames for `/#story-*` deep links. |
 | Not available on dev machine | Docker (no docker/podman/nerdctl on PATH), Ollama/llama.cpp/vLLM, GPU, LLM API keys |
 | Docker images | `python:3.14-slim` (build arg `PYTHON_VERSION`), `node:24-bookworm-slim` (`NODE_VERSION`), `nginx:1.28-alpine`, `ollama/ollama:${OLLAMA_IMAGE_TAG:-latest}` |
 | Runtime state | `backend/.state/truck_pools.json` (durable pools); anomalies, reservations, PII vault, trace history are in memory |
@@ -118,7 +123,7 @@
 - Verified in browser (live backend): [x] split-screen renders · [x] voice preset → decision cards + 32 trace events
   · [x] 5 s scan → certificate · [x] power-cut + flash-flood simulations · [x] pool join → DISPATCH LOCKED · [x] bank + docs tabs
   · [x] backend-offline fallback banner · [x] `tsc --noEmit` and `npm run build` pass
-  · [ ] **visual appearance not screenshot-reviewed** (browser pane was hidden during verification)
+  · [x] visual appearance screenshot-reviewed during Phase 7 (headless Chrome)
 
 ### Phase 6 — Evaluation & live `/docs`
 - [x] `backend/evals/__init__.py` · [x] `backend/evals/regression_suite.py` (`RagasReport`, `MetricValue`, `QuestionScore`,
@@ -141,13 +146,46 @@
   Step 2 example · [x] `POST /agents/orchestrate` demo · [x] `POST /edge/voice-interact` `munshiganj_cold_storage`
   · [x] `GET /evals/metrics?refresh=true`
 
+### Phase 7 — Immersive website redesign (approved and built 2026-10-24)
+- Direction in one line: Rahim's own Rangpuri question ("এলা বেচমু না হিমাগারত থুমু?") over a persistent, scroll-driven
+  delta landscape; night-paddy green `#0E211A` + one mustard accent `#EDB723`; Tiro Bangla for spoken words, Anek Bangla
+  (variable width) for the system. User decisions: story at `/`, OS at `/os`, stylised delta, bilingual headlines,
+  procedural imagery.
+- [x] Plan: `frontend/design/DESIGN_PLAN.md` (approved; section 10 lists what changed during the build) · `style-tile.html`
+- [x] Foundation: self-hosted fonts in `main.tsx` · `index.css` (`@theme` palette remap, `.num` `.wide` `.label` `.voice`
+      `.panel` `.card`) · `index.html` (no Google Fonts, theme colour, inline SVG favicon) · `tsconfig.json` (`types: node`)
+- [x] Routing: `lib/router.tsx` (`useLocation`, `routeOf`, `navigate`, `Link`; types `Route`, `OsView`) · `App.tsx`
+      (lazy `story/StoryPage`, `os/OsPage`, `os/DocsShell`; OS polling only on `/os`) · `lib/summary.ts` (`englishSummary`)
+- [x] Shell: `components/shell/TopBar.tsx` (`Wordmark`, overlay mode) · `Alerts.tsx` · `Backdrop.tsx` · `components/MosaicSvg.tsx`
+      · `components/gauges.tsx` (`ArcGauge`, `Ring`, `ScoreDial`) · `components/ui.tsx` restyled
+- [x] Story: `story/StoryPage.tsx` · `Hero.tsx` · `parts.tsx` (`ChapterHeading`, `SourceNote`, `StoryButton`, `Waveform`,
+      `Anchor`) · `data.ts` (`useStoryFacts`, `SourceStatus`, `Sourced<T>`, `Ladder`, `RahimFacts`, `AbdulFacts`,
+      `SNAPSHOT_DATE`) · `geo.ts` · `presets.ts` · `story.css` · `landscape/Landscape.ts` (`Landscape`, `CHAPTER_COUNT`,
+      `RouteMode`) · `landscape/shaders.ts` · `chapters/` Cold, Road, Answer, Haor, Agents, Dawn
+- [x] OS and docs: `os/OsPage.tsx` (judge, field, coop, market views) · `os/DocsShell.tsx` (no Three.js) · existing pages
+      and components re-skinned; the cold-storage twin uses the story's quota colours
+- [x] Backend: `rag/lexicon.py` crop names also match English plurals (`_contains(..., plural=True)` in `detect_crop`)
+- Verified 2026-10-24 against the live backend:
+  - [x] `tsc --noEmit` · `npm run build`
+  - [x] headless Chrome screenshots (puppeteer-core, SwiftShader WebGL):
+    - all 7 chapters at 1440×900, plus the deep links `/#story-cold` and `/#story-road`;
+    - interactions: 4 districts, power cut and restore, pooled truck, 2017 flood simulation, agents re-run, a dialect preset, a typed English question;
+    - phone 390×844, reduced motion, backend offline (cached snapshot, "Cached demo"), WebGL disabled (mosaic fallback);
+    - `/os`, `/os/field`, `/os/coop`, `/os/market` and `/docs`.
+  - [x] Console clean except the dev-only StrictMode warning when the trace WebSocket is closed before it opens.
+  - [x] RAG metrics all 1.00 over 19 questions (gold doc first 19/19), MCP validity 22/22, PII 12/12, regression 100/100
+        after the lexicon change
+  - [ ] Not done: a GPU browser on real hardware, a real phone, a screen-reader pass, Lighthouse
+
 ---
 
-## 4. Last measured results (2026-10-22)
+## 4. Last measured results (2026-10-22; metrics and regression re-run 2026-10-24 after the lexicon change, unchanged)
 
 | Check | Result |
 |---|---|
 | Regression suite (seed 20261226, 5 × 20) | **100/100 PASS**; rubric-judge 1.00 on every case (SYND-019 partial gone after the narrative change) |
+| Frontend build (2026-10-24) | `index` 269 kB, `StoryPage` 74 kB, `OsPage` 79 kB, `DocsShell` 45 kB, shared Three.js chunk 559 kB (Vite warns above 500 kB); fonts self-hosted (Anek Bangla Bengali subset 448 kB woff2) |
+| Story live run (24 Oct 2026) | Rahim: Faria offer Tk 12, farm gate Tk 36.18, Karwan Bazar retail Tk 77.67, markup 115%, he keeps 46.6%; pooled truck Tk 61.91/kg = Tk 24,764 for 400 kg vs storage Tk 8,298 vs Faria Tk 4,800 (blocked). Rangpur: 4 stores, 35,200 t, 2,045 t open. Abdul: 4.6% GREEN today; the flood simulation (+320 mm upstream) gives 99.7% RED and harvest within 5 h |
 | Faithfulness / answer relevancy | 1.00 / 1.00 (targets 0.94 / 0.92) — extractive answers, deterministic checks |
 | Context precision / recall | **1.00** / 1.00 over 19 questions (targets 0.95 / 0.91); gold doc ranked first on every question. It was 0.9211 before the intent fix of 2026-10-22. |
 | Held-out retrieval probe (10 paraphrases not in the eval set) | top-1 9/10. The "cost" trigger was added after seeing this probe (it was 8/10 before), so the probe is no longer fully held out. The remaining miss: "bank loan … without collateral" ranks `BB-WHR-01` above `AGRI-FIN-01`, because neither retriever handles negation. |
@@ -184,7 +222,15 @@ figures (truck Tk 24/kg, storage Tk 48.50/kg net) reproduce only in harvest seas
   KrishiNexus brief" in the knowledge seed and on `/docs`.
 - Bepari cost lines other than the Aratdar's 62.35% (freight 18%, labour 6.5%, wastage 5.25%, bags 4.4%, tolls 3.5%)
   and the Faria 20% / Bepari 70% cost-ratio split are modelled, not cited.
-- Frontend bundle is a single 934 kB JS file (Three.js included), not code-split; visual review pending.
+- Frontend: pages are code-split, but Three.js is one 559 kB shared chunk (named `summary-*.js` by rolldown after the
+  first shared module). The docs page does not load it.
+- Redesign, reviewed only in headless Chrome with SwiftShader:
+  - Thin river ribbons look dashed when zoomed far out; this may be SwiftShader without MSAA.
+  - Labels lifted off a neighbour keep a horizontal leader line, so they float a little above their point.
+  - In the agents view the Thakurgaon label sits under the header shade.
+  - The agents chapter prints the backend's raw trace summaries (Python list reprs, "True").
+  - "Play his question" needs a Bangla voice on the device; without one the button explains that instead.
+  - The story's snapshot (`story/data.ts`) is dated 24 Oct 2026 and must be refreshed if the backend's numbers change.
 - Model-card specs (layers, GGUF sizes) and DeepSeek/Gemini prices are from memory; Claude prices come from the
   claude-api reference (Sonnet 5.5 `claude-sonnet-5-5`, $2/$10 per MTok).
 
@@ -201,7 +247,8 @@ figures (truck Tk 24/kg, storage Tk 48.50/kg net) reproduce only in harvest seas
 
 Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anomaly_state.py`, `schemas/api_models.py`,
 `rag/lexicon.py`, `agents/tracing.py`, `.env.example`, `frontend/src/api/fallback.ts`, `state/store.ts`, `lib/*`,
-`components/ui.tsx`, `components/docs/*`.
+`components/ui.tsx`, `components/docs/*`, and the redesign: `frontend/design/*`, `src/story/*`, `src/os/*`,
+`components/shell/*`, `components/gauges.tsx`, `components/MosaicSvg.tsx`.
 
 ---
 
@@ -303,3 +350,30 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   - check `http://localhost:5173` live mode, the `/ws` agent trace, `POST /mcp` SSE through nginx, and a pool join that persists across `docker compose restart backend`;
   - optionally run `--profile local-llm` and `POST /edge/local-inference`.
   - After that, the next file is `frontend/src/App.tsx`: lazy-load `CommandCenter` / `ColdStorage3DTwin` to split the 934 kB bundle.
+
+### 2026-10-24 · Immersive redesign: plan for review
+- **Built:** `frontend/design/DESIGN_PLAN.md` and `frontend/design/style-tile.html` only; the running app is unchanged.
+- **How it was made:** studied curtisdesignr.me, portalsystems.space, vay.io and the AgrixAI shot in the in-app browser; checked fonts with the ui-ux-pro-max data (Anek Bangla: wdth 75–125, wght 100–800, Bengali + Latin) and Google Fonts; confirmed `@fontsource-variable/anek-bangla` and `@fontsource/tiro-bangla` 5.3.0 exist for offline bundling; rendered the tile with headless Edge at 1440 px and 390 px.
+- **Next:** wait for the user's review of the plan (section 1 decisions). On approval, start with foundation: tokens in `frontend/src/index.css`, then the self-hosted fonts and routing.
+
+### 2026-10-24 · Immersive redesign built and verified
+- **Built:** the Phase 7 file list. In short:
+  - foundation: tokens, self-hosted fonts and a history router with lazy pages;
+  - the story: one persistent Three.js landscape driven by scroll, 7 chapters on live agent data with a dated offline snapshot;
+  - the live OS under `/os` with four views, and the whitepaper in its own chunk.
+- **Fixed after the screenshot review:**
+  - cold-storage framing per district; the whole road in Rahim's answer;
+  - cold-store towers gone before the road;
+  - map labels flip at the edge and avoid each other; the pooled-truck label follows the truck;
+  - the header shade; on a phone, a two-row header that scrolls away;
+  - agent step summaries wrap instead of widening the grid;
+  - the twin's quota colours match the story; THREE.Clock removed (deprecated in r186);
+  - favicon (the 404 is gone); whitepaper headline figures use `.num`;
+  - English plural crop names in `rag/lexicon.py`.
+- **Tested:** see the Phase 7 "Verified" list. Screenshots came from a puppeteer-core script in the session scratchpad, not from the repo.
+- **Published (user's go-ahead):** copied into `Claude to push`, with the README routes updated (story `/`, judge mode `/os`).
+  - Committed as HTanvir0011 <hossin23105101466@diu.edu.bd> with no AI trailers, as the user requires, and pushed to `HTanvir0011/KrishiNexus` `main`.
+  - The `Claude` repo itself still has the redesign as uncommitted working-tree changes.
+- **Next:**
+  - The Docker run from the previous entries.
+  - Next file for polish: `frontend/src/story/chapters/AgentsChapter.tsx`, to turn the raw trace summaries into plain sentences.

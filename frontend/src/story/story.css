@@ -1,0 +1,158 @@
+/* Story page: the landscape stage, its labels, and the hero's single load sequence. */
+
+.story-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--color-ink-900);
+}
+
+.story-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+/* Keeps the text column readable over the world on wide screens. */
+.story-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(14 33 26 / 0.94) 0%, rgb(14 33 26 / 0.82) 30%, rgb(14 33 26 / 0.35) 52%, rgb(14 33 26 / 0) 68%),
+    linear-gradient(180deg, rgb(14 33 26 / 0.75) 0%, rgb(14 33 26 / 0) 16%);
+}
+
+.anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.anchor[data-visible="true"] {
+  opacity: 1;
+}
+.anchor > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-stretch: 88%;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-slate-50);
+  padding: 2px 9px 2px 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(14 33 26 / 0) 0, rgb(14 33 26 / 0.66) 22px);
+}
+.anchor > span::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: var(--color-mustard-400);
+}
+/* Near the right edge the label hangs to the left of its point instead. */
+.anchor[data-side="left"] > span {
+  flex-direction: row-reverse;
+  transform: translate(-100%, -50%);
+  padding: 2px 0 2px 9px;
+  background: linear-gradient(270deg, rgb(14 33 26 / 0) 0, rgb(14 33 26 / 0.66) 22px);
+}
+.anchor.is-alert > span::before {
+  background: var(--color-red-400);
+}
+.anchor b {
+  font-stretch: 75%;
+  font-weight: 600;
+  color: var(--color-mustard-300);
+}
+.anchor.is-alert b {
+  color: var(--color-red-300);
+}
+
+/* The one orchestrated moment: words arrive along the waveform, then what the system understood. */
+.story-word {
+  display: inline-block;
+  animation: story-word 0.55s ease-out both;
+  animation-delay: calc(0.35s + var(--i) * 0.42s);
+}
+.story-wave-said {
+  animation: story-draw 2.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: 0.25s;
+}
+.story-tag {
+  animation: story-tag 0.35s ease-out both;
+  animation-delay: calc(var(--i) * 0.16s);
+}
+@keyframes story-word {
+  from { opacity: 0; filter: blur(6px); }
+  to { opacity: 1; filter: none; }
+}
+@keyframes story-draw {
+  from { stroke-dashoffset: var(--len); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes story-tag {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.radar-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  margin-left: -22px;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 3;
+}
+.radar-handle::before {
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgb(239 235 221 / 0.75);
+  box-shadow: 0 0 12px rgb(111 168 181 / 0.6);
+}
+.radar-handle > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--color-ink-900);
+  border: 1px solid rgb(239 235 221 / 0.5);
+  color: var(--color-slate-50);
+}
+
+@media (max-width: 767px) {
+  .story-stage {
+    bottom: auto;
+    height: 42svh;
+    z-index: 20;
+  }
+  .story-stage::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 30%;
+    background: linear-gradient(0deg, var(--color-ink-900), rgb(14 33 26 / 0));
+    pointer-events: none;
+  }
+  .story-scrim {
+    display: none;
+  }
+}

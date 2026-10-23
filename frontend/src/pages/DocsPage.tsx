@@ -41,16 +41,16 @@ export function DocsPage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-      <aside className="lg:sticky lg:top-16 lg:h-[calc(100vh-5rem)]">
+      <aside className="lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
         <div className="panel p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300"><BookOpen className="size-3.5" /> Whitepaper</div>
+          <div className="mb-2 flex items-center gap-1.5 label text-[13px] font-semibold text-emerald-300"><BookOpen className="size-3.5" /> Whitepaper</div>
           <nav className="space-y-0.5">
             {SECTIONS.map((s) => (
               <button key={s.id} type="button" onClick={() => jump(s.id)}
                 className={cn("flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
                   active === s.id ? "bg-emerald-500/15 text-emerald-200" : "text-slate-400 hover:bg-ink-800 hover:text-slate-200")}>
                 <span className="mt-0.5">{s.icon}</span>
-                <span><span className="block text-[10px] uppercase tracking-wider opacity-70">{s.kicker}</span>{s.title}</span>
+                <span><span className="block label text-[12px] opacity-70">{s.kicker}</span>{s.title}</span>
               </button>
             ))}
           </nav>
@@ -61,7 +61,7 @@ export function DocsPage() {
       </aside>
       <div className="min-w-0 space-y-8 pb-16">
         <header>
-          <h1 className="text-2xl font-bold text-slate-50">KrishiNexus OS — technical whitepaper</h1>
+          <h1 className="text-2xl font-bold text-slate-50">KrishiNexus OS technical whitepaper</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-400">
             Every panel below talks to the running backend: call any MCP tool, test each AI layer, recompute the metrics and run the regression suite live.
           </p>
@@ -71,7 +71,7 @@ export function DocsPage() {
             <div className="mb-3 flex items-center gap-2">
               <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30">{s.icon}</span>
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500">{s.kicker}</div>
+                <div className="label text-[12px] text-slate-500">{s.kicker}</div>
                 <h2 className="text-lg font-semibold text-slate-100">{s.title}</h2>
               </div>
             </div>

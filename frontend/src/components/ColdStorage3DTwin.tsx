@@ -17,14 +17,15 @@ const NATIONAL_ROT_BASELINE = 9.0;
 
 type SlotKind = "trader" | "owner" | "farmerBooked" | "farmerOpen";
 
+// Same encoding as the story's quota chart: traders slate, plant owners sky, farmers mustard (open = full strength).
 const COLORS: Record<SlotKind, number> = {
-  trader: 0xb08d57,
-  owner: 0x8b5cf6,
-  farmerBooked: 0x0f766e,
-  farmerOpen: 0x34d399,
+  trader: 0x5f7468,
+  owner: 0x3d6f7b,
+  farmerBooked: 0x5f5920,
+  farmerOpen: 0xedb723,
 };
 
-/** Assign rack slots front-row-first so the smallholder (emerald) share faces the viewer. */
+/** Assign rack slots front-row-first so the smallholder (mustard) share faces the viewer. */
 function slotKinds(openShareOfFarmer: number): SlotKind[] {
   const farmer = Math.round(TOTAL * SHARES.farmer);
   const owner = Math.round(TOTAL * SHARES.owner);
@@ -60,7 +61,7 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x060b0d, 14, 30);
+    scene.fog = new THREE.Fog(0x0a1913, 14, 30);
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.set(9.5, 7, 11);
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -72,26 +73,26 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     controls.maxDistance = 22;
     controls.target.set(0, 1.4, 0);
 
-    scene.add(new THREE.HemisphereLight(0xbfe9ff, 0x0b1417, 0.9));
+    scene.add(new THREE.HemisphereLight(0xcfe3e8, 0x0e211a, 0.9));
     const key = new THREE.DirectionalLight(0xffffff, 1.1);
     key.position.set(6, 10, 6);
     scene.add(key);
-    const chamberLight = new THREE.PointLight(0x7dd3fc, 18, 18);
+    const chamberLight = new THREE.PointLight(0x8bbcc7, 18, 18);
     chamberLight.position.set(0, 4.6, 0);
     scene.add(chamberLight);
 
-    const floor = new THREE.GridHelper(16, 32, 0x1d3036, 0x142227);
+    const floor = new THREE.GridHelper(16, 32, 0x21443a, 0x17352a);
     scene.add(floor);
     const walls = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(13, 5, 8)),
-      new THREE.LineBasicMaterial({ color: 0x2a434b }),
+      new THREE.LineBasicMaterial({ color: 0x2f5648 }),
     );
     walls.position.y = 2.5;
     scene.add(walls);
 
     const cube = new THREE.BoxGeometry(0.9, 0.8, 0.9);
     const shelf = new THREE.BoxGeometry(BAYS * 1.1, 0.06, 1.1);
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.5 });
+    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x44584d, metalness: 0.6, roughness: 0.5 });
     const meshes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[] = [];
     let index = 0;
     for (let row = 0; row < ROWS; row++) {
@@ -116,7 +117,7 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
       meshes.forEach((mesh, i) => {
         const kind = kinds[i];
         mesh.material.color.setHex(COLORS[kind]);
-        mesh.material.emissive.setHex(kind === "farmerOpen" ? 0x10b981 : 0x000000);
+        mesh.material.emissive.setHex(kind === "farmerOpen" ? 0xb5840b : 0x000000);
         mesh.material.emissiveIntensity = kind === "farmerOpen" ? 0.55 : 0;
       });
     };
@@ -137,12 +138,12 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
 
-    const clock = new THREE.Clock();
+    const start = performance.now();
     let raf = 0;
     const tick = () => {
-      const t = clock.getElapsedTime();
+      const t = (performance.now() - start) / 1000;
       controls.update();
-      chamberLight.color.setHex(alarmOn ? 0xef4444 : 0x7dd3fc);
+      chamberLight.color.setHex(alarmOn ? 0xf42a41 : 0x8bbcc7);
       chamberLight.intensity = alarmOn ? 14 + 10 * Math.abs(Math.sin(t * 4)) : 18;
       const pulsing = performance.now() < pulseUntil;
       meshes.forEach((mesh, i) => {
@@ -252,9 +253,9 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
             value={telemetry ? `${pct(telemetry.rot_risk_pct)} vs ${NATIONAL_ROT_BASELINE}% baseline` : "…"} />
         </div>
         <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-1.5 text-[10px]">
-          <Legend color="bg-[#b08d57]" label="Trader hoarded 45.0%" />
-          <Legend color="bg-violet-500" label="Plant owner 32.32%" />
-          <Legend color="bg-emerald-400" label={`Smallholder 22.68% · ${facility ? `${facility.open_smallholder_quota_mt.toFixed(0)} t open` : "open quota"}`} />
+          <Legend color="bg-slate-600" label="Trader hoarded 45.0%" />
+          <Legend color="bg-sky-600" label="Plant owner 32.32%" />
+          <Legend color="bg-mustard-400" label={`Smallholder 22.68% · ${facility ? `${facility.open_smallholder_quota_mt.toFixed(0)} t open` : "open quota"}`} />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-ink-700 px-3 py-2">
@@ -281,7 +282,7 @@ function TelemetryChip({ icon, label, value, alert }: { icon: ReactNode; label: 
   return (
     <div className={cn("rounded-md px-2 py-1 backdrop-blur-sm ring-1",
       alert ? "bg-red-950/70 text-red-200 ring-red-500/50" : "bg-black/50 text-slate-200 ring-white/10")}>
-      <div className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-slate-400">{icon}{label}</div>
+      <div className="flex items-center gap-1 label text-[11px] text-slate-400">{icon}{label}</div>
       <div className="font-mono font-semibold">{value}</div>
     </div>
   );

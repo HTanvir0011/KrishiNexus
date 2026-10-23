@@ -2,7 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-const BACKEND = "http://localhost:8000";
+const BACKEND = process.env.KNX_BACKEND_URL ?? "http://localhost:8000";
 const BACKEND_PREFIXES = ["/mcp", "/rag", "/edge", "/agents", "/automation", "/guardrails", "/optimization", "/prompts", "/evals", "/health"];
 
 export default defineConfig({

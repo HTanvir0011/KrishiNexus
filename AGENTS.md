@@ -47,7 +47,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Component | Command (from repo root) | Port / route |
 |---|---|---|
 | Backend (FastAPI) | `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000` | `http://localhost:8000`, OpenAPI at `/docs` |
-| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`, whitepaper at `/docs` |
+| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: story `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/market`), whitepaper `/docs` |
 | Live agent trace | WebSocket | `ws://localhost:8000/ws/agent-trace?session_id=...` (proxied as `/ws`) |
 | MCP stdio servers | `cd backend && python -m mcp_servers.<server_module>` | newline-delimited JSON-RPC on stdin/stdout |
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
@@ -57,7 +57,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 Docker layout:
 - `backend/Dockerfile`: `python:3.14-slim`, installs the pinned `backend/requirements.lock`, runs as uid 10001, HEALTHCHECK on `GET /health`, named volume `backend-state` at `/app/.state`.
 - `frontend/Dockerfile`: `node:24-bookworm-slim` build stage, then `nginx:1.28-alpine`.
-- `frontend/nginx.conf` mirrors the Vite proxy (same prefix list plus `openapi.json`, the `/api/` rewrite and the `/ws/` upgrade) with an SPA fallback for `/docs`.
+- `frontend/nginx.conf` mirrors the Vite proxy (same prefix list plus `openapi.json`, the `/api/` rewrite and the `/ws/` upgrade) with an SPA fallback (`location /` → `index.html`) that serves `/`, `/os/*` and `/docs`.
 - Compose host ports and the Ollama tag can be overridden in a root `.env` (see `.env.example`); application settings come from `backend/.env` (optional `env_file`).
 - `KNX_OLLAMA_HOST` defaults to `http://ollama:11434` in compose; when the profile is off the edge node reports the runtime unreachable and falls back.
 
@@ -68,9 +68,10 @@ Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SE
 All times are BDT (UTC+06:00, `config.BDT`, `now_bdt()`); no `zoneinfo`/`tzdata` dependency.
 
 Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /health` and `/ws`
-(ws: true) to `:8000`. A new backend prefix **must** be added to `BACKEND_PREFIXES` in `frontend/vite.config.ts` **and**
-to the API `location` regex in `frontend/nginx.conf`. Regenerate `backend/requirements.lock` (`pip freeze`) after any
-dependency change.
+(ws: true) to `KNX_BACKEND_URL` (default `http://localhost:8000`; set it when the backend runs on another port). A new
+backend prefix **must** be added to `BACKEND_PREFIXES` in `frontend/vite.config.ts` **and** to the API `location` regex
+in `frontend/nginx.conf`. A new frontend route needs no nginx change. Regenerate `backend/requirements.lock`
+(`pip freeze`) after any dependency change.
 
 ---
 
@@ -129,13 +130,25 @@ krishinexus-os/
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
     ├── Dockerfile · .dockerignore · nginx.conf   # node build stage -> nginx serving dist + API/ws proxy
+    ├── design/DESIGN_PLAN.md · style-tile.html   # approved redesign plan (§10: build changes) + style tile (not in the build)
     └── src/
-        ├── main.tsx · index.css · App.tsx      # navbar, split-screen judge mode, /docs routing
+        ├── main.tsx                            # self-hosted fonts (Anek Bangla Variable wdth, Tiro Bangla 400 + italic)
+        ├── index.css                           # Tailwind @theme tokens + .num .wide .label .voice .panel .card
+        ├── App.tsx                             # history router: lazy StoryPage / OsPage / DocsShell, backend bootstrap
         ├── api/client.ts · api/fallback.ts     # typed REST + WebSocket client, OFFLINE-PREVIEW fallbacks
         ├── state/store.ts                      # useSyncExternalStore global store + actions
-        ├── lib/format.ts · lib/speech.ts · lib/mcpExamples.ts
+        ├── lib/format.ts · speech.ts · mcpExamples.ts · router.tsx (Route, navigate, Link) · summary.ts (englishSummary)
+        ├── story/                              # the scroll story at /
+        │   ├── StoryPage.tsx · Hero.tsx · parts.tsx · story.css
+        │   ├── data.ts                         # useStoryFacts: live agents first, dated snapshot (SNAPSHOT_DATE) offline
+        │   ├── geo.ts · presets.ts             # stylised delta (places, route, rivers, haors, 18 BCSA seeds), 5 farmers, team
+        │   ├── landscape/Landscape.ts · shaders.ts   # one persistent Three.js scene; camera poses driven by scroll
+        │   └── chapters/ColdChapter · RoadChapter · AnswerChapter · HaorChapter · AgentsChapter · DawnChapter (.tsx)
+        ├── os/OsPage.tsx · DocsShell.tsx       # /os views (judge, field, coop, market) and /docs without Three.js
         ├── components/
-        │   ├── ui.tsx · OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
+        │   ├── shell/TopBar.tsx · Alerts.tsx · Backdrop.tsx
+        │   ├── ui.tsx · gauges.tsx · MosaicSvg.tsx
+        │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx
         └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx
 ```
@@ -318,4 +331,38 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
   `TraceRecorder.mcp(...)` so every call is timed and streamed.
 - Frontend reads/writes shared state only through `state/store.ts` (`useAppState(selector)`; selectors return
   existing references). Network calls go through `api/client.ts`; `withFallback` masks only network/5xx failures.
+- Crop names in `rag/lexicon.CROP_TERMS` also match English plurals ("potatoes", "chillies"): `detect_crop` calls
+  `_contains(..., plural=True)`. Concept and district matching stay exact.
 - Shell heredocs fail on apostrophes in this environment's Bash tool; append to files with the editor instead.
+
+### 9.1 Frontend design system (redesign of 2026-10-24; full rationale in `frontend/design/DESIGN_PLAN.md`)
+
+- **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
+  - `/` is the story. Chapter deep links: `/#story-cold`, `-road`, `-answer`, `-haor`, `-agents`, `-dawn`.
+  - `/os` is judge mode; `/os/field`, `/os/coop` and `/os/market` are the other views.
+  - `/docs` (with `#section` anchors) is the whitepaper.
+  - Pages are lazy chunks. Only the story and the OS load Three.js.
+- **Colour tokens keep Tailwind names with new meanings:**
+  - `ink`: night-paddy background;
+  - `slate`: husk/silt text;
+  - `emerald`: healthy / flag green;
+  - `amber`: warning;
+  - `sky`: water, radar, information;
+  - `red`: alerts;
+  - `violet`: agents;
+  - `mustard`: the single action accent (primary buttons, focus ring, Rahim's plot, the open farmer quota).
+  - Quota shares are always traders `slate`, plant owners `sky` and farmers `mustard`, in the story chart and in the 3D twin alike.
+- **Type:** Anek Bangla Variable is the system face; it is self-hosted, so the site never calls Google Fonts.
+  - Use `.num` for figures (condensed, tabular), `.wide` for titles and `.label` for small captions in sentence case. No all-caps labels.
+  - Tiro Bangla (`.voice`) is used only for words a farmer says or hears.
+  - The monospace face is for IDs, code and logs.
+- **Honest data on the story:**
+  - Every figure comes from `story/data.ts`, which calls the live agents and falls back to a snapshot dated `SNAPSHOT_DATE`.
+  - `SourceNote` says which one is shown (live, cached or sample).
+  - Refresh the snapshot when backend outputs change.
+- **Landscape:**
+  - `Landscape` is imperative: React passes state through its setters (`setProgress`, `setRouteMode`, `setColdDistrict`,
+    `setFlood`, ...) and never re-renders per frame.
+  - Map labels are `Anchor` elements with `data-lat/lon/alt/ch`, positioned each frame. `followTruck` labels ride with the truck.
+    Labels flip left near the right edge; overlapping labels are lifted on desktop and hidden on phones.
+  - Reduced motion snaps the camera to each chapter's still. Without WebGL, `MosaicSvg` replaces the canvas.

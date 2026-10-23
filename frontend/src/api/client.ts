@@ -251,6 +251,8 @@ export interface VoiceEntities {
   offered_faria_price_bdt: number | null;
   middleman_role: string | null;
   intent: string;
+  quantity_expression?: string | null;
+  concepts?: string[];
 }
 
 export interface VoiceInteractResponse {

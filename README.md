@@ -14,7 +14,7 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 ## Contents
 
 - [Project overview](#project-overview)
-- [Recent fixes](#recent-fixes)
+- [Recent changes](#recent-changes)
 - [Quickstart](#quickstart)
 - [Architecture](#architecture)
 - [API at a glance](#api-at-a-glance)
@@ -33,7 +33,7 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 | **CRAG pipeline with intent routing** | PII scrub → HyDE dialect rewrite → intent detection → hybrid BM25 + vector retrieval with RRF and reranking → GraphRAG multi-hop facts → Corrective-RAG grading → live MCP augmentation |
 | **LangGraph supervisor + 4 agents** | Vision grading, syndicate bypass (5-ton pooled trucks), cold-chain arbitrage (ΔΠ circuit-breaker), climate credit (SAR flood shield + 300–850 score) |
 | **Offline edge node** | Bangla voice pipeline, optical grader with signed certificates, local LLM manager for **Ollama** / llama.cpp / vLLM with automatic fallback when no runtime is reachable |
-| **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | Split-screen judge mode: farmer zero-UI app, co-op command center with a Three.js cold-storage twin, B2B and bank portal, live `/docs` whitepaper with a 13-tool MCP inspector |
+| **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | A scroll story at `/` that answers one farmer's question with the live agents over a 3D map of the delta; the live OS at `/os` (farmer zero-UI app, co-op command center with a Three.js cold-storage twin, market and credit portal); the `/docs` whitepaper with a 13-tool MCP inspector |
 | **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models |
 
 The system runs end to end with **no paid API keys and no GPU**: every agent has deterministic logic seeded with
@@ -41,7 +41,23 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ---
 
-## Recent fixes
+## Recent changes
+
+### Immersive website (24 October 2026)
+
+The site now opens on a scroll story. Rahim Mia, a potato farmer in Mithapukur, Rangpur, asks in Rangpuri whether to
+sell now or keep his potatoes in cold storage. A 3D map of the delta follows his question:
+- who holds the cold-store space;
+- what each of the five traders adds on the road to Dhaka;
+- what each choice is worth for his 400 kg;
+- Abdul's haor in Sunamganj, seen through monsoon cloud by radar.
+
+Every figure comes from the running agents. With the backend off, the story shows a dated snapshot and says so.
+
+- The working system moved to `/os`: judge mode, the farmer's phone, co-op and cold storage, market and credit.
+- The Bangla fonts (Anek Bangla, Tiro Bangla) ship with the site. Reduced motion is respected, and a static map
+  replaces the 3D view without WebGL.
+- Typed English questions with plural crop names ("potatoes", "chillies") are now recognised.
 
 ### Dialect rewriter and cold-storage / quota intents: context precision 1.00
 
@@ -90,7 +106,8 @@ docker compose up --build
 
 | URL | What |
 |---|---|
-| http://localhost:5173 | Split-screen judge demo (nginx) |
+| http://localhost:5173 | Scroll story (nginx) |
+| http://localhost:5173/os | Live OS: split-screen judge mode |
 | http://localhost:5173/docs | Live whitepaper, MCP inspector, evals |
 | http://localhost:8000/docs | FastAPI OpenAPI reference |
 
@@ -216,7 +233,8 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   └── evals/                  metrics engine + 100-case regression suite
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
-    └── src/                    pages, components, typed API client with offline fallback
+    ├── design/                 redesign plan and style tile (not part of the build)
+    └── src/                    story/ (scroll story, 3D delta), os/ (live OS), pages, components, typed API client
 ```
 
 ---

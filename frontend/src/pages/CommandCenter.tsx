@@ -65,7 +65,7 @@ export function CommandCenter({ className }: { className?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Leaf className="size-4 text-emerald-400" />
-          <span>Cloud OS core: 3 MCP servers · 13 tools · LangGraph supervisor · 4 agents</span>
+          <span>Cloud core: 3 MCP servers, 13 tools, a LangGraph supervisor and 4 agents</span>
           {state?.rag_crag_result && <Badge tone="violet">CRAG {state.rag_crag_result.verdict} {state.rag_crag_result.confidence.toFixed(2)}</Badge>}
           {state?.compression_report.reduction_factor && <Badge tone="violet"><Cpu className="size-3" /> {state.compression_report.reduction_factor}x context compression</Badge>}
         </div>

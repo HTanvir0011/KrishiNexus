@@ -59,7 +59,7 @@ export function ProvenanceSection() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300"><Sprout className="size-4" /> Executive summary</div>
+        <div className="flex items-center gap-2 label text-[13px] font-semibold text-emerald-300"><Sprout className="size-4" /> Executive summary</div>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-200">
           KrishiNexus OS is an edge-to-cloud multi-agent operating system for Bangladeshi smallholders. A farmer speaks in their own dialect;
           four agents grade the crop, expose the middleman markup, price cold storage against a pooled truck sale with the ΔΠ equation, clear
@@ -71,7 +71,7 @@ export function ProvenanceSection() {
           <article key={card.label} className="panel p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="font-mono text-3xl font-bold text-slate-50">{card.headline}</div>
+                <div className="num text-4xl leading-none text-slate-50">{card.headline}</div>
                 <div className="text-sm font-medium text-slate-300">{card.label}</div>
               </div>
               <Badge tone={card.tone}>{card.icon}</Badge>

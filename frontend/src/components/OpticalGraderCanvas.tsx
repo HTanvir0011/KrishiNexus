@@ -8,10 +8,10 @@ import { Badge } from "./ui";
 export const SCAN_DURATION_MS = 5_000;
 
 const CLASS_STYLE: Record<DetectionClass, { stroke: string; label: string }> = {
-  uniform_A: { stroke: "#34d399", label: "uniform_A" },
-  minor_bruise: { stroke: "#fbbf24", label: "minor_bruise" },
-  fungal_blight: { stroke: "#f87171", label: "fungal_blight" },
-  undersized: { stroke: "#94a3b8", label: "undersized" },
+  uniform_A: { stroke: "#3fa97c", label: "uniform_A" },
+  minor_bruise: { stroke: "#e58f2b", label: "minor_bruise" },
+  fungal_blight: { stroke: "#f2545b", label: "fungal_blight" },
+  undersized: { stroke: "#9db0a3", label: "undersized" },
 };
 
 const PRODUCE_COLOR: Record<GradeableCrop, [string, string]> = {
@@ -95,7 +95,7 @@ function drawBox(ctx: CanvasRenderingContext2D, b: BoundingBox, sx: number, sy: 
   const ty = Math.max(0, y * sy - 15);
   ctx.fillStyle = style.stroke;
   ctx.fillRect(x * sx, ty, tw, 14);
-  ctx.fillStyle = "#06120c";
+  ctx.fillStyle = "#0a1913";
   ctx.fillText(label, x * sx + 4, ty + 10.5);
   ctx.globalAlpha = 1;
 }
@@ -146,7 +146,7 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
           grad.addColorStop(1, "rgba(52,211,153,0.35)");
           ctx.fillStyle = grad;
           ctx.fillRect(lineX - 40, 0, 40, height);
-          ctx.fillStyle = "#34d399";
+          ctx.fillStyle = "#3fa97c";
           ctx.fillRect(lineX - 1, 0, 2, height);
         }
         setFrame(Math.round(progress * result.video_frames_analyzed));
@@ -194,7 +194,7 @@ export function CertificateCard({ result }: { result: GradeCropResult }) {
     <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-ink-900 to-ink-900 p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+          <div className="flex items-center gap-1.5 label text-[13px] font-semibold text-emerald-300">
             <ShieldCheck className="size-3.5" /> Digital Quality Certificate
           </div>
           <div className="mt-1 text-lg font-bold text-slate-50">{result.assigned_grade}</div>

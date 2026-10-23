@@ -265,7 +265,7 @@ export function DepthMatrixSection() {
     <div className="space-y-3">
       <div className="panel overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-xs">
-          <thead className="text-[10px] uppercase tracking-wider text-slate-500">
+          <thead className="label text-[12px] text-slate-500">
             <tr><th className="px-3 py-2">Category</th><th>Implementation</th><th>Live evidence</th><th className="pr-3">Status</th></tr>
           </thead>
           <tbody className="divide-y divide-ink-700">

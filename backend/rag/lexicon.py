@@ -93,9 +93,11 @@ DISTRICT_TERMS: dict[str, str] = {
 _TOKEN_RE = re.compile(r"[ঀ-৿]+|[a-z0-9]+(?:\.[0-9]+)?", re.IGNORECASE)
 
 
-def _contains(text: str, term: str) -> bool:
+def _contains(text: str, term: str, plural: bool = False) -> bool:
     if term.isascii():
-        return re.search(rf"\b{re.escape(term)}\b", text) is not None
+        # English crop names also arrive as plurals ("potatoes", "chillies", "brinjals").
+        suffix = "(?:e?s)?" if plural else ""
+        return re.search(rf"\b{re.escape(term)}{suffix}\b", text) is not None
     return term in text
 
 
@@ -128,7 +130,7 @@ def concepts_in(text: str) -> list[str]:
 def detect_crop(text: str) -> Crop | None:
     lowered = text.lower()
     for term, crop in sorted(CROP_TERMS.items(), key=lambda kv: -len(kv[0])):
-        if _contains(lowered, term.lower()):
+        if _contains(lowered, term.lower(), plural=True):
             return crop
     return None
 

@@ -21,14 +21,14 @@ function LotDot({ lot, radiusKm }: { lot: PoolLot; radiusKm: number }) {
   const x = C + r * Math.cos(a);
   const y = C + r * Math.sin(a);
   const size = 3 + Math.sqrt(lot.weight_kg) / 6;
-  const fill = lot.grade === "A" ? "#34d399" : lot.grade === "B" ? "#fbbf24" : "#f87171";
+  const fill = lot.grade === "A" ? "#3fa97c" : lot.grade === "B" ? "#e58f2b" : "#f2545b";
   return (
     <g>
       <line x1={C} y1={C} x2={x} y2={y} stroke={fill} strokeOpacity={0.18} strokeDasharray="2 3" />
       {lot.source === "farmer" && (
-        <circle cx={x} cy={y} r={size + 6} fill="none" stroke="#34d399" strokeWidth={1.5} className="animate-pulse-soft" />
+        <circle cx={x} cy={y} r={size + 6} fill="none" stroke="#3fa97c" strokeWidth={1.5} className="animate-pulse-soft" />
       )}
-      <circle cx={x} cy={y} r={size} fill={fill} fillOpacity={0.9} stroke="#06120c" strokeWidth={1}>
+      <circle cx={x} cy={y} r={size} fill={fill} fillOpacity={0.9} stroke="#0a1913" strokeWidth={1}>
         <title>{`${lot.farmer_id}: ${lot.weight_kg} kg Grade-${lot.grade}, ${lot.distance_km} km`}</title>
       </circle>
     </g>
@@ -65,27 +65,27 @@ export function TruckPoolMap({ className }: { className?: string }) {
             <svg viewBox="0 0 300 300" className="w-full" role="img" aria-label={`Radar of ${pool.smallholders} micro-lots within ${pool.union_radius_km} km`}>
               <defs>
                 <radialGradient id="radarBg" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#0f2a22" />
-                  <stop offset="100%" stopColor="#081310" />
+                  <stop offset="0%" stopColor="#122a21" />
+                  <stop offset="100%" stopColor="#0b1b15" />
                 </radialGradient>
                 <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#34d399" stopOpacity="0" />
-                  <stop offset="100%" stopColor="#34d399" stopOpacity="0.35" />
+                  <stop offset="0%" stopColor="#3fa97c" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#3fa97c" stopOpacity="0.35" />
                 </linearGradient>
               </defs>
-              <circle cx={C} cy={C} r={R} fill="url(#radarBg)" stroke="#1d3036" />
+              <circle cx={C} cy={C} r={R} fill="url(#radarBg)" stroke="#21443a" />
               {[1, 2, 3, 4].map((ring) => (
-                <circle key={ring} cx={C} cy={C} r={(R * ring) / 5} fill="none" stroke="#1d3036" strokeDasharray="3 4" />
+                <circle key={ring} cx={C} cy={C} r={(R * ring) / 5} fill="none" stroke="#21443a" strokeDasharray="3 4" />
               ))}
-              <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="#1d3036" />
-              <line x1={C} y1={C - R} x2={C} y2={C + R} stroke="#1d3036" />
+              <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="#21443a" />
+              <line x1={C} y1={C - R} x2={C} y2={C + R} stroke="#21443a" />
               <g className="origin-center animate-sweep" style={{ transformOrigin: "150px 150px" }}>
                 <path d={`M ${C} ${C} L ${C + R} ${C} A ${R} ${R} 0 0 0 ${C + R * Math.cos(-0.6)} ${C + R * Math.sin(-0.6)} Z`} fill="url(#sweep)" />
               </g>
               {pool.lots.map((lot) => <LotDot key={lot.farmer_id} lot={lot} radiusKm={pool.union_radius_km} />)}
-              <circle cx={C} cy={C} r={9} fill={pool.status === "DISPATCHED" ? "#f59e0b" : "#10b981"} />
-              <text x={C} y={C + 3.5} textAnchor="middle" fontSize="9" fontWeight="700" fill="#06120c">5T</text>
-              <text x={C + R - 4} y={C - 4} textAnchor="end" fontSize="9" fill="#64748b">{pool.union_radius_km} km</text>
+              <circle cx={C} cy={C} r={9} fill={pool.status === "DISPATCHED" ? "#cf7616" : "#158a60"} />
+              <text x={C} y={C + 3.5} textAnchor="middle" fontSize="9" fontWeight="700" fill="#0a1913">5T</text>
+              <text x={C + R - 4} y={C - 4} textAnchor="end" fontSize="9" fill="#7d9285">{pool.union_radius_km} km</text>
             </svg>
             <div className="absolute left-1 top-1 flex items-center gap-1 text-[10px] text-slate-400">
               <MapPin className="size-3" /> {pool.union}

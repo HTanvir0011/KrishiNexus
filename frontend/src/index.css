@@ -1,16 +1,99 @@
 @import "tailwindcss";
 
+/*
+ * KrishiNexus design tokens (frontend/design/DESIGN_PLAN.md).
+ * Tailwind's palette names are remapped so existing classes take the new identity:
+ *   ink     → night-paddy surfaces        slate   → husk-to-silt neutrals
+ *   emerald → leaf: healthy, in band      amber   → turmeric: warnings
+ *   sky     → monsoon: water, radar, info red     → sun red: alerts only
+ *   violet  → jamun: agents and models    mustard → the one action accent
+ */
 @theme {
-  --font-sans: "Inter", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
-  --font-bangla: "Noto Sans Bengali", "Inter", ui-sans-serif, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Anek Bangla Variable", "Anek Bangla", system-ui, sans-serif;
+  --font-voice: "Tiro Bangla", "Noto Serif Bengali", Georgia, serif;
+  --font-bangla: "Anek Bangla Variable", "Anek Bangla", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, "Liberation Mono", monospace;
 
-  --color-ink-950: #060b0d;
-  --color-ink-900: #0b1417;
-  --color-ink-850: #0f1b1f;
-  --color-ink-800: #142227;
-  --color-ink-700: #1d3036;
-  --color-ink-600: #2a434b;
+  --color-ink-950: #0a1913;
+  --color-ink-900: #0e211a;
+  --color-ink-850: #122a21;
+  --color-ink-800: #17352a;
+  --color-ink-700: #21443a;
+  --color-ink-600: #2f5648;
+
+  --color-slate-50: #efebdd;
+  --color-slate-100: #e7e4d5;
+  --color-slate-200: #d8dac9;
+  --color-slate-300: #bfc8b9;
+  --color-slate-400: #9db0a3;
+  --color-slate-500: #7d9285;
+  --color-slate-600: #5f7468;
+  --color-slate-700: #44584d;
+  --color-slate-800: #2c3d34;
+  --color-slate-900: #1a2821;
+  --color-slate-950: #0f1813;
+
+  --color-emerald-50: #e3f4ec;
+  --color-emerald-100: #c3e8d6;
+  --color-emerald-200: #98d6b9;
+  --color-emerald-300: #6cc39b;
+  --color-emerald-400: #3fa97c;
+  --color-emerald-500: #158a60;
+  --color-emerald-600: #006a4e;
+  --color-emerald-700: #00553f;
+  --color-emerald-800: #064433;
+  --color-emerald-900: #08362a;
+  --color-emerald-950: #05241c;
+
+  --color-amber-50: #fdf1e1;
+  --color-amber-100: #fbdfb9;
+  --color-amber-200: #f6c487;
+  --color-amber-300: #efa95a;
+  --color-amber-400: #e58f2b;
+  --color-amber-500: #cf7616;
+  --color-amber-600: #a95c10;
+  --color-amber-700: #84470f;
+  --color-amber-800: #633610;
+  --color-amber-900: #4a290e;
+  --color-amber-950: #2c1807;
+
+  --color-mustard-200: #f8dd8b;
+  --color-mustard-300: #f3c94e;
+  --color-mustard-400: #edb723;
+  --color-mustard-500: #d9a010;
+  --color-mustard-600: #b5840b;
+
+  --color-sky-50: #e8f2f4;
+  --color-sky-100: #cfe3e8;
+  --color-sky-200: #a8ccd5;
+  --color-sky-300: #8bbcc7;
+  --color-sky-400: #6fa8b5;
+  --color-sky-500: #4f8b99;
+  --color-sky-600: #3d6f7b;
+  --color-sky-700: #31585f;
+  --color-sky-800: #26444a;
+  --color-sky-900: #1b3237;
+  --color-sky-950: #0f1f22;
+
+  --color-red-50: #fdeaeb;
+  --color-red-100: #fbd3d5;
+  --color-red-200: #fbc1c4;
+  --color-red-300: #f78e93;
+  --color-red-400: #f2545b;
+  --color-red-500: #f42a41;
+  --color-red-600: #c81d32;
+  --color-red-700: #9e1828;
+  --color-red-800: #74131e;
+  --color-red-900: #4f0f16;
+  --color-red-950: #2e080c;
+
+  --color-violet-200: #ddd6f0;
+  --color-violet-300: #bfb3e3;
+  --color-violet-400: #9d8fd0;
+  --color-violet-500: #7d6cb8;
+  --color-violet-600: #64549c;
+  --color-violet-700: #4c3f7a;
+  --color-violet-900: #2a2245;
 
   --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
   --animate-sweep: sweep 4s linear infinite;
@@ -30,26 +113,75 @@
   }
 }
 
+html {
+  background: var(--color-ink-900);
+  color-scheme: dark;
+}
+
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--color-ink-950);
-  color: var(--color-slate-200);
+  background: var(--color-ink-900);
+  color: var(--color-slate-100);
   font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  font-stretch: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
+:focus-visible {
+  outline: 2px solid var(--color-mustard-400);
+  outline-offset: 3px;
+}
+
+[lang="bn"] {
+  line-height: 1.7;
+}
+
+/* Bangla set in the system face (interface text that happens to be Bangla). */
 .bn {
   font-family: var(--font-bangla);
 }
 
+/* Anything a person says, or the system says aloud. */
+.voice {
+  font-family: var(--font-voice);
+  font-weight: 400;
+}
+
+/* Width carries the role: condensed numbers, normal interface, expanded headlines. */
+.num {
+  font-stretch: 75%;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wide {
+  font-stretch: 118%;
+  font-weight: 650;
+}
+.label {
+  font-stretch: 88%;
+  font-weight: 500;
+}
+
+/* OS glass: only in the operating system, over the frozen dawn landscape. */
 .panel {
-  background: color-mix(in oklab, var(--color-ink-900) 92%, transparent);
-  border: 1px solid var(--color-ink-700);
-  border-radius: 0.875rem;
+  background: color-mix(in oklab, var(--color-ink-800) 62%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  backdrop-filter: blur(16px) saturate(1.1);
+  border: 1px solid rgb(239 235 221 / 0.07);
+  border-top-color: rgb(239 235 221 / 0.14);
+  border-radius: 20px;
+}
+
+.card {
+  background: color-mix(in oklab, var(--color-ink-900) 55%, transparent);
+  border: 1px solid rgb(239 235 221 / 0.07);
+  border-radius: 14px;
 }
 
 .scroll-thin {
@@ -62,5 +194,6 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -36,7 +36,7 @@ function Slider({ label, value, min, max, step, onChange, format, hint }: {
     <label className="block">
       <div className="flex items-baseline justify-between text-xs">
         <span className="text-slate-200">{label}</span>
-        <span className="font-mono font-semibold text-emerald-300">{format(value)}</span>
+        <span className="num text-emerald-300">{format(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
         className="mt-1 w-full accent-emerald-400" />

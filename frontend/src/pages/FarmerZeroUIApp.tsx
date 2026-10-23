@@ -1,11 +1,12 @@
 import { Ban, Camera, Check, Landmark, Mic, Snowflake, Truck, Volume2, WifiOff } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
-import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type VoiceInteractBody, type VoiceInteractResponse } from "../api/client";
+import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type VoiceInteractBody } from "../api/client";
 import { CertificateCard, OpticalGraderCanvas, SCAN_DURATION_MS } from "../components/OpticalGraderCanvas";
 import { Badge, Button, Spinner } from "../components/ui";
 import { bnDigits, cn, kg, tk } from "../lib/format";
 import { listenOnce, speak, speechRecognitionSupported } from "../lib/speech";
+import { englishSummary } from "../lib/summary";
 import { getState, pushAlert, refreshPools, refreshQuota, refreshTelemetry, setState, useAppState } from "../state/store";
 
 interface VoicePresetOption {
@@ -42,20 +43,6 @@ const SCAN_QUALITIES: { id: SamplePreset; label: string }[] = [
   { id: "mixed_wholesale_lot", label: "Mixed lot" },
   { id: "blight_affected_lot", label: "Blight lot" },
 ];
-
-function englishSummary(r: VoiceInteractResponse): string {
-  const s = r.orchestration?.state;
-  if (!s) return r.follow_up_question_bn ?? "";
-  const syn = s.syndicate_bypass_plan;
-  const cold = s.cold_storage_arbitrage_plan;
-  const credit = s.climate_credit_report;
-  return [
-    s.optical_grade_cert && `Your ${s.quantity_kg} kilograms of ${s.crop} are certified ${s.optical_grade_cert.grade}.`,
-    cold?.distress_sale_blocked && `The middleman offer of ${s.farmer_offer_tk_per_kg} taka per kilo is below the 15 taka production cost, so that sale is blocked.`,
-    syn && `A pooled five-ton truck to ${syn.best_hub_name} pays ${syn.b2b_net_tk_per_kg.toFixed(2)} taka per kilo.`,
-    credit?.loan_eligible && `Your agri-credit score is ${credit.credit_score}; up to ${credit.loan_amount_tk} taka working capital is pre-approved.`,
-  ].filter(Boolean).join(" ");
-}
 
 export function FarmerZeroUIApp({ className }: { className?: string }) {
   const offline = useAppState((s) => s.offlineMode);
@@ -172,7 +159,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
 
         <div className="scroll-thin flex-1 space-y-3 overflow-y-auto p-3">
           <section>
-            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">1 · আপনার কথা বলুন / Speak</div>
+            <div className="mb-1.5 label text-[13px] font-semibold text-slate-400">1 · আপনার কথা বলুন / Speak</div>
             <div className="grid grid-cols-2 gap-1.5">
               {PRESETS.map((p) => (
                 <button key={p.id} type="button" onClick={() => runVoice(p)} disabled={busy !== null}
@@ -210,7 +197,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
 
           <section>
             <div className="mb-1.5 flex items-center justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">2 · ফসল স্ক্যান / Scan</div>
+              <div className="label text-[13px] font-semibold text-slate-400">2 · ফসল স্ক্যান / Scan</div>
               <div className="flex gap-1">
                 <select value={scanCrop} onChange={(e) => setScanCrop(e.target.value as GradeableCrop)} aria-label="Crop to scan"
                   className="rounded-md bg-ink-800 px-1 py-0.5 text-[11px] ring-1 ring-ink-600">
@@ -235,7 +222,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
 
           {state && (
             <section className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">3 · সিদ্ধান্ত / Decision</div>
+              <div className="label text-[13px] font-semibold text-slate-400">3 · সিদ্ধান্ত / Decision</div>
               {offer !== null && (
                 <OptionCard tone="red" icon={<Ban className="size-5" />} title="A · ফড়িয়ার স্পট দাম" subtitle="Village Faria spot sale"
                   price={tk(offer)} blocked={cold?.distress_sale_blocked ?? false}
@@ -299,14 +286,14 @@ function OptionCard({ tone, icon, title, subtitle, price, detail, blocked = fals
   const text = { red: "text-red-300", emerald: "text-emerald-300", sky: "text-sky-300" }[tone];
   return (
     <div className={cn("relative rounded-xl p-2.5 ring-1", ring, recommended && "ring-2")}>
-      {recommended && <span className="absolute -top-2 right-2 rounded-full bg-emerald-400 px-2 py-0.5 text-[9px] font-bold text-ink-950">RECOMMENDED</span>}
+      {recommended && <span className="absolute -top-2 right-2 rounded-full bg-emerald-400 px-2 py-0.5 text-[11px] font-semibold text-ink-950">Recommended</span>}
       <div className="flex items-center gap-2">
         <span className={text}>{icon}</span>
         <div className="min-w-0 flex-1">
           <div className="bn text-sm font-semibold text-slate-100">{title}</div>
           <div className="truncate text-[10px] text-slate-400">{subtitle}</div>
         </div>
-        <div className={cn("font-mono text-lg font-bold", text, blocked && "line-through decoration-2")}>{price}</div>
+        <div className={cn("num text-[22px]", text, blocked && "line-through decoration-2")}>{price}</div>
       </div>
       <div className={cn("mt-1 text-[11px]", blocked ? "font-semibold text-red-300" : "text-slate-300")}>{detail}</div>
     </div>
