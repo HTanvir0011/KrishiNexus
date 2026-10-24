@@ -1,6 +1,7 @@
 import { Calculator } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { cn } from "../../lib/format";
 import { Stat } from "../ui";
 
 const ASSUMPTIONS = {
@@ -33,14 +34,14 @@ function Slider({ label, value, min, max, step, onChange, format, hint }: {
   label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; format: (v: number) => string; hint: string;
 }) {
   return (
-    <label className="block">
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="text-slate-200">{label}</span>
-        <span className="num text-emerald-300">{format(value)}</span>
+    <label className="block min-w-0">
+      <div className="flex items-baseline justify-between gap-3 text-[13px]">
+        <span className="font-medium text-slate-700">{label}</span>
+        <span className="num shrink-0 text-emerald-700">{format(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 w-full accent-emerald-400" />
-      <div className="text-[10px] text-slate-500">{hint}</div>
+        className="mt-2 w-full accent-emerald-700" />
+      <div className="mt-0.5 text-[12px] text-slate-500">{hint}</div>
     </label>
   );
 }
@@ -70,23 +71,38 @@ export function EconomicsSection() {
     };
   }, [trucks, takeRate, storages, profiles]);
 
+  // The take-rate floor (2.5%) and minimum 10 trucks keep marketplace revenue, and so ARR, above zero.
+  const parts = [
+    { label: "Marketplace", value: model.marketplace, fill: "bg-emerald-600" },
+    { label: "Storage SaaS + brokerage", value: model.storageRevenue, fill: "bg-sky-600" },
+    { label: "Credit API", value: model.creditRevenue, fill: "bg-violet-600" },
+  ];
+  // Farmers wear the design system's farmer accent; platform revenue stays neutral.
+  const bars = [
+    { label: "Farmer income uplift", value: model.uplift, fill: "bg-amber-600" },
+    { label: "Platform ARR", value: model.arr, fill: "bg-slate-500" },
+  ];
+  const scale = Math.max(model.uplift, model.arr);
+
   return (
-    <div className="grid gap-3 lg:grid-cols-[360px_1fr]">
-      <div className="panel space-y-4 p-3">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-100"><Calculator className="size-4 text-emerald-400" /> Levers</div>
-        <Slider label="Active 5-ton pooled trucks / month" value={trucks} min={10} max={10_000} step={10} onChange={setTrucks}
-          format={(v) => v.toLocaleString()} hint="Each truck carries 12.5 smallholder micro-lots of 400 kg" />
-        <Slider label="B2B marketplace take-rate" value={takeRate} min={2.5} max={4} step={0.1} onChange={setTakeRate}
-          format={(v) => `${v.toFixed(1)}%`} hint="Charged on the escrow-locked truck contract value" />
-        <Slider label="Subscribed BCSA cold storages" value={storages} min={0} max={400} step={5} onChange={setStorages}
-          format={(v) => v.toLocaleString()} hint="$150/mo SaaS + Tk 0.25/kg smallholder quota brokerage" />
-        <Slider label="Underwritten smallholder profiles" value={profiles} min={0} max={1_000_000} step={5_000} onChange={setProfiles}
-          format={(v) => v.toLocaleString()} hint="$1.50 per profile per season to partner banks / iFarmer" />
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="surface min-w-0 p-4 sm:p-5 xl:self-start">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-slate-900"><Calculator className="size-4 text-emerald-700" /> Levers</h3>
+        <div className="mt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
+          <Slider label="Active 5-ton pooled trucks / month" value={trucks} min={10} max={10_000} step={10} onChange={setTrucks}
+            format={(v) => v.toLocaleString()} hint="Each truck carries 12.5 smallholder micro-lots of 400 kg" />
+          <Slider label="B2B marketplace take-rate" value={takeRate} min={2.5} max={4} step={0.1} onChange={setTakeRate}
+            format={(v) => `${v.toFixed(1)}%`} hint="Charged on the escrow-locked truck contract value" />
+          <Slider label="Subscribed BCSA cold storages" value={storages} min={0} max={400} step={5} onChange={setStorages}
+            format={(v) => v.toLocaleString()} hint="$150/mo SaaS + Tk 0.25/kg smallholder quota brokerage" />
+          <Slider label="Underwritten smallholder profiles" value={profiles} min={0} max={1_000_000} step={5_000} onChange={setProfiles}
+            format={(v) => v.toLocaleString()} hint="$1.50 per profile per season to partner banks / iFarmer" />
+        </div>
       </div>
-      <div className="space-y-3">
-        <div className="panel grid grid-cols-2 gap-4 p-4 md:grid-cols-3">
-          <Stat label="Annual recurring revenue" value={usd(model.arr)} tone="emerald"
-            hint={`marketplace ${usd(model.marketplace)} · storage ${usd(model.storageRevenue)} · credit API ${usd(model.creditRevenue)}`} />
+
+      <div className="min-w-0 space-y-4">
+        <div className="surface grid grid-cols-2 gap-x-4 gap-y-5 p-4 sm:p-5 md:grid-cols-3">
+          <Stat label="Annual recurring revenue" value={usd(model.arr)} tone="emerald" hint="three revenue lines" />
           <Stat label="Smallholders served / yr" value={model.farmers.toLocaleString()} tone="sky" hint="unique farmers, 2 lots each" />
           <Stat label="Net farmer income uplift" value={usd(model.uplift)} tone="emerald" hint="at the +32% / $947 per season benchmark" />
           <Stat label="Spoilage prevented" value={`${Math.round(model.spoilageTons).toLocaleString()} t/yr`} tone="amber"
@@ -96,8 +112,54 @@ export function EconomicsSection() {
           <Stat label="Food CPI spread (weighted)" value={`${model.spread.toFixed(1)}%`} tone="red"
             hint={`116% baseline → 34% on platform volume`} />
         </div>
-        <div className="panel p-3 text-[11px] leading-relaxed text-slate-400">
-          <div className="mb-1 font-semibold text-slate-300">Model assumptions (illustrative, not forecasts)</div>
+
+        <div className="surface space-y-5 p-4 sm:p-5">
+          <figure>
+            <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-[14px] font-semibold text-slate-900">ARR composition</span>
+              <span className="text-[13px] text-slate-500">Total <span className="num text-slate-900">{usd(model.arr)}</span></span>
+            </figcaption>
+            <div className="mt-3 flex h-3 gap-0.5 overflow-hidden rounded-r-[4px]" role="img"
+              aria-label={`ARR composition: ${parts.map((p) => `${p.label} ${usd(p.value)}`).join(", ")}`}>
+              {parts.filter((p) => p.value > 0).map((p) => (
+                <div key={p.label} className={cn("h-full", p.fill)} style={{ width: `${(p.value / model.arr) * 100}%` }} title={`${p.label}: ${usd(p.value)}`} />
+              ))}
+            </div>
+            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px]">
+              {parts.map((p) => (
+                <li key={p.label} className="flex items-center gap-2">
+                  <span className={cn("size-2.5 shrink-0 rounded-[3px]", p.fill)} aria-hidden />
+                  <span className="text-slate-600">{p.label}</span>
+                  <span className="num text-slate-900">{usd(p.value)}</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+
+          <figure className="border-t border-slate-100 pt-5">
+            <figcaption className="text-[14px] font-semibold text-slate-900">Smallholder surplus against platform revenue</figcaption>
+            <div className="mt-3 space-y-3">
+              {bars.map((b) => (
+                <div key={b.label}>
+                  <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                    <span className="text-slate-600">{b.label}</span>
+                    <span className="num text-slate-900">{usd(b.value)}</span>
+                  </div>
+                  <div className="mt-1.5 h-3">
+                    <div className={cn("h-full min-w-[3px] rounded-r-[4px]", b.fill)} style={{ width: `${(b.value / scale) * 100}%` }} title={`${b.label}: ${usd(b.value)}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[13px] text-slate-600">
+              Farmers keep <span className="num text-slate-900">{((model.uplift / (model.uplift + model.arr)) * 100).toFixed(1)}%</span> of the
+              combined value: farmer uplift plus platform ARR.
+            </p>
+          </figure>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-600 ring-1 ring-slate-200 ring-inset">
+          <div className="mb-1 text-[13px] font-semibold text-slate-900">Model assumptions (illustrative, not forecasts)</div>
           Truck load {ASSUMPTIONS.truckKg.toLocaleString()} kg at Tk {ASSUMPTIONS.avgPriceTkPerKg}/kg, Tk {ASSUMPTIONS.fxTkPerUsd}/USD;
           {` ${ASSUMPTIONS.brokeredTonsPerStorage} t brokered per storage per season; credit fee over ${ASSUMPTIONS.creditSeasonsPerYear} seasons;`}
           {` farmer uplift uses the BAU +32% / $${ASSUMPTIONS.upliftUsdPerFarmerSeason} seasonal benchmark for one season;`}

@@ -35,11 +35,15 @@ const MATRIX: { category: string; implementation: string; evidence: string; stat
 ];
 
 type Tab = "prompts" | "compress" | "rag" | "guardrails" | "local" | "workflows" | "aidlc";
+// The three core layers lead the row and the compression tester opens first.
 const TABS: { id: Tab; label: string }[] = [
-  { id: "prompts", label: "XML prompts & DSPy" }, { id: "compress", label: "LLMLingua-2" }, { id: "rag", label: "GraphRAG + CRAG" },
-  { id: "guardrails", label: "PII & ΔΠ breaker" }, { id: "local", label: "Ollama & LoRA" }, { id: "workflows", label: "n8n + Temporal" },
+  { id: "compress", label: "LLMLingua-2" }, { id: "rag", label: "GraphRAG + CRAG" }, { id: "guardrails", label: "PII & ΔΠ breaker" },
+  { id: "prompts", label: "XML prompts & DSPy" }, { id: "local", label: "Ollama & LoRA" }, { id: "workflows", label: "n8n + Temporal" },
   { id: "aidlc", label: "AI-DLC" },
 ];
+
+/** Light code block shared by every JSON, diff and compressed-text view. */
+const CODE = "scroll-thin overflow-auto rounded-lg bg-slate-50 p-3 font-mono text-[12px] leading-relaxed text-slate-800 ring-1 ring-slate-200 ring-inset";
 
 const WEATHER_JSON = JSON.stringify({
   latitude: 25.07, longitude: 91.39,
@@ -82,25 +86,26 @@ function PromptsTester() {
   const [agent, setAgent] = useState("coldchain_arbitrage");
   const view = r.data?.agents.find((a) => a.agent === agent);
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <RunButton busy={r.busy} onClick={() => r.run(api.promptsRegistry)} label="Load prompt registry" />
-      {r.error && <div className="text-xs text-red-300">{r.error}</div>}
+      {r.error && <div className="text-[13px] text-rose-600">{r.error}</div>}
       {r.data && (
         <>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {r.data.agents.map((a) => (
-              <button key={a.agent} type="button" onClick={() => setAgent(a.agent)}
-                className={cn("rounded-md px-2 py-1 text-[11px] ring-1", agent === a.agent ? "bg-emerald-500/20 ring-emerald-400/50" : "bg-ink-800 ring-ink-600")}>
-                {a.agent} <span className="font-mono text-emerald-300">{a.optimization.baseline_score.toFixed(2)}→{a.optimization.optimized_score.toFixed(2)}</span>
+              <button key={a.agent} type="button" onClick={() => setAgent(a.agent)} aria-pressed={agent === a.agent}
+                className={cn("rounded-md px-2.5 py-1 text-[12.5px] ring-1 ring-inset transition-colors max-sm:min-h-10",
+                  agent === a.agent ? "bg-emerald-50 text-emerald-800 ring-emerald-700/25" : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50")}>
+                {a.agent} <span className="font-mono tabular-nums text-emerald-700">{a.optimization.baseline_score.toFixed(2)}→{a.optimization.optimized_score.toFixed(2)}</span>
               </button>
             ))}
           </div>
           {view && (
-            <div className="text-[11px] text-slate-400">{view.optimization.method} · {view.optimization.trials_evaluated} candidates · active {view.active_version}</div>
+            <div className="text-[12.5px] text-slate-600">{view.optimization.method} · {view.optimization.trials_evaluated} candidates · active {view.active_version}</div>
           )}
-          <pre className="scroll-thin max-h-72 overflow-auto rounded-lg bg-black/40 p-2 font-mono text-[10.5px] leading-relaxed">
+          <pre className={cn(CODE, "max-h-72")}>
             {view?.optimization.diff.map((line, i) => (
-              <div key={i} className={line.startsWith("+") ? "text-emerald-300" : line.startsWith("-") ? "text-red-300" : "text-slate-500"}>{line}</div>
+              <div key={i} className={line.startsWith("+") ? "text-emerald-700" : line.startsWith("-") ? "text-rose-600" : "text-slate-500"}>{line}</div>
             ))}
           </pre>
         </>
@@ -114,28 +119,28 @@ function CompressTester() {
   const r = useRunner<CompressReport>();
   const c = r.data?.compression;
   return (
-    <div className="grid gap-2 lg:grid-cols-2">
-      <div className="space-y-2">
-        <div className="flex gap-1.5">
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="min-w-0 space-y-2">
+        <div className="flex flex-wrap gap-1.5">
           <Button onClick={() => setText(WEATHER_JSON)}>168-hour weather JSON</Button>
           <Button onClick={() => setText(DAM_TEXT)}>DAM price text</Button>
           <RunButton busy={r.busy} onClick={() => r.run(() => api.compress(text))} label="Compress" />
         </div>
         <textarea value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} aria-label="Context to compress"
-          className="h-48 w-full rounded-lg bg-black/40 p-2 font-mono text-[10px] text-slate-300 ring-1 ring-ink-600" />
+          className={cn(CODE, "block h-52 w-full resize-y")} />
       </div>
-      <div className="space-y-2 text-xs">
-        {r.error && <div className="text-red-300">{r.error}</div>}
+      <div className="min-w-0 space-y-2 text-[13px]">
+        {r.error && <div className="text-rose-600">{r.error}</div>}
         {c && (
           <>
             <div className="flex flex-wrap gap-1.5">
-              <Badge tone="violet">{c.original_tokens} → {c.compressed_tokens} tokens</Badge>
-              <Badge tone="emerald">{c.reduction_factor}x reduction</Badge>
+              <Badge tone="violet"><span className="tabular-nums">{c.original_tokens} → {c.compressed_tokens}</span> tokens</Badge>
+              <Badge tone="emerald"><span className="tabular-nums">{c.reduction_factor}x</span> reduction</Badge>
               <Badge tone={c.all_numbers_preserved ? "emerald" : "red"}>numbers preserved: {String(c.all_numbers_preserved)}</Badge>
-              <Badge tone="sky">dedup {r.data?.deduplication.input_chunks}→{r.data?.deduplication.kept_chunks}</Badge>
+              <Badge tone="sky">dedup <span className="tabular-nums">{r.data?.deduplication.input_chunks}→{r.data?.deduplication.kept_chunks}</span></Badge>
             </div>
-            <div className="text-[11px] text-slate-400">Cache eligible: {Object.entries(r.data?.cache.cache_eligible ?? {}).map(([k, v]) => `${k} ${v ? "yes" : "no"}`).join(" · ")}</div>
-            <pre className="scroll-thin max-h-40 overflow-auto rounded-lg bg-black/40 p-2 font-mono text-[10px] text-emerald-100 whitespace-pre-wrap">{c.compressed_text}</pre>
+            <div className="text-[12.5px] text-slate-600">Cache eligible: {Object.entries(r.data?.cache.cache_eligible ?? {}).map(([k, v]) => `${k} ${v ? "yes" : "no"}`).join(" · ")}</div>
+            <pre className={cn(CODE, "max-h-48 whitespace-pre-wrap wrap-anywhere")}>{c.compressed_text}</pre>
           </>
         )}
       </div>
@@ -147,33 +152,39 @@ function RagTester() {
   const [query, setQuery] = useState("মুন্সিগঞ্জে কার্ডিনাল আলু কোল্ড স্টোরেজে কত তাপমাত্রায় রাখলে পচবে না এবং সিন্ডিকেট ছাড়া কোথায় বেচব?");
   const r = useRunner<RagQueryReport>();
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Farmer question"
-          className="bn min-w-0 flex-1 rounded-lg bg-ink-800 px-2 py-1.5 text-xs ring-1 ring-ink-600" />
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Farmer question" lang="bn"
+          className="voice min-w-0 flex-1 rounded-lg bg-white px-3 py-1.5 text-[15px] text-slate-900 ring-1 ring-slate-300 ring-inset" />
         <RunButton busy={r.busy} onClick={() => r.run(() => api.ragQuery(query, "Munshiganj", "Cardinal Potato"))} label="Query" />
       </div>
-      {r.error && <div className="text-xs text-red-300">{r.error}</div>}
+      {r.error && <div className="text-[13px] text-rose-600">{r.error}</div>}
       {r.data && (
-        <div className="grid gap-2 text-xs lg:grid-cols-2">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap gap-1">
+        <div className="grid gap-4 text-[13px] lg:grid-cols-2">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap gap-1.5">
               <Badge tone="violet">{r.data.rewrite.detected_dialect}</Badge>
               {r.data.rewrite.intents.map((i) => <Badge key={i} tone="sky">{i}</Badge>)}
-              <Badge tone={r.data.crag.verdict === "CORRECT" ? "emerald" : "amber"}>CRAG {r.data.crag.verdict} {r.data.crag.confidence.toFixed(2)}</Badge>
+              <Badge tone={r.data.crag.verdict === "CORRECT" ? "emerald" : "amber"}>CRAG {r.data.crag.verdict} <span className="tabular-nums">{r.data.crag.confidence.toFixed(2)}</span></Badge>
             </div>
-            <div className="text-[11px] text-slate-400">HyDE formal query: {r.data.rewrite.formal_query}</div>
-            <table className="w-full font-mono text-[10.5px]">
-              <thead className="text-slate-500"><tr><th className="text-left">chunk</th><th>BM25</th><th>vector</th><th>rerank</th></tr></thead>
-              <tbody>{r.data.retrieval.slice(0, 5).map((c) => (
-                <tr key={c.chunk_id}><td className="text-slate-300">{c.chunk_id}</td><td className="text-center">{c.bm25_rank ?? "-"}</td>
-                  <td className="text-center">{c.vector_rank ?? "-"}</td><td className="text-center text-emerald-300">{c.rerank_score.toFixed(3)}</td></tr>
-              ))}</tbody>
-            </table>
+            <div className="text-[12.5px] text-slate-600">HyDE formal query: {r.data.rewrite.formal_query}</div>
+            <div className="scroll-thin overflow-x-auto rounded-lg ring-1 ring-slate-200 ring-inset">
+              <table className="w-full font-mono text-[12px] tabular-nums">
+                <thead className="bg-slate-50 text-slate-500 [&_th]:px-2.5 [&_th]:py-1.5 [&_th]:font-medium">
+                  <tr><th className="text-left">chunk</th><th>BM25</th><th>vector</th><th>rerank</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 [&_td]:px-2.5 [&_td]:py-1.5">{r.data.retrieval.slice(0, 5).map((c) => (
+                  <tr key={c.chunk_id}><td className="text-slate-800">{c.chunk_id}</td><td className="text-center text-slate-600">{c.bm25_rank ?? "-"}</td>
+                    <td className="text-center text-slate-600">{c.vector_rank ?? "-"}</td><td className="text-center text-emerald-700">{c.rerank_score.toFixed(3)}</td></tr>
+                ))}</tbody>
+              </table>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            {r.data.graph?.paths.slice(0, 2).map((p) => <div key={p.narrative} className="rounded bg-ink-800 p-1.5 text-[10.5px] text-slate-300">{p.narrative}</div>)}
-            <div className="rounded-lg bg-emerald-950/40 p-2 text-[11px] leading-relaxed text-emerald-50 ring-1 ring-emerald-500/30">{r.data.answer_summary}</div>
+          <div className="min-w-0 space-y-2">
+            {r.data.graph?.paths.slice(0, 2).map((p) => (
+              <div key={p.narrative} className="rounded-md bg-slate-50 p-2.5 text-[12.5px] text-slate-700 ring-1 ring-slate-200 ring-inset">{p.narrative}</div>
+            ))}
+            <div className="rounded-lg bg-emerald-50 p-3 leading-relaxed text-emerald-900 ring-1 ring-emerald-700/20 ring-inset">{r.data.answer_summary}</div>
           </div>
         </div>
       )}
@@ -185,16 +196,16 @@ function GuardrailsTester() {
   const r = useRunner<Record<string, unknown>>();
   const d = r.data as { overall_verdict?: string; tripped?: string[]; pii?: { anonymized_text: string }; arbitrage?: { delta_pi_bdt: number; verdict: string; rationale: string[]; micro_credit?: { credit_limit_bdt: number } } } | null;
   return (
-    <div className="space-y-2 text-xs">
-      <div className="bn rounded-lg bg-black/30 p-2 text-slate-300">{GUARD_BODY.raw_text}</div>
+    <div className="space-y-3 text-[13px]">
+      <div lang="bn" className="voice rounded-lg bg-slate-50 p-3 text-[15px] text-slate-800 ring-1 ring-slate-200 ring-inset">{GUARD_BODY.raw_text}</div>
       <RunButton busy={r.busy} onClick={() => r.run(() => api.guardrailsVerify(GUARD_BODY))} label="Verify (5,000 kg at Tk 10/kg)" />
-      {r.error && <div className="text-red-300">{r.error}</div>}
+      {r.error && <div className="text-rose-600">{r.error}</div>}
       {d && (
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap gap-1"><Badge tone={d.overall_verdict === "BLOCKED" ? "red" : "emerald"}>{d.overall_verdict}</Badge>{d.tripped?.map((t) => <Badge key={t} tone="amber">{t}</Badge>)}</div>
-          <div className="bn rounded-lg bg-black/30 p-2 text-emerald-100">{d.pii?.anonymized_text}</div>
-          {d.arbitrage && <div className="font-mono text-[11px] text-slate-300">ΔΠ = {tk(d.arbitrage.delta_pi_bdt, 0)} · {d.arbitrage.verdict} · credit {tk(d.arbitrage.micro_credit?.credit_limit_bdt ?? 0, 0)}</div>}
-          {d.arbitrage?.rationale.map((line) => <div key={line} className="text-[11px] text-slate-400">• {line}</div>)}
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5"><Badge tone={d.overall_verdict === "BLOCKED" ? "red" : "emerald"}>{d.overall_verdict}</Badge>{d.tripped?.map((t) => <Badge key={t} tone="amber">{t}</Badge>)}</div>
+          <div lang="bn" className="voice rounded-lg bg-emerald-50 p-3 text-[15px] text-emerald-900 ring-1 ring-emerald-700/20 ring-inset">{d.pii?.anonymized_text}</div>
+          {d.arbitrage && <div className="font-mono text-[12.5px] tabular-nums text-slate-800">ΔΠ = {tk(d.arbitrage.delta_pi_bdt, 0)} · {d.arbitrage.verdict} · credit {tk(d.arbitrage.micro_credit?.credit_limit_bdt ?? 0, 0)}</div>}
+          {d.arbitrage?.rationale.map((line) => <div key={line} className="text-[12.5px] text-slate-600">• {line}</div>)}
         </div>
       )}
     </div>
@@ -204,19 +215,21 @@ function GuardrailsTester() {
 function LocalTester() {
   const r = useRunner<LocalModelsReport>();
   return (
-    <div className="space-y-2 text-xs">
+    <div className="space-y-3 text-[13px]">
       <RunButton busy={r.busy} onClick={() => r.run(async () => (await api.localModels()).data)} label="Probe local runtimes" />
-      {r.error && <div className="text-red-300">{r.error}</div>}
+      {r.error && <div className="text-rose-600">{r.error}</div>}
       {r.data && (
         <>
-          <div className="flex flex-wrap gap-1">{r.data.runtimes.map((rt) => <Badge key={rt.runtime} tone={rt.reachable ? "emerald" : "slate"}>{rt.runtime} {rt.reachable ? "live" : "not running"}</Badge>)}</div>
-          <table className="w-full text-[11px]">
-            <tbody>{r.data.models.map((m) => (
-              <tr key={m.key} className="border-b border-ink-700"><td className="py-1 text-slate-200">{m.display_name}</td><td className="text-slate-400">{m.role}</td>
-                <td className="font-mono text-slate-300">{m.telemetry.vram_mb} MB · {m.telemetry.decode_tokens_per_s} tok/s (modelled)</td></tr>
-            ))}</tbody>
-          </table>
-          <div className="text-[11px] text-slate-300">LoRA {r.data.lora_adapter.name}: <Badge tone="amber">{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples</div>
+          <div className="flex flex-wrap gap-1.5">{r.data.runtimes.map((rt) => <Badge key={rt.runtime} tone={rt.reachable ? "emerald" : "slate"}>{rt.runtime} {rt.reachable ? "live" : "not running"}</Badge>)}</div>
+          <div className="scroll-thin overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[12.5px]">
+              <tbody className="divide-y divide-slate-100">{r.data.models.map((m) => (
+                <tr key={m.key}><td className="py-2 pr-3 font-medium text-slate-900">{m.display_name}</td><td className="pr-3 text-slate-600">{m.role}</td>
+                  <td className="font-mono tabular-nums text-slate-700">{m.telemetry.vram_mb} MB · {m.telemetry.decode_tokens_per_s} tok/s (modelled)</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <div className="text-[12.5px] text-slate-700">LoRA {r.data.lora_adapter.name}: <Badge tone="amber">{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples</div>
         </>
       )}
     </div>
@@ -226,17 +239,21 @@ function LocalTester() {
 function WorkflowsTester() {
   const r = useRunner<PoolView[]>();
   return (
-    <div className="space-y-2 text-xs">
+    <div className="space-y-3 text-[13px]">
       <RunButton busy={r.busy} onClick={() => r.run(async () => (await api.truckPools()).data)} label="Read durable pool state" />
-      {r.error && <div className="text-red-300">{r.error}</div>}
-      {r.data && r.data.map((p) => (
-        <div key={p.pool_id} className="flex flex-wrap items-center gap-2 border-b border-ink-700 py-1">
-          <span className="font-mono text-slate-200">{p.pool_id}</span><Badge tone={p.status === "DISPATCHED" ? "amber" : "emerald"}>{p.status}</Badge>
-          <span className="text-slate-400">{p.loaded_kg.toLocaleString()} / 5,000 kg · {p.smallholders} lots</span>
-          {p.dispatch && <span className="font-mono text-[10px] text-amber-200">escrow {p.dispatch.escrow_id}</span>}
+      {r.error && <div className="text-rose-600">{r.error}</div>}
+      {r.data && (
+        <div className="divide-y divide-slate-100">
+          {r.data.map((p) => (
+            <div key={p.pool_id} className="flex flex-wrap items-center gap-2 py-2">
+              <span className="font-mono text-slate-900">{p.pool_id}</span><Badge tone={p.status === "DISPATCHED" ? "amber" : "emerald"}>{p.status}</Badge>
+              <span className="tabular-nums text-slate-600">{p.loaded_kg.toLocaleString()} / 5,000 kg · {p.smallholders} lots</span>
+              {p.dispatch && <span className="font-mono text-[12px] text-amber-700">escrow {p.dispatch.escrow_id}</span>}
+            </div>
+          ))}
         </div>
-      ))}
-      <div className="text-[11px] text-slate-400">n8n jobs: Daily DAM Price Sync (0 6 * * * Asia/Dhaka) and Hourly SAR Flood Check (0 * * * *); import JSON from GET /automation/n8n/workflows.</div>
+      )}
+      <div className="text-[12.5px] text-slate-600">n8n jobs: Daily DAM Price Sync (0 6 * * * Asia/Dhaka) and Hourly SAR Flood Check (0 * * * *); import JSON from GET /automation/n8n/workflows.</div>
     </div>
   );
 }
@@ -250,54 +267,66 @@ const STEPS = [
   "Step 6 · /docs portal, measured metrics and 100-case regression suite",
 ];
 
-function AidlcPanel() {
+function AidlcSteps() {
   return (
-    <div className="space-y-2 text-xs text-slate-300">
-      <p>AGENTS.md (mirrored as CLAUDE.md) is the single specification the coding agent reads before every step: mission, non-negotiable rules (no placeholders, strict typing, Bangladeshi seed data) and the target file tree. Each step ends with a verification gate before the next begins.</p>
-      <ol className="space-y-1">{STEPS.map((s) => <li key={s} className="flex gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />{s}</li>)}</ol>
+    <div className="space-y-3 text-[13.5px] leading-relaxed text-slate-700">
+      <p className="max-w-[760px]">AGENTS.md (mirrored as CLAUDE.md) is the single specification the coding agent reads before every step: mission, non-negotiable rules (no placeholders, strict typing, Bangladeshi seed data) and the target file tree. Each step ends with a verification gate before the next begins.</p>
+      <ol className="space-y-1.5">{STEPS.map((s) => <li key={s} className="flex gap-2"><CheckCircle2 className="mt-[3px] size-4 shrink-0 text-emerald-600" />{s}</li>)}</ol>
     </div>
   );
 }
 
 export function DepthMatrixSection() {
-  const [tab, setTab] = useState<Tab>("prompts");
+  const [tab, setTab] = useState<Tab>("compress");
   return (
-    <div className="space-y-3">
-      <div className="panel overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-xs">
-          <thead className="label text-[12px] text-slate-500">
-            <tr><th className="px-3 py-2">Category</th><th>Implementation</th><th>Live evidence</th><th className="pr-3">Status</th></tr>
-          </thead>
-          <tbody className="divide-y divide-ink-700">
-            {MATRIX.map((row) => (
-              <tr key={row.category}>
-                <td className="px-3 py-1.5 font-medium text-slate-100">{row.category}</td>
-                <td className="py-1.5 text-slate-300">{row.implementation}{row.note && <div className="text-[10px] text-amber-300/80">{row.note}</div>}</td>
-                <td className="font-mono text-[10.5px] text-sky-300">{row.evidence}</td>
-                <td className="pr-3">{row.status === "Live"
-                  ? <Badge tone="emerald"><CheckCircle2 className="size-3" /> Live</Badge>
-                  : <Badge tone="amber"><CircleDashed className="size-3" /> Partial</Badge>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <p className="max-w-[760px] text-[15px] leading-relaxed text-slate-600">
+        The congress judges AI depth with its 110-point AI Depth Score rubric; each row below links one rubric area to an endpoint you can call live, and the testers underneath call them for you.
+      </p>
+      <div className="surface overflow-hidden">
+        <div className="scroll-thin overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-[13px]">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[12px] text-slate-500 [&_th]:px-4 [&_th]:py-2.5 [&_th]:font-medium">
+              <tr><th>Rubric area</th><th>Implementation</th><th>Live evidence</th><th>Status</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {MATRIX.map((row) => (
+                <tr key={row.category} className="align-top [&>td]:px-4 [&>td]:py-3">
+                  <td className="font-medium text-slate-900">{row.category}</td>
+                  <td className="text-slate-600">
+                    {row.implementation}
+                    {row.note && <div className={cn("mt-1 text-[12px]", row.status === "Partial" ? "text-amber-700" : "text-slate-500")}>{row.note}</div>}
+                  </td>
+                  <td className="font-mono text-[12px] whitespace-nowrap text-sky-700">{row.evidence}</td>
+                  <td>{row.status === "Live"
+                    ? <Badge tone="emerald"><CheckCircle2 className="size-3" /> Live</Badge>
+                    : <Badge tone="amber"><CircleDashed className="size-3" /> Partial</Badge>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="panel p-3">
-        <div className="mb-3 flex flex-wrap gap-1" role="tablist">
+      <div className="surface min-w-0">
+        {/* The inset shadow is the tab rail's hairline, so the active underline can sit on it inside the scroll box. */}
+        <div role="tablist" aria-label="Live AI layer testers" className="scroll-thin flex overflow-x-auto px-2 shadow-[inset_0_-1px_0_var(--color-slate-200)]">
           {TABS.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-              className={cn("rounded-lg px-2.5 py-1 text-xs font-medium", tab === t.id ? "bg-emerald-500 text-ink-950" : "bg-ink-800 text-slate-300 hover:bg-ink-700")}>
+              className={cn("shrink-0 border-b-2 px-3 py-3 text-[13.5px] font-medium whitespace-nowrap transition-colors",
+                tab === t.id ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-600 hover:text-slate-900")}>
               {t.label}
             </button>
           ))}
         </div>
-        {tab === "prompts" && <PromptsTester />}
-        {tab === "compress" && <CompressTester />}
-        {tab === "rag" && <RagTester />}
-        {tab === "guardrails" && <GuardrailsTester />}
-        {tab === "local" && <LocalTester />}
-        {tab === "workflows" && <WorkflowsTester />}
-        {tab === "aidlc" && <AidlcPanel />}
+        <div className="p-4 sm:p-5">
+          {tab === "prompts" && <PromptsTester />}
+          {tab === "compress" && <CompressTester />}
+          {tab === "rag" && <RagTester />}
+          {tab === "guardrails" && <GuardrailsTester />}
+          {tab === "local" && <LocalTester />}
+          {tab === "workflows" && <WorkflowsTester />}
+          {tab === "aidlc" && <AidlcSteps />}
+        </div>
       </div>
     </div>
   );

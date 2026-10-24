@@ -54,52 +54,69 @@ export function McpInspectorSection() {
 
   return (
     <div className="space-y-3">
-      {error && <div className="rounded-lg bg-red-500/10 p-2 text-xs text-red-300">Backend unreachable: {error}</div>}
-      <div className="grid gap-2 md:grid-cols-3">
-        {servers.map((s) => (
-          <div key={s.name} className="panel p-3">
-            <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-emerald-300"><Server className="size-3.5" />{s.name}</div>
-            <div className="mt-1 text-[11px] text-slate-400">{s.title} · v{s.version} · MCP {s.protocol_version}</div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {s.transports.map((t) => <Badge key={t} tone="sky">{t}</Badge>)}
-              <Badge tone="slate">{s.tool_count} tools</Badge>
+      {error && <div role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-[13px] text-rose-700 ring-1 ring-rose-600/20 ring-inset">Backend unreachable: {error}</div>}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="surface min-w-0 divide-y divide-slate-100 lg:self-start">
+          {servers.length === 0 && !error && <div className="flex items-center gap-2 p-4 text-[13px] text-slate-500"><Spinner /> Loading servers…</div>}
+          {servers.map((s) => (
+            <div key={s.name} className="p-4">
+              <div className="flex items-center gap-1.5 font-mono text-[13px] font-semibold text-slate-900"><Server className="size-3.5 text-emerald-700" />{s.name}</div>
+              <div className="mt-0.5 text-[12px] text-slate-500">{s.title} · v{s.version} · MCP {s.protocol_version}</div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {s.transports.map((t) => <Badge key={t} tone="sky">{t}</Badge>)}
+                <Badge tone="slate"><span className="tabular-nums">{s.tool_count}</span> tools</Badge>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1 lg:flex-col">
+                {s.tools.map((name) => (
+                  <button key={name} type="button" onClick={() => choose(name)} aria-pressed={tool === name}
+                    className={cn("rounded-md px-2.5 py-1.5 text-left font-mono text-[12.5px] ring-1 ring-inset transition-colors max-lg:min-h-10",
+                      tool === name
+                        ? "bg-emerald-50 font-semibold text-emerald-800 ring-emerald-700/25"
+                        : "text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 lg:ring-transparent")}>
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 truncate font-mono text-[11px] text-slate-500" title={s.stdio_command}>$ {s.stdio_command}</div>
             </div>
-            <div className="mt-2 truncate font-mono text-[10px] text-slate-500" title={s.stdio_command}>$ {s.stdio_command}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="panel flex flex-col gap-2 p-3">
-          <label htmlFor="mcp-tool" className="label text-[12px] text-slate-500">Tool</label>
-          <select id="mcp-tool" value={tool} onChange={(e) => choose(e.target.value)}
-            className="rounded-lg bg-ink-800 px-2 py-1.5 font-mono text-xs text-slate-100 ring-1 ring-ink-600">
-            {servers.map((s) => (
-              <optgroup key={s.name} label={s.name}>
-                {s.tools.map((name) => <option key={name} value={name}>{name}</option>)}
-              </optgroup>
-            ))}
-          </select>
-          <p className="text-xs leading-relaxed text-slate-400">{selected?.description}</p>
-          <label htmlFor="mcp-json" className="label text-[12px] text-slate-500">params.arguments</label>
-          <textarea id="mcp-json" value={args} onChange={(e) => setArgs(e.target.value)} spellCheck={false}
-            className="min-h-[150px] rounded-lg bg-black/40 p-2 font-mono text-[11px] text-slate-200 ring-1 ring-ink-600" />
-          <Button variant="primary" onClick={execute} disabled={running}>
-            {running ? <Spinner /> : <Play className="size-3.5" />} Execute Live MCP Tool Call
-          </Button>
-          <div className="font-mono text-[10px] text-slate-500">POST /mcp/call · method tools/call · JSON-RPC 2.0</div>
+          ))}
         </div>
-        <div className="panel flex min-h-[320px] flex-col gap-2 p-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="label text-[12px] text-slate-500">Response</span>
-            {result && <Badge tone={result.status === 200 ? "emerald" : "red"}>HTTP {result.status || "—"}</Badge>}
-            {result && <Badge tone="sky"><Timer className="size-3" /> {result.latencyMs.toFixed(0)} ms round trip</Badge>}
-            {outcome && <Badge tone={outcome === "success" ? "emerald" : "amber"}>{outcome}</Badge>}
+
+        <div className="surface min-w-0">
+          <div className="space-y-4 p-4 sm:p-5">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="min-w-0 font-mono text-[15px] font-semibold text-slate-900 wrap-anywhere">{tool}</h3>
+                {selected && <Badge tone="violet">{selected.server}</Badge>}
+              </div>
+              {selected && <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">{selected.description}</p>}
+            </div>
+            <div>
+              <label htmlFor="mcp-json" className="text-[12px] font-medium text-slate-500">params.arguments</label>
+              <textarea id="mcp-json" value={args} onChange={(e) => setArgs(e.target.value)} spellCheck={false}
+                className="scroll-thin mt-1.5 block min-h-[180px] w-full resize-y rounded-lg bg-slate-50 p-3 font-mono text-[12.5px] leading-relaxed text-slate-800 ring-1 ring-slate-200 ring-inset" />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Button variant="primary" onClick={execute} disabled={running}>
+                {running ? <Spinner /> : <Play className="size-3.5" />} Execute tool
+              </Button>
+              <span className="font-mono text-[12px] text-slate-500">POST /mcp/call · method tools/call · JSON-RPC 2.0</span>
+            </div>
           </div>
-          <pre className={cn("scroll-thin max-h-[440px] flex-1 overflow-auto rounded-lg bg-black/40 p-2 font-mono text-[11px]",
-            outcome === "success" ? "text-emerald-100" : "text-slate-300")}>
-            {result ? JSON.stringify(result.body, null, 2) : "Execute a call to see the raw JSON-RPC 2.0 envelope."}
-          </pre>
+
+          <div className="border-t border-slate-200 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-[13px] font-semibold text-slate-900">Response</span>
+              {result && <Badge tone={result.status === 200 ? "emerald" : "red"}>HTTP <span className="tabular-nums">{result.status || "—"}</span></Badge>}
+              {result && <Badge tone="sky"><Timer className="size-3" /> <span className="tabular-nums">{result.latencyMs.toFixed(0)} ms</span> round trip</Badge>}
+              {outcome && <Badge tone={outcome === "success" ? "emerald" : "amber"}>{outcome}</Badge>}
+            </div>
+            {/* Wrapped: content[0].text is one JSON string tens of thousands of pixels long. */}
+            <pre className={cn("scroll-thin mt-3 max-h-[440px] min-h-[140px] overflow-auto rounded-lg bg-slate-50 p-3 font-mono text-[12px] leading-relaxed whitespace-pre-wrap ring-1 ring-slate-200 ring-inset wrap-anywhere",
+              result ? "text-slate-800" : "text-slate-500")}>
+              {result ? JSON.stringify(result.body, null, 2) : "Execute a call to see the raw JSON-RPC 2.0 envelope."}
+            </pre>
+          </div>
         </div>
       </div>
     </div>

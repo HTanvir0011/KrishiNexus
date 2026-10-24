@@ -1,6 +1,6 @@
 # MEMORY.md — KrishiNexus OS Live State & Handover
 
-**Last updated:** 2026-10-24 (BDT) · **Status:** every file in the target tree is built, including the immersive redesign (story at `/`, live OS at `/os`, whitepaper at `/docs`). Docker files are statically validated but not yet run on a Docker host. The redesign is published to GitHub `HTanvir0011/KrishiNexus` (2026-10-24) · **Next:** run `docker compose up --build` on a machine with Docker
+**Last updated:** 2026-10-24 (BDT) · **Status:** every file in the target tree is built. The Phase 8 institutional UI (daylight Design System v2: overview at `/`, live OS at `/os`, whitepaper at `/docs`) replaced the Phase 7 scroll story and is published to GitHub `HTanvir0011/KrishiNexus` (2026-10-24). Docker files are statically validated but not yet run on a Docker host · **Next:** run `docker compose up --build` on a machine with Docker
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -148,7 +148,7 @@
   Step 2 example · [x] `POST /agents/orchestrate` demo · [x] `POST /edge/voice-interact` `munshiganj_cold_storage`
   · [x] `GET /evals/metrics?refresh=true`
 
-### Phase 7 — Immersive website redesign (approved and built 2026-10-24)
+### Phase 7 — Immersive website redesign (approved and built 2026-10-24; replaced by Phase 8 the same day)
 - Direction in one line: Rahim's own Rangpuri question ("এলা বেচমু না হিমাগারত থুমু?") over a persistent, scroll-driven
   delta landscape; night-paddy green `#0E211A` + one mustard accent `#EDB723`; Tiro Bangla for spoken words, Anek Bangla
   (variable width) for the system. User decisions: story at `/`, OS at `/os`, stylised delta, bilingual headlines,
@@ -179,6 +179,61 @@
         after the lexicon change
   - [ ] Not done: a GPU browser on real hardware, a real phone, a screen-reader pass, Lighthouse
 
+### Phase 8 — Institutional UI and product architecture overhaul (built 2026-10-24)
+- Direction:
+  - daylight-first, high-trust institutional SaaS surface (stated references: Stripe, Flexport, Wise, Linear);
+  - alabaster canvas `#F6F8F5`, white cards with `#E2E8F0` hairlines;
+  - obsidian `#090D16` only for the agent trace terminal, the cold-storage CAD viewport and the SAR map;
+  - emerald `#047857` brand, amber `#D97706` farmer quota/action, rose `#E11D48` danger, sky `#0284C7` cold chain.
+  - Full spec in `frontend/design/DESIGN_PLAN.md` §11.
+- Figma MCP: connected (Tanvir Hossin's team), but no file or frame was shared, so the tokens come from the written brief.
+- [x] Design system:
+  - `index.css` rewritten: Tailwind defaults restored, plus `--color-canvas`, `--color-obsidian`, `--shadow-card`, `--shadow-lift`, `.surface`, `.well`, `.num`, `.voice`, and `tabular-nums` on `body`;
+  - `components/ui.tsx`: `Badge` (`dark`), `Panel` (`well`), `Button` (`quiet`), new `SourceChip`, `Segmented`, `LiveDot`;
+  - `components/gauges.tsx` and `shell/Alerts.tsx` restyled.
+- [x] Navigation and state:
+  - `components/Navbar.tsx` (status pill, route switcher, বাং/EN, Online/Offline edge, judge CTA);
+  - `lib/i18n.ts` (`useCopy`);
+  - `store.ts` gained `lang` and `health`;
+  - `App.tsx` renders the navbar once, health stores the server and tool counts, and `<html lang>` follows the toggle.
+- [x] Overview (`story/`):
+  - `StoryPage.tsx` (hero, `HeroMetrics` computed live, bento, pipeline, team footer);
+  - `LiveDecisionCard.tsx`, `SyndicateCard.tsx` (`Select`), `QuotaCard.tsx`, `HaorCard.tsx` (`SarMap`), `PipelineSection.tsx`;
+  - `pipeline.ts` (`PIPELINE`, `nodeOf`, `timingsFor`), `useLive.ts`;
+  - `data.ts` trimmed to adapters and snapshots (`ladderFrom` and `DetectOutput` exported; `Ladder` gained severity, fair markup, excess and grading spend);
+  - `presets.ts` without geography.
+- [x] Deleted: `story/landscape/*`, `story/chapters/*`, `Hero.tsx`, `parts.tsx`, `story.css`, `geo.ts`, `components/MosaicSvg.tsx`, `shell/TopBar.tsx`, `shell/Backdrop.tsx`. They are in GitHub `11336ad`.
+- [x] Live OS:
+  - `os/OsPage.tsx`: 12-column judge mode, with sub-tabs;
+  - `FarmerZeroUIApp.tsx`: daylight phone, five Tiro Bangla preset pills, mic, decision cards, the truck hero card with "হ্যাঁ, ৫-টন ট্রাকে যুক্ত করুন", and auto-scroll to the decision;
+  - `CommandCenter.tsx`: live KPIs, and an edge-mode line driven by the navbar toggle;
+  - `ColdStorage3DTwin.tsx`: obsidian CAD viewport, quota colours, telemetry pills;
+  - `TruckPoolMap.tsx`: light radar, freight formula, destination;
+  - `AgentTraceVisualizer.tsx`: plain-language and raw views;
+  - `BuyerBankPortal.tsx`: LTV maths and HMAC verify;
+  - `OpticalGraderCanvas.tsx`: light tray, HMAC badge;
+  - `api/client.ts`: `health` types `mcp_servers`, new `verifyCertificate(certId)`; `lib/speech.ts` gained `hasBanglaVoice`.
+- [x] Whitepaper, by a delegated subagent and reviewed:
+  - `pages/DocsPage.tsx`: sticky numbered sidebar, mobile chips, deep-link scroll on mount;
+  - `ProvenanceSection.tsx`: MathML formulas, plus a `declare module "react"` MathML typing block;
+  - `McpInspectorSection.tsx`: two-column playground;
+  - `DepthMatrixSection.tsx`: 110-point rubric framing, never a computed score;
+  - `EvalsSection.tsx` restyled;
+  - `EconomicsSection.tsx`: ARR composition and farmer-surplus charts.
+  - `os/DocsShell.tsx` is a plain container now.
+- Verified 2026-10-24:
+  - [x] `tsc --noEmit` clean; `npm run build`: `index` 280 kB, `StoryPage` 60 kB (no Three.js on `/`), `DocsShell` 58 kB, `OsPage` 627 kB (Three.js; Vite warns above 500 kB).
+  - [x] Headless Chrome: `/`, `/os`, `/os/field`, `/os/coop`, `/os/market`, `/docs` at 1440×900 and 390×844 all have `scrollWidth` equal to the viewport.
+  - [x] Overflow found and fixed: panel header actions, trace toggle labels, WFP badge.
+  - [x] Live interactions:
+    - hero orchestration for Rahim (Faria Tk 12 blocked; Tk 4,800 / 8,298 / 24,764; credit 781) and Abdul (4.7% green, −12.7 dB, credit 764);
+    - haor surge (99.7% red, 5 h) and reset;
+    - judge-mode preset run with the plain and raw trace;
+    - Bangla toggle;
+    - MCP inspector, compressor, guardrails and the 100-case run in `/docs`.
+  - [x] Backend untouched: metrics 1.00 ×4 over 19 questions (gold first 19/19), MCP validity 22/22, PII 12/12, regression 100/100.
+  - [ ] Not done: a real phone, a GPU browser, a screen-reader pass, Lighthouse; Firefox/Safari MathML rendering.
+
 ---
 
 ## 4. Last measured results (2026-10-22; metrics and regression re-run 2026-10-24 after the lexicon change, unchanged)
@@ -186,7 +241,7 @@
 | Check | Result |
 |---|---|
 | Regression suite (seed 20261226, 5 × 20) | **100/100 PASS**; rubric-judge 1.00 on every case (SYND-019 partial gone after the narrative change) |
-| Frontend build (2026-10-24) | `index` 269 kB, `StoryPage` 74 kB, `OsPage` 79 kB, `DocsShell` 45 kB, shared Three.js chunk 559 kB (Vite warns above 500 kB); fonts self-hosted (Anek Bangla Bengali subset 448 kB woff2) |
+| Frontend build (Phase 8, 2026-10-24) | `index` 280 kB, `StoryPage` 60 kB (no Three.js on `/`), `DocsShell` 58 kB, `OsPage` 627 kB including Three.js (Vite warns above 500 kB); fonts self-hosted (Anek Bangla Bengali subset 448 kB woff2) |
 | Story live run (24 Oct 2026) | Rahim: Faria offer Tk 12, farm gate Tk 36.18, Karwan Bazar retail Tk 77.67, markup 115%, he keeps 46.6%; pooled truck Tk 61.91/kg = Tk 24,764 for 400 kg vs storage Tk 8,298 vs Faria Tk 4,800 (blocked). Rangpur: 4 stores, 35,200 t, 2,045 t open. Abdul: 4.6% GREEN today; the flood simulation (+320 mm upstream) gives 99.7% RED and harvest within 5 h |
 | Faithfulness / answer relevancy | 1.00 / 1.00 (targets 0.94 / 0.92) — extractive answers, deterministic checks |
 | Context precision / recall | **1.00** / 1.00 over 19 questions (targets 0.95 / 0.91); gold doc ranked first on every question. It was 0.9211 before the intent fix of 2026-10-22. |
@@ -224,15 +279,20 @@ figures (truck Tk 24/kg, storage Tk 48.50/kg net) reproduce only in harvest seas
   KrishiNexus brief" in the knowledge seed and on `/docs`.
 - Bepari cost lines other than the Aratdar's 62.35% (freight 18%, labour 6.5%, wastage 5.25%, bags 4.4%, tolls 3.5%)
   and the Faria 20% / Bepari 70% cost-ratio split are modelled, not cited.
-- Frontend: pages are code-split, but Three.js is one 559 kB shared chunk (named `summary-*.js` by rolldown after the
-  first shared module). The docs page does not load it.
-- Redesign, reviewed only in headless Chrome with SwiftShader:
-  - Thin river ribbons look dashed when zoomed far out; this may be SwiftShader without MSAA.
-  - Labels lifted off a neighbour keep a horizontal leader line, so they float a little above their point.
-  - In the agents view the Thakurgaon label sits under the header shade.
-  - The agents chapter prints the backend's raw trace summaries (Python list reprs, "True").
-  - "Play his question" needs a Bangla voice on the device; without one the button explains that instead.
-  - The story's snapshot (`story/data.ts`) is dated 24 Oct 2026 and must be refreshed if the backend's numbers change.
+- Frontend: pages are code-split; Three.js lives only in the `OsPage` chunk (627 kB). Lazy-loading
+  `ColdStorage3DTwin` would let the OS paint before Three.js arrives.
+- Phase 8 UI, reviewed only in headless Chrome:
+  - The language toggle covers the navbar, the overview, the OS headings and the farmer phone; the whitepaper and the
+    OS panel internals stay English.
+  - The overview's haor card runs Abdul's full voice preset on load to get today's simulated SAR scene (about 2 s).
+  - The hero card runs the regression suite on every load to fill the "100/100" pill (about 0.3 s).
+  - The haor card's surge, and the OS twin's simulations, inject backend anomalies that every viewer sees.
+    "Today" / "Reset" clears all anomalies.
+  - The plain-language trace sentences are written by the frontend from the final agent state. The raw
+    `payload_summary` text from the backend is unchanged and still shows Python reprs in the raw view.
+  - Listening needs a Bangla voice on the device; without one the UI says so.
+  - Snapshots in `story/data.ts` are dated 24 Oct 2026; refresh them if backend outputs change.
+  - The pipeline shows nine nodes although the brief said ten; there are nine working LangGraph nodes.
 - Model-card specs (layers, GGUF sizes) and DeepSeek/Gemini prices are from memory; Claude prices come from the
   claude-api reference (Sonnet 5.5 `claude-sonnet-5-5`, $2/$10 per MTok).
 
@@ -250,7 +310,7 @@ figures (truck Tk 24/kg, storage Tk 48.50/kg net) reproduce only in harvest seas
 Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anomaly_state.py`, `schemas/api_models.py`,
 `rag/lexicon.py`, `agents/tracing.py`, `.env.example`, `frontend/src/api/fallback.ts`, `state/store.ts`, `lib/*`,
 `components/ui.tsx`, `components/docs/*`, and the redesign: `frontend/design/*`, `src/story/*`, `src/os/*`,
-`components/shell/*`, `components/gauges.tsx`, `components/MosaicSvg.tsx`.
+`components/shell/Alerts.tsx`, `components/Navbar.tsx`, `components/gauges.tsx`, `lib/i18n.ts`.
 
 ---
 
@@ -379,3 +439,20 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - **Next:**
   - The Docker run from the previous entries.
   - Next file for polish: `frontend/src/story/chapters/AgentsChapter.tsx`, to turn the raw trace summaries into plain sentences.
+
+### 2026-10-24 · Phase 8 institutional UI overhaul
+- **Why:** the user rejected the Phase 7 scroll-hijacked 3D delta and the dark "night paddy" palette, and asked for a daylight-first, high-trust institutional SaaS and field OS.
+- **Built:** see the Phase 8 checklist.
+  - The navbar is shared by every route.
+  - `/` is a product overview whose live cards call the real MCP tools and the real orchestration.
+  - `/os` is a 12-column workspace.
+  - `/docs` is a Stripe-Docs layout with MathML formulas.
+  - The whitepaper restyle was delegated to a subagent and reviewed by screenshot.
+- **Found on the way:** an earlier, interrupted attempt at this prompt had left `components/gauges.tsx` in Design System v2 colours, and a code restore had put the Phase 7 versions back into `index.css`, `ui.tsx`, `store.ts` and `Alerts.tsx`. No other process was writing, so the work continued from that state.
+- **Tested:** see the Phase 8 "Verified" list. Screenshots came from a puppeteer-core script in the session scratchpad.
+- **Published (user's go-ahead):** mirrored into `Claude to push` with a Phase 8 README, committed as HTanvir0011 <hossin23105101466@diu.edu.bd> with no AI trailers, and pushed to `HTanvir0011/KrishiNexus` `main`.
+  - The mirror deleted the Phase 7 story files from the push repo, matching their removal here.
+  - The `Claude` repo itself still holds all of this as uncommitted working-tree changes.
+- **Next:**
+  - Run the Docker check.
+  - Next file for polish: `frontend/src/pages/CommandCenter.tsx`, to lazy-load `ColdStorage3DTwin` so Three.js splits out of the OS chunk.

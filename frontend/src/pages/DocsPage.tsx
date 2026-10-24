@@ -8,12 +8,13 @@ import { McpInspectorSection } from "../components/docs/McpInspectorSection";
 import { ProvenanceSection } from "../components/docs/ProvenanceSection";
 import { cn } from "../lib/format";
 
-const SECTIONS: { id: string; title: string; kicker: string; icon: ReactNode; body: ReactNode }[] = [
-  { id: "pitch", kicker: "Section 1", title: "Executive pitch & data provenance", icon: <Sprout className="size-4" />, body: <ProvenanceSection /> },
-  { id: "mcp", kicker: "Section 2", title: "Interactive 13-tool MCP protocol inspector", icon: <Plug className="size-4" />, body: <McpInspectorSection /> },
-  { id: "matrix", kicker: "Section 3", title: "AI depth architecture matrix", icon: <LayoutGrid className="size-4" />, body: <DepthMatrixSection /> },
-  { id: "evals", kicker: "Section 4", title: "Live metrics & 100-scenario regression runner", icon: <FlaskConical className="size-4" />, body: <EvalsSection /> },
-  { id: "economics", kicker: "Section 5", title: "B2B unit economics & national impact simulator", icon: <BarChart3 className="size-4" />, body: <EconomicsSection /> },
+/** A real sequence: the sidebar numbers them; `nav` is the short name used in the sidebar and the mobile chips. */
+const SECTIONS: { id: string; nav: string; title: string; icon: ReactNode; body: ReactNode }[] = [
+  { id: "pitch", nav: "Provenance and formulas", title: "Macroeconomic provenance and the formulas", icon: <Sprout className="size-4" />, body: <ProvenanceSection /> },
+  { id: "mcp", nav: "MCP protocol inspector", title: "Interactive 13-tool MCP protocol inspector", icon: <Plug className="size-4" />, body: <McpInspectorSection /> },
+  { id: "matrix", nav: "AI depth matrix", title: "AI depth verification matrix (110-point rubric)", icon: <LayoutGrid className="size-4" />, body: <DepthMatrixSection /> },
+  { id: "evals", nav: "Evaluation and regression", title: "Live computed evaluation and the 100-case regression runner", icon: <FlaskConical className="size-4" />, body: <EvalsSection /> },
+  { id: "economics", nav: "Unit economics", title: "B2B unit economics and national impact simulator", icon: <BarChart3 className="size-4" />, body: <EconomicsSection /> },
 ];
 
 const BACKEND_DOCS = `${import.meta.env.VITE_API_BASE ?? "http://localhost:8000"}/docs`;
@@ -31,6 +32,8 @@ export function DocsPage() {
       { rootMargin: "-80px 0px -60% 0px" },
     );
     Object.values(refs.current).forEach((el) => el && observer.observe(el));
+    // /docs#id deep link: this page is a lazy chunk, so the browser's own fragment scroll ran before the section existed.
+    refs.current[location.hash.slice(1)]?.scrollIntoView({ block: "start" });
     return () => observer.disconnect();
   }, []);
 
@@ -40,40 +43,53 @@ export function DocsPage() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-      <aside className="lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
-        <div className="panel p-3">
-          <div className="mb-2 flex items-center gap-1.5 label text-[13px] font-semibold text-emerald-300"><BookOpen className="size-3.5" /> Whitepaper</div>
-          <nav className="space-y-0.5">
-            {SECTIONS.map((s) => (
-              <button key={s.id} type="button" onClick={() => jump(s.id)}
-                className={cn("flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
-                  active === s.id ? "bg-emerald-500/15 text-emerald-200" : "text-slate-400 hover:bg-ink-800 hover:text-slate-200")}>
-                <span className="mt-0.5">{s.icon}</span>
-                <span><span className="block label text-[12px] opacity-70">{s.kicker}</span>{s.title}</span>
-              </button>
-            ))}
-          </nav>
-          <a href={BACKEND_DOCS} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-1 border-t border-ink-700 pt-2 text-[11px] text-sky-300 hover:underline">
-            FastAPI OpenAPI reference <ExternalLink className="size-3" />
+    <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-x-10 gap-y-6 pb-24 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <header className="min-w-0 max-w-[980px] border-b border-slate-200 pb-6 lg:col-start-2 lg:row-start-1">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.01em] text-slate-900 sm:text-[34px]">KrishiNexus OS technical whitepaper</h1>
+        <p className="mt-2 max-w-[680px] text-[16px] leading-relaxed text-slate-600">
+          This page talks to the running backend: call any MCP tool, test each AI layer, recompute the metrics and run the regression suite live.
+        </p>
+      </header>
+
+      <aside className="min-w-0 lg:sticky lg:top-[88px] lg:col-start-1 lg:row-[1/span_2] lg:self-start">
+        <nav aria-label="Whitepaper sections">
+          <div className="mb-3 hidden items-center gap-2 text-[13px] font-semibold text-slate-900 lg:flex">
+            <BookOpen className="size-4 text-emerald-700" /> Whitepaper
+          </div>
+          {/* Phones: one horizontally scrolling row of chips. Desktop: a numbered list on a hairline rail. */}
+          <ol className="scroll-thin flex gap-2 overflow-x-auto py-1 lg:flex-col lg:gap-0 lg:overflow-visible lg:border-l lg:border-slate-200 lg:py-0">
+            {SECTIONS.map((s, i) => {
+              const on = active === s.id;
+              return (
+                <li key={s.id} className="shrink-0">
+                  <button type="button" onClick={() => jump(s.id)} aria-current={on ? "location" : undefined}
+                    className={cn(
+                      "flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium ring-1 ring-inset transition-colors",
+                      "lg:-ml-px lg:min-h-0 lg:w-full lg:rounded-none lg:border-l-2 lg:px-4 lg:py-2 lg:text-left lg:whitespace-normal lg:ring-0",
+                      on
+                        ? "bg-emerald-50 text-emerald-800 ring-emerald-700/25 lg:border-emerald-700 lg:bg-transparent lg:text-emerald-700"
+                        : "bg-white text-slate-600 ring-slate-200 hover:text-slate-900 lg:border-transparent lg:bg-transparent lg:hover:border-slate-300",
+                    )}>
+                    <span className={cn("num w-3 shrink-0 text-[12.5px]", on ? "text-emerald-700" : "text-slate-500")}>{i + 1}</span>
+                    {s.nav}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <a href={BACKEND_DOCS} target="_blank" rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-sky-700 hover:underline lg:mt-5 lg:flex lg:border-t lg:border-slate-200 lg:pt-4">
+            FastAPI OpenAPI reference <ExternalLink className="size-3.5" />
           </a>
-        </div>
+        </nav>
       </aside>
-      <div className="min-w-0 space-y-8 pb-16">
-        <header>
-          <h1 className="text-2xl font-bold text-slate-50">KrishiNexus OS technical whitepaper</h1>
-          <p className="mt-1 max-w-3xl text-sm text-slate-400">
-            Every panel below talks to the running backend: call any MCP tool, test each AI layer, recompute the metrics and run the regression suite live.
-          </p>
-        </header>
+
+      <div className="min-w-0 max-w-[980px] space-y-16 lg:col-start-2 lg:row-start-2">
         {SECTIONS.map((s) => (
-          <section key={s.id} id={s.id} ref={(el) => { refs.current[s.id] = el; }} className="scroll-mt-20">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30">{s.icon}</span>
-              <div>
-                <div className="label text-[12px] text-slate-500">{s.kicker}</div>
-                <h2 className="text-lg font-semibold text-slate-100">{s.title}</h2>
-              </div>
+          <section key={s.id} id={s.id} ref={(el) => { refs.current[s.id] = el; }} className="scroll-mt-[88px]">
+            <div className="mb-5 flex items-start gap-3">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-700/15 ring-inset">{s.icon}</span>
+              <h2 className="text-[22px] font-semibold leading-snug tracking-[-0.01em] text-slate-900">{s.title}</h2>
             </div>
             {s.body}
           </section>

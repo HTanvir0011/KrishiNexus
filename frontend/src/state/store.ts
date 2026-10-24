@@ -32,8 +32,13 @@ export interface FocusChamber {
   district: string;
 }
 
+export type Lang = "en" | "bn";
+
 export interface AppState {
   backendLive: boolean | null;
+  /** Counts from GET /health for the navbar status pill. */
+  health: { mcpServers: number; tools: number } | null;
+  lang: Lang;
   traceStatus: TraceConnection;
   offlineMode: boolean;
   traces: TraceEvent[];
@@ -56,6 +61,8 @@ let alertSeq = 0;
 
 let state: AppState = {
   backendLive: null,
+  health: null,
+  lang: "en",
   traceStatus: "connecting",
   offlineMode: false,
   traces: [],

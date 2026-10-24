@@ -1,266 +1,149 @@
-import "./story.css";
+import { ArrowRight, CheckCircle2, ExternalLink, KeyRound } from "lucide-react";
 
-import { MoveHorizontal } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { api } from "../api/client";
+import { useCopy } from "../lib/i18n";
+import { Link } from "../lib/router";
+import { useAppState } from "../state/store";
+import { HaorCard } from "./HaorCard";
+import { LiveDecisionCard } from "./LiveDecisionCard";
+import { PipelineSection } from "./PipelineSection";
+import { TEAM } from "./presets";
+import { QuotaCard } from "./QuotaCard";
+import { SyndicateCard } from "./SyndicateCard";
+import { useLive } from "./useLive";
 
-import { MosaicSvg } from "../components/MosaicSvg";
-import { TopBar } from "../components/shell/TopBar";
-import { bnDigits, cn, kg, tk } from "../lib/format";
-import { AgentsChapter } from "./chapters/AgentsChapter";
-import { AnswerChapter } from "./chapters/AnswerChapter";
-import { ColdChapter } from "./chapters/ColdChapter";
-import { DawnChapter } from "./chapters/DawnChapter";
-import { HaorChapter } from "./chapters/HaorChapter";
-import { RoadChapter } from "./chapters/RoadChapter";
-import { useStoryFacts } from "./data";
-import { DISTRICT_LABELS, FACILITIES, HAOR_BASINS, PLACES, TIER_STOPS, type FacilitySeed, type LatLon } from "./geo";
-import { Hero } from "./Hero";
-import { CHAPTER_COUNT, Landscape, type RouteMode } from "./landscape/Landscape";
-import { Anchor } from "./parts";
-import type { StoryPreset } from "./presets";
+const COPY = {
+  en: {
+    eyebrow: "AGRISPHERE AI · FARMMARKET TRACK",
+    title: "Cut the 116% syndicate markup. Open the hoarded cold stores. Harvest before the flood.",
+    lede: "KrishiNexus OS listens to a farmer's question in their own dialect and four agents answer it: they grade the crop, route it past five middlemen on a pooled 5-ton truck, find space in cold stores where traders and plant owners hold 77.32% of capacity, and send a Sentinel-1 radar harvest alert 72 hours before a haor embankment breaks.",
+    os: "Open live OS workspace",
+    docs: "Inspect 13 MCP tools and evals",
+    faithfulness: "RAG faithfulness",
+    regression: "seeded regression",
+    keys: "paid API keys required",
+    computing: "computing",
+    measured: "Measured on this backend just now, not typed in.",
+    leakTitle: "Where the money and the harvest leak",
+    leakLede: "Three live views of the failures KrishiNexus targets. Every figure is an MCP tool call you can repeat in the whitepaper.",
+    team: "The team",
+    congress: "International AI Builders Congress 2026 · AgriSphere AI → FarmMarket · Showcase on 26 December 2026 at Daffodil International University.",
+    source: "Source on GitHub",
+  },
+  bn: {
+    eyebrow: "এগ্রিস্ফিয়ার এআই · ফার্মমার্কেট ট্র্যাক",
+    title: "সিন্ডিকেটের ১১৬% মুনাফা কাটুন। দখলে থাকা হিমাগার খুলুন। বন্যার আগেই ধান তুলুন।",
+    lede: "কৃষিনেক্সাস ওএস কৃষকের নিজের আঞ্চলিক ভাষায় প্রশ্ন শোনে, আর চার এজেন্ট উত্তর দেয়: ফসল গ্রেড করে, পাঁচ মধ্যস্বত্বভোগীকে এড়িয়ে ৫ টনের যৌথ ট্রাকে পাঠায়, যেসব হিমাগারের ৭৭.৩২% জায়গা ব্যবসায়ী ও মালিকদের দখলে সেখানে জায়গা খুঁজে দেয়, আর হাওরের বাঁধ ভাঙার ৭২ ঘণ্টা আগে সেন্টিনেল-১ রাডারের সতর্কবার্তা পাঠায়।",
+    os: "লাইভ ওএস খুলুন",
+    docs: "১৩টি এমসিপি টুল ও ইভাল দেখুন",
+    faithfulness: "আরএজি ফেইথফুলনেস",
+    regression: "সিডেড রিগ্রেশন",
+    keys: "পেইড এপিআই কী লাগে না",
+    computing: "হিসাব হচ্ছে",
+    measured: "এই ব্যাকএন্ডে এইমাত্র মাপা, হাতে লেখা নয়।",
+    leakTitle: "টাকা আর ফসল কোথায় হারায়",
+    leakLede: "কৃষিনেক্সাস যে তিনটি সমস্যার সমাধান করে, তার লাইভ চিত্র। প্রতিটি সংখ্যা একটি এমসিপি টুল কল, যা শ্বেতপত্রে আবার চালানো যায়।",
+    team: "দল",
+    congress: "ইন্টারন্যাশনাল এআই বিল্ডার্স কংগ্রেস ২০২৬ · এগ্রিস্ফিয়ার এআই → ফার্মমার্কেট · প্রদর্শনী ২৬ ডিসেম্বর ২০২৬, ড্যাফোডিল ইন্টারন্যাশনাল ইউনিভার্সিটি।",
+    source: "গিটহাবে সোর্স",
+  },
+};
 
-const CHAPTERS = [
-  { id: "story-hero", title: "Rahim's question" },
-  { id: "story-cold", title: "Who holds the cold" },
-  { id: "story-road", title: "The road to Dhaka" },
-  { id: "story-answer", title: "Rahim's answer" },
-  { id: "story-haor", title: "Abdul's question" },
-  { id: "story-agents", title: "Four agents, one answer" },
-  { id: "story-dawn", title: "Open the OS" },
-];
-
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-function Chapter({ index, sectionRef, tall = true, children }: {
-  index: number;
-  sectionRef: (el: HTMLElement | null) => void;
-  tall?: boolean;
-  children: ReactNode;
-}) {
+function MetricPill({ value, label, live }: { value: string; label: string; live: boolean }) {
   return (
-    <section id={CHAPTERS[index].id} ref={sectionRef} aria-label={CHAPTERS[index].title}
-      className={cn("relative px-4 sm:px-8 lg:px-12", tall ? "min-h-[155vh] py-24" : "min-h-[110vh] pt-24 pb-32")}>
-      <div className="pointer-events-auto max-w-[34rem]">{children}</div>
-    </section>
+    <li className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200">
+      <CheckCircle2 className={live ? "size-4 text-emerald-700" : "size-4 text-slate-400"} aria-hidden />
+      <span className="num text-slate-900">{value}</span> {label}
+    </li>
+  );
+}
+
+function HeroMetrics() {
+  const c = useCopy(COPY);
+  const metrics = useLive("metrics", () => api.evalMetrics(), () => null);
+  const regression = useLive("regression", () => api.runRegression(20), () => null);
+  const faithfulness = metrics.data?.metrics.find((m) => m.name === "faithfulness");
+  return (
+    <div className="mt-8">
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+        <MetricPill live={metrics.status === "live"} label={c.faithfulness}
+          value={faithfulness ? faithfulness.value.toFixed(2) : metrics.status === "loading" ? c.computing : "-"} />
+        <MetricPill live={regression.status === "live"} label={c.regression}
+          value={regression.data ? `${regression.data.passed}/${regression.data.total_cases}` : regression.status === "loading" ? c.computing : "-"} />
+        <li className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200">
+          <KeyRound className="size-4 text-emerald-700" aria-hidden /><span className="num text-slate-900">0</span> {c.keys}
+        </li>
+      </ul>
+      <p className="m-0 mt-2 text-[12.5px] text-slate-500">{c.measured}</p>
+    </div>
   );
 }
 
 export default function StoryPage() {
-  const facts = useStoryFacts();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const labelsRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const coordsRef = useRef<HTMLSpanElement>(null);
-  const sections = useRef<(HTMLElement | null)[]>([]);
-  const dragging = useRef(false);
-  const [engine, setEngine] = useState<Landscape | null>(null);
-  const [webgl, setWebgl] = useState(true);
-  const [active, setActive] = useState(0);
-  const [district, setDistrict] = useState<FacilitySeed["district"]>("Rangpur");
-  const [mode, setMode] = useState<RouteMode>("syndicate");
-  const [focus, setFocus] = useState<number | null>(null);
-  const [radar, setRadar] = useState(0.62);
-  const [flood, setFlood] = useState(0);
-  const [heroPreset, setHeroPreset] = useState<StoryPreset | null>(null);
-  const ladder = facts.ladder.data;
-  const rahim = facts.rahim.data;
-
-  // One world for the whole page; a static mosaic when WebGL is missing.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const labels = labelsRef.current;
-    if (!canvas || !labels) return;
-    if (!Landscape.isSupported()) {
-      setWebgl(false);
-      return;
-    }
-    let instance: Landscape | null = null;
-    try {
-      instance = new Landscape({
-        canvas,
-        labelsRoot: labels,
-        reducedMotion: reducedMotion(),
-        onPlace: (text) => {
-          if (coordsRef.current) coordsRef.current.textContent = text;
-        },
-      });
-      setEngine(instance);
-    } catch (error) {
-      console.warn("WebGL landscape unavailable, showing the static mosaic", error);
-      setWebgl(false);
-    }
-    return () => {
-      instance?.dispose();
-      setEngine(null);
-    };
-  }, []);
-
-  // Scroll position in chapters: the section crossing the reading line, plus how far through it we are.
-  useEffect(() => {
-    let frame = 0;
-    const measure = () => {
-      frame = 0;
-      const line = window.innerHeight * (window.innerWidth < 768 ? 0.7 : 0.5);
-      let p = 0;
-      sections.current.forEach((el, i) => {
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        if (rect.top <= line) p = i + Math.min(0.9999, Math.max(0, (line - rect.top) / rect.height));
-      });
-      engine?.setProgress(p);
-      setActive(Math.min(CHAPTER_COUNT - 1, Math.floor(p + 0.2)));
-    };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(measure);
-    };
-    measure();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    return () => {
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      cancelAnimationFrame(frame);
-    };
-  }, [engine]);
-
-  useEffect(() => engine?.setColdDistrict(district), [engine, district]);
-  useEffect(() => engine?.setRouteMode(mode), [engine, mode]);
-  useEffect(() => engine?.setTierFocus(focus), [engine, focus]);
-  useEffect(() => engine?.setRadar(radar, true), [engine, radar]);
-  useEffect(() => engine?.setFlood(flood), [engine, flood]);
-  useEffect(() => engine?.setHeroPlace(heroPreset?.at ?? null), [engine, heroPreset]);
-  useEffect(() => engine?.setLadder(ladder.grower, ladder.tiers.map((t) => t.sell)), [engine, ladder]);
-
-  const anchors = useMemo(() => {
-    const plotAt: LatLon = heroPreset?.at ?? PLACES.rahimPlot;
-    const town = (heroPreset?.place ?? "Mithapukur, Rangpur").split(",")[0];
-    const who = !heroPreset || heroPreset.farmer === "Rahim Mia" ? "Rahim's plot" : heroPreset.farmer === "A farmer" ? "A farmer's field" : `${heroPreset.farmer}'s field`;
-    const routeAt = (t: number): LatLon => engine?.routeLatLon(t) ?? PLACES.mithapukur;
-    const stopAt = (at: number | LatLon): LatLon => (typeof at === "number" ? routeAt(at) : at);
-    const list: { key: string; at: LatLon; alt?: number; ch: number[]; alert?: boolean; follow?: boolean; body: ReactNode }[] = [
-      { key: "plot", at: plotAt, alt: 0.02, ch: [0, 3, 6], body: <>{who}, {town}</> },
-      { key: "ring", at: { lat: plotAt.lat + 0.032, lon: plotAt.lon + 0.036 }, ch: [0], body: "5 km union ring" },
-      ...FACILITIES.filter((f) => f.district === district).map((f) => ({
-        key: f.id, at: f.at, alt: (f.capacityMt / 12000) * 0.42 + 0.04, ch: [1], body: f.name,
-      })),
-    ];
-    if (mode === "syndicate") {
-      list.push({ key: "gate", at: routeAt(0), alt: ladder.grower * 0.012 + 0.06, ch: [2], body: <>Farm gate <b>{tk(ladder.grower)}</b></> });
-      TIER_STOPS.forEach((stop, i) => {
-        const tier = ladder.tiers[i];
-        if (tier) list.push({ key: stop.tier, at: stopAt(stop.at), alt: tier.sell * 0.012 + 0.06, ch: [2], alert: true, body: <>{tier.tier} <b>{tk(tier.sell)}</b></> });
-      });
-    } else {
-      list.push({ key: "depot", at: PLACES.mirpur, ch: [2], body: <>Mirpur supermarket depot <b>{tk(rahim.b2bNet)} to Rahim</b></> });
-      if (rahim.pool) list.push({ key: "pool", at: routeAt(0), follow: true, ch: [2], body: <>Union truck <b>{kg(rahim.pool.after)} of {kg(rahim.pool.capacity)}</b></> });
-    }
-    list.push(
-      { key: "dhaka", at: PLACES.karwanBazar, ch: [3], body: "Karwan Bazar, Dhaka" },
-      { key: "tanguar", at: HAOR_BASINS[0].at, ch: [4], body: "Tanguar haor" },
-      { key: "abdul", at: PLACES.abdulFields, ch: [4], alert: flood > 0.5, body: <>Abdul's fields, Tahirpur{flood > 0.5 && <b> harvest now</b>}</> },
-      { key: "sunamganj", at: PLACES.sunamganj, ch: [4], body: "Sunamganj" },
-      ...DISTRICT_LABELS.map((d) => ({ key: `d-${d.name}`, at: d.at, ch: [5], body: d.name })),
-    );
-    return list;
-  }, [engine, heroPreset, district, mode, ladder, rahim, flood]);
-
-  useEffect(() => engine?.refreshLabels(), [engine, anchors]);
-
-  // Deep links such as /#story-road open at that chapter.
-  useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if (CHAPTERS.some((c) => c.id === hash)) requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
-  }, []);
-
-  const dragRadar = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || !stageRef.current) return;
-    const rect = stageRef.current.getBoundingClientRect();
-    setRadar(Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)));
-  };
-
-  const jump = (index: number) => {
-    sections.current[index]?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth" });
-  };
-
+  const c = useCopy(COPY);
+  const lang = useAppState((s) => s.lang);
   return (
-    <div className="relative">
-      <TopBar overlay coordsRef={coordsRef} />
-
-      <div ref={stageRef} className="story-stage">
-        {webgl ? <canvas ref={canvasRef} aria-hidden /> : <MosaicSvg highlight className="absolute inset-0 h-full w-full" />}
-        <div className="story-scrim" aria-hidden />
-        <div ref={labelsRef} className="pointer-events-none absolute inset-0" aria-hidden>
-          {webgl && anchors.map((a) => (
-            <Anchor key={a.key} lat={a.at.lat} lon={a.at.lon} alt={a.alt} chapters={a.ch} alert={a.alert} followTruck={a.follow}>{a.body}</Anchor>
-          ))}
-        </div>
-        {webgl && active === 4 && (
-          <div className="radar-handle" style={{ left: `${radar * 100}%` }} aria-hidden
-            onPointerDown={(e) => {
-              dragging.current = true;
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={dragRadar}
-            onPointerUp={() => {
-              dragging.current = false;
-            }}>
-            <span><MoveHorizontal className="size-4" /></span>
+    <main>
+      <section className="mx-auto grid max-w-[1280px] items-start gap-10 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-12 lg:gap-12">
+        <div className="min-w-0 lg:col-span-7 lg:pt-6">
+          <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-semibold tracking-[0.06em] text-emerald-800 ring-1 ring-inset ring-emerald-700/15">
+            {c.eyebrow}
+          </span>
+          {/* Bangla conjuncts need more room between lines than Latin capitals. */}
+          <h1 className={`m-0 mt-5 max-w-[22ch] text-[clamp(34px,4.6vw,56px)] font-semibold text-slate-900 ${lang === "bn" ? "leading-[1.32]" : "leading-[1.08] tracking-[-0.025em]"}`}>
+            {c.title}
+          </h1>
+          <p className="m-0 mt-5 max-w-[60ch] text-[17px] leading-relaxed text-slate-600">{c.lede}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link to="/os" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-5 text-[15px] font-semibold text-white no-underline shadow-sm transition-colors hover:bg-emerald-800">
+              {c.os} <ArrowRight className="size-4" aria-hidden />
+            </Link>
+            <Link to="/docs" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-5 text-[15px] font-semibold text-slate-800 no-underline ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50">
+              {c.docs}
+            </Link>
           </div>
-        )}
+          <HeroMetrics />
+        </div>
+        <div className="min-w-0 lg:col-span-5">
+          <LiveDecisionCard />
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white/60">
+        <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6">
+          <h2 className="m-0 text-[28px] font-semibold tracking-[-0.02em] text-slate-900">{c.leakTitle}</h2>
+          <p className="m-0 mt-2 max-w-[44rem] text-[15px] text-slate-600">{c.leakLede}</p>
+          <div className="mt-8 grid gap-5 lg:grid-cols-3">
+            <SyndicateCard className="lg:col-span-2" />
+            <QuotaCard />
+            <HaorCard className="lg:col-span-3" />
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6">
+        <PipelineSection />
       </div>
 
-      <main className="pointer-events-none relative z-10">
-        <section id={CHAPTERS[0].id} ref={(el) => {
-          sections.current[0] = el;
-        }} aria-label="Rahim's question"
-          className="flex min-h-[100svh] flex-col justify-center px-4 pt-[46svh] pb-16 sm:px-8 md:pt-28 lg:px-12">
-          <div className="pointer-events-auto">
-            <Hero rahim={facts.rahim} onPreset={setHeroPreset} />
-          </div>
-        </section>
-        <Chapter index={1} sectionRef={(el) => { sections.current[1] = el; }}>
-          <ColdChapter district={district} onDistrict={setDistrict} />
-        </Chapter>
-        <Chapter index={2} sectionRef={(el) => { sections.current[2] = el; }}>
-          <RoadChapter ladder={facts.ladder} rahim={facts.rahim} mode={mode} onMode={setMode} focus={focus} onFocus={setFocus} />
-        </Chapter>
-        <Chapter index={3} sectionRef={(el) => { sections.current[3] = el; }}>
-          <AnswerChapter rahim={facts.rahim} />
-        </Chapter>
-        <Chapter index={4} sectionRef={(el) => { sections.current[4] = el; }}>
-          <HaorChapter abdul={facts.abdul} radar={radar} onRadar={setRadar} onFlood={setFlood} />
-        </Chapter>
-        <Chapter index={5} sectionRef={(el) => { sections.current[5] = el; }}>
-          <AgentsChapter />
-        </Chapter>
-        <Chapter index={6} tall={false} sectionRef={(el) => { sections.current[6] = el; }}>
-          <DawnChapter />
-        </Chapter>
-      </main>
-
-      <nav aria-label="Chapters" className="fixed top-1/2 right-6 z-20 hidden -translate-y-1/2 lg:block">
-        <ol className="m-0 grid list-none gap-3.5 p-0">
-          {CHAPTERS.slice(1).map((chapter, i) => {
-            const index = i + 1;
-            const current = active === index;
-            return (
-              <li key={chapter.id}>
-                <a href={`#${chapter.id}`} aria-current={current ? "step" : undefined}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    jump(index);
-                  }}
-                  className="group flex items-center justify-end gap-3 text-[15px] text-slate-400 no-underline">
-                  <span className={cn("label translate-x-1.5 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100",
-                    current && "text-slate-200")}>{chapter.title}</span>
-                  <b className={cn("grid size-[30px] place-items-center rounded-full border font-medium",
-                    current ? "border-mustard-400 text-mustard-400" : "border-slate-400/35")}>{bnDigits(index)}</b>
-                </a>
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6">
+          <h2 className="m-0 text-[15px] font-semibold text-slate-900">{c.team}</h2>
+          <ul className="m-0 mt-4 grid list-none gap-x-6 gap-y-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
+            {TEAM.map((member) => (
+              <li key={member.name} className="text-[14px]">
+                <span className="font-medium text-slate-900">{member.name}</span>
+                <span className="block text-[13px] text-slate-500">{member.role} · {member.country}</span>
               </li>
-            );
-          })}
-        </ol>
-      </nav>
-    </div>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-[13px] text-slate-500">
+            <p className="m-0 max-w-[60rem]">{c.congress}</p>
+            <a href="https://github.com/HTanvir0011/KrishiNexus" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-emerald-700 no-underline hover:text-emerald-800">
+              {c.source} <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
 }

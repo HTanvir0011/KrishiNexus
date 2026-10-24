@@ -1,8 +1,8 @@
 # KrishiNexus: immersive website, design plan v1 (for review)
 
-Status: **approved 2026-10-24 and built** (see section 10 for what changed during the build). A visual style tile with the palette, type and a hero
-mock is at `frontend/design/style-tile.html` (open `http://localhost:5173/design/style-tile.html` with the dev
-server running).
+Status: **superseded by Phase 8** (section 11, the Institutional Design System v2 that is live now). Sections 1–10 record
+the Phase 7 scroll story (approved and built 2026-10-24, then replaced the same day). The style tile at
+`frontend/design/style-tile.html` shows the Phase 7 palette and is kept for the record only.
 
 References studied:
 - curtisdesignr.me: a live HUD with coordinates and clock, a hairline grid, a condensed display face, scroll-pinned statements.
@@ -316,3 +316,81 @@ New dependencies: only the two font packages. No GSAP or smooth-scroll library; 
   - The live OS cold-storage twin now uses the story's quota colours (traders slate, plant owners sky, farmers mustard).
   - Typed English questions with plural crop names ("potatoes") were asked for the crop; the lexicon now accepts
     English plurals for crop names.
+
+---
+
+## 11. Phase 8: Institutional Design System v2 (2026-10-24, live)
+
+The Phase 7 scroll story was rejected as gimmicky, hard to navigate and dated. Phase 8 replaces it with a daylight-first,
+high-trust product surface (Stripe, Flexport, Wise and Linear were the stated references). Figma MCP was connected,
+but no Figma file or frame was shared, so the system below comes from the written brief.
+
+### 11.1 Tokens (`frontend/src/index.css`)
+
+| Role | Value | How it is used |
+|---|---|---|
+| App canvas | `--color-canvas` `#F6F8F5` | `html`, `body` (warm alabaster) |
+| Elevated surface | `#FFFFFF`, 1px `--color-slate-200` `#E2E8F0`, radius 12px, `--shadow-card` `0 1px 3px rgba(15,23,42,.04), 0 8px 24px -4px rgba(15,23,42,.06)` | `.surface` class and `Panel` |
+| Raised surface | `--shadow-lift` | hero live card, toasts, phone frame |
+| Telemetry well | `--color-obsidian` `#090D16`, `--color-obsidian-raised` `#0F172A` | `.well` class and `Panel well`; only the agent trace terminal, the cold-storage CAD viewport and the SAR radar map |
+| Brand and growth | emerald-700 `#047857`, soft emerald-50 `#ECFDF5`, text emerald-800 `#065F46` | primary buttons, active states, recommended option |
+| Action and farmer quota | amber-600 `#D97706`, soft amber-100 `#FEF3C7` | farmer quota in charts, amber buttons, warnings |
+| Danger and syndicate | rose-600 `#E11D48`, soft rose-100 `#FFE4E6` | circuit breaker, blocked sale, syndicate margins, alerts |
+| Cold chain and SAR | sky-600 `#0284C7`, sky-400 `#38BDF8` inside wells | plant-owner quota, telemetry, cold-storage option |
+| Text | slate-900 `#0F172A` / slate-600 / slate-500 | primary, secondary, tertiary |
+
+Tailwind's default palette is used with its real meaning; the Phase 7 remaps (`ink`, `mustard`, the re-coloured slate,
+emerald, amber, sky and red scales) are gone. Quota shares use one encoding everywhere: traders slate, plant owners sky,
+farmers amber (booked lighter, open brighter).
+
+### 11.2 Type
+
+- Anek Bangla Variable (self-hosted) for every interface string. Base 15px.
+- `font-variant-numeric: tabular-nums` on `body`, so every price, weight, percentage and latency aligns. `.num` adds weight 600 for figures.
+- Tiro Bangla (`.voice`) only for words a farmer says or hears: preset questions, transcripts, spoken replies.
+- Headlines are semibold with tight tracking in English and line height 1.32 in Bangla (conjuncts need the room).
+- No all-caps labels except the brief's track badge.
+
+### 11.3 Information architecture
+
+- `components/Navbar.tsx`, sticky glass on every page:
+  - left: wordmark and a live status pill from `GET /health` ("3 MCP servers online · 13 tools · BDT UTC+6");
+  - centre: route switcher (Overview `/`, Live OS `/os`, Whitepaper `/docs`);
+  - right: language toggle (বাং / EN), the network blackout toggle (Online / Offline edge, which sets `offlineMode` for every voice request) and "Launch judge split-screen".
+  - On a phone the switcher drops to its own row.
+- `/` (`story/StoryPage.tsx`), no scroll hijacking and no Three.js:
+  - hero split: copy, two CTAs and three metric pills computed live on load (`GET /evals/metrics`, `POST /evals/run-regression`);
+  - `LiveDecisionCard`: Rahim or Abdul, runs the real orchestration on click, then shows the circuit-breaker verdict, the three-way payout bars, credit, the Bangla reply and a link to the OS trace;
+  - bento:
+    - `SyndicateCard`: waterfall from `detect_syndicate_markup_anomaly`, with crop and origin pickers;
+    - `QuotaCard`: stacked capture bar and tonnage calculator from `query_cold_storage_quota`;
+    - `HaorCard`: today's scene from Abdul's own agent run versus the simulated April 2017 surge, with an obsidian SAR map, both from `calculate_haor_flash_flood_risk`;
+  - `PipelineSection`: the nine LangGraph nodes with their real reads, writes, MCP tools, files and per-node timing from the last watched run.
+- `/os` (`os/OsPage.tsx`):
+  - sub-tabs: judge mode, farmer phone (`/os/field`), co-op and cold chain (`/os/coop`), market and bank (`/os/market`);
+  - judge mode is a 12-column grid: the phone spans 4 columns on xl (5 on lg) and the command centre spans 8 (7 on lg);
+  - the phone shows big Tiro Bangla preset pills, a mic, the light grader with an HMAC certificate, and decision cards: blocked offer (rose), recommended truck hero card with "হ্যাঁ, ৫-টন ট্রাকে যুক্ত করুন", and the storage alternative with a credit badge;
+  - the trace terminal has a plain-language judge view (one sentence per node, written from the run's state) and a raw JSON-RPC / telemetry view;
+  - the bank desk shows the LTV maths from `climate_credit_agent._ltv_for` and verifies certificates with `POST /edge/verify-certificate`.
+- `/docs`: Stripe-Docs layout, with a sticky numbered sidebar (chips on a phone).
+  - The ΔΠ, Aratdar-take and haor breach formulas are in native MathML, so there is no KaTeX dependency.
+  - The MCP inspector is a two-column playground.
+  - The economics section has ARR-composition and farmer-surplus charts drawn in plain HTML.
+
+### 11.4 Deliberate deviations from the brief
+
+- The brief says "10-node pipeline"; the graph has nine working nodes (plus START/END), so the page shows nine and the conditional re-plan edge.
+- "110-point AI depth score" is the congress rubric (Agent.md §6); the whitepaper maps rubric areas to live evidence and never prints a computed score.
+- Language toggle: the navbar, the overview, the OS headings and the farmer phone switch to Bangla; the technical whitepaper stays English.
+- The landscape engine, chapters, `MosaicSvg`, `TopBar` and `Backdrop` were deleted (they are in GitHub commit `11336ad` if needed).
+
+### 11.5 Verification (headless Chrome, puppeteer-core)
+
+- All six routes at 1440×900 and 390×844 have zero horizontal page scroll; the check measures `scrollWidth`.
+- Fixes found by that check: panel header actions can now shrink and wrap, the trace toggle labels are shorter on phones, and the WFP badge wraps.
+- Live interactions:
+  - hero run for both personas;
+  - haor surge and reset;
+  - judge mode preset run with the plain and raw trace views;
+  - Bangla toggle.
+- The whitepaper sections were exercised by the restyle pass: MCP call, compression, guardrails, 100-case run.

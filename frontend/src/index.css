@@ -1,103 +1,32 @@
 @import "tailwindcss";
 
 /*
- * KrishiNexus design tokens (frontend/design/DESIGN_PLAN.md).
- * Tailwind's palette names are remapped so existing classes take the new identity:
- *   ink     → night-paddy surfaces        slate   → husk-to-silt neutrals
- *   emerald → leaf: healthy, in band      amber   → turmeric: warnings
- *   sky     → monsoon: water, radar, info red     → sun red: alerts only
- *   violet  → jamun: agents and models    mustard → the one action accent
+ * KrishiNexus Institutional Design System v2 (Phase 8; frontend/design/DESIGN_PLAN.md §11).
+ * Daylight first. Tailwind's default palette is used with its real meaning:
+ *   emerald-700 #047857  primary brand, growth, active state   (soft fill emerald-50 #ECFDF5, text emerald-800 #065F46)
+ *   amber-600   #D97706  action and farmer-quota accent         (soft fill amber-100 #FEF3C7)
+ *   rose-600    #E11D48  danger, circuit breaker, syndicate     (soft fill rose-100 #FFE4E6)
+ *   sky-600     #0284C7  cold chain and SAR telemetry           (bright sky-400 #38BDF8 inside obsidian wells)
+ *   slate-200   #E2E8F0  hairline borders; slate-900 #0F172A text
+ * Three surfaces: the alabaster canvas, white cards (.surface) and obsidian telemetry wells (.well), which are kept for
+ * the agent trace terminal, the cold-storage CAD viewport and the Sentinel-1 SAR map only.
  */
 @theme {
   --font-sans: "Anek Bangla Variable", "Anek Bangla", system-ui, sans-serif;
   --font-voice: "Tiro Bangla", "Noto Serif Bengali", Georgia, serif;
-  --font-bangla: "Anek Bangla Variable", "Anek Bangla", system-ui, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", Consolas, "Liberation Mono", monospace;
 
-  --color-ink-950: #0a1913;
-  --color-ink-900: #0e211a;
-  --color-ink-850: #122a21;
-  --color-ink-800: #17352a;
-  --color-ink-700: #21443a;
-  --color-ink-600: #2f5648;
+  --color-canvas: #f6f8f5;
+  --color-obsidian: #090d16;
+  --color-obsidian-raised: #0f172a;
 
-  --color-slate-50: #efebdd;
-  --color-slate-100: #e7e4d5;
-  --color-slate-200: #d8dac9;
-  --color-slate-300: #bfc8b9;
-  --color-slate-400: #9db0a3;
-  --color-slate-500: #7d9285;
-  --color-slate-600: #5f7468;
-  --color-slate-700: #44584d;
-  --color-slate-800: #2c3d34;
-  --color-slate-900: #1a2821;
-  --color-slate-950: #0f1813;
-
-  --color-emerald-50: #e3f4ec;
-  --color-emerald-100: #c3e8d6;
-  --color-emerald-200: #98d6b9;
-  --color-emerald-300: #6cc39b;
-  --color-emerald-400: #3fa97c;
-  --color-emerald-500: #158a60;
-  --color-emerald-600: #006a4e;
-  --color-emerald-700: #00553f;
-  --color-emerald-800: #064433;
-  --color-emerald-900: #08362a;
-  --color-emerald-950: #05241c;
-
-  --color-amber-50: #fdf1e1;
-  --color-amber-100: #fbdfb9;
-  --color-amber-200: #f6c487;
-  --color-amber-300: #efa95a;
-  --color-amber-400: #e58f2b;
-  --color-amber-500: #cf7616;
-  --color-amber-600: #a95c10;
-  --color-amber-700: #84470f;
-  --color-amber-800: #633610;
-  --color-amber-900: #4a290e;
-  --color-amber-950: #2c1807;
-
-  --color-mustard-200: #f8dd8b;
-  --color-mustard-300: #f3c94e;
-  --color-mustard-400: #edb723;
-  --color-mustard-500: #d9a010;
-  --color-mustard-600: #b5840b;
-
-  --color-sky-50: #e8f2f4;
-  --color-sky-100: #cfe3e8;
-  --color-sky-200: #a8ccd5;
-  --color-sky-300: #8bbcc7;
-  --color-sky-400: #6fa8b5;
-  --color-sky-500: #4f8b99;
-  --color-sky-600: #3d6f7b;
-  --color-sky-700: #31585f;
-  --color-sky-800: #26444a;
-  --color-sky-900: #1b3237;
-  --color-sky-950: #0f1f22;
-
-  --color-red-50: #fdeaeb;
-  --color-red-100: #fbd3d5;
-  --color-red-200: #fbc1c4;
-  --color-red-300: #f78e93;
-  --color-red-400: #f2545b;
-  --color-red-500: #f42a41;
-  --color-red-600: #c81d32;
-  --color-red-700: #9e1828;
-  --color-red-800: #74131e;
-  --color-red-900: #4f0f16;
-  --color-red-950: #2e080c;
-
-  --color-violet-200: #ddd6f0;
-  --color-violet-300: #bfb3e3;
-  --color-violet-400: #9d8fd0;
-  --color-violet-500: #7d6cb8;
-  --color-violet-600: #64549c;
-  --color-violet-700: #4c3f7a;
-  --color-violet-900: #2a2245;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px -4px rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 1px 3px rgba(15, 23, 42, 0.06), 0 18px 40px -10px rgba(15, 23, 42, 0.16);
 
   --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
   --animate-sweep: sweep 4s linear infinite;
   --animate-wave: wave 1s ease-in-out infinite;
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @keyframes pulse-soft {
     0%, 100% { opacity: 1; }
@@ -111,11 +40,15 @@
     0%, 100% { transform: scaleY(0.35); }
     50% { transform: scaleY(1); }
   }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
 }
 
 html {
-  background: var(--color-ink-900);
-  color-scheme: dark;
+  background: var(--color-canvas);
+  color-scheme: light;
 }
 
 html, body, #root {
@@ -124,69 +57,61 @@ html, body, #root {
 
 body {
   margin: 0;
-  background: var(--color-ink-900);
-  color: var(--color-slate-100);
+  background: var(--color-canvas);
+  color: var(--color-slate-900);
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.55;
-  font-stretch: 100%;
+  /* Every price, weight, percentage and latency lines up. */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-mustard-400);
-  outline-offset: 3px;
+  outline: 2px solid var(--color-emerald-700);
+  outline-offset: 2px;
 }
 
 [lang="bn"] {
   line-height: 1.7;
 }
 
-/* Bangla set in the system face (interface text that happens to be Bangla). */
-.bn {
-  font-family: var(--font-bangla);
-}
-
-/* Anything a person says, or the system says aloud. */
+/* Words a farmer says or hears; never interface text. */
 .voice {
   font-family: var(--font-voice);
   font-weight: 400;
 }
 
-/* Width carries the role: condensed numbers, normal interface, expanded headlines. */
 .num {
-  font-stretch: 75%;
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-.wide {
-  font-stretch: 118%;
-  font-weight: 650;
-}
-.label {
-  font-stretch: 88%;
-  font-weight: 500;
+  font-feature-settings: "tnum" 1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-/* OS glass: only in the operating system, over the frozen dawn landscape. */
-.panel {
-  background: color-mix(in oklab, var(--color-ink-800) 62%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.1);
-  backdrop-filter: blur(16px) saturate(1.1);
-  border: 1px solid rgb(239 235 221 / 0.07);
-  border-top-color: rgb(239 235 221 / 0.14);
-  border-radius: 20px;
+/* White elevated card on the canvas. */
+.surface {
+  background: #ffffff;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
 }
 
-.card {
-  background: color-mix(in oklab, var(--color-ink-900) 55%, transparent);
-  border: 1px solid rgb(239 235 221 / 0.07);
-  border-radius: 14px;
+/* Obsidian telemetry well: agent trace, CAD viewport, SAR radar. */
+.well {
+  background: var(--color-obsidian);
+  border: 1px solid rgb(148 163 184 / 0.16);
+  border-radius: 12px;
+  color: var(--color-slate-200);
 }
 
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-ink-600) transparent;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+.well .scroll-thin,
+.scroll-thin.on-dark {
+  scrollbar-color: var(--color-slate-700) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

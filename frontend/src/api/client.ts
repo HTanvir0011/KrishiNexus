@@ -469,7 +469,10 @@ export interface VoiceInteractBody {
 }
 
 export const api = {
-  health: () => request<{ status: string; tools: number; active_anomalies: number }>("/health", undefined, 4_000),
+  health: () => request<{ status: string; mcp_servers: number; tools: number; active_anomalies: number }>("/health", undefined, 4_000),
+
+  verifyCertificate: (certId: string) =>
+    post<{ cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean }>("/edge/verify-certificate", { cert_id: certId }),
 
   voiceInteract: (body: VoiceInteractBody) =>
     withFallback(() => post<VoiceInteractResponse>("/edge/voice-interact", body), () => fallbackVoice(body)),

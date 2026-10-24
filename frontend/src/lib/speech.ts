@@ -42,6 +42,11 @@ export function listenOnce(lang: string, onText: (text: string) => void, onError
   return () => recognition.stop();
 }
 
+/** Without an installed Bangla voice the browser would read Bangla with an English voice; callers say so instead. */
+export function hasBanglaVoice(): boolean {
+  return "speechSynthesis" in window && window.speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith("bn"));
+}
+
 export function speak(text: string, lang: "bn-BD" | "en-US"): boolean {
   if (!("speechSynthesis" in window) || !text) return false;
   window.speechSynthesis.cancel();

@@ -1,12 +1,9 @@
 /**
- * Facts the story tells, taken from three live calls (Rahim's voice preset, his price ladder, Abdul's
- * voice preset). When the backend is unreachable the page falls back to a snapshot of a live run on
- * 24 Oct 2026 and says so; nothing on the page is typed in by hand.
+ * Facts the overview shows, read from live calls (a voice preset, the price ladder, the haor risk). When the backend is
+ * unreachable each card falls back to a snapshot of a live run on 24 Oct 2026 and says so; nothing is typed in by hand.
  */
 
-import { useEffect, useState } from "react";
-
-import { api, mcpCall, withFallback, type QuotaResult, type VoiceInteractResponse } from "../api/client";
+import type { QuotaResult, VoiceInteractResponse } from "../api/client";
 import { englishSummary } from "../lib/summary";
 
 export type SourceStatus = "loading" | "live" | "cached";
@@ -33,6 +30,10 @@ export interface Ladder {
   bepariCost: number;
   aratdarTake: number;
   aratdarSharePct: number;
+  gradingSpend: number;
+  severity: string;
+  fairMarkupPct: number;
+  excessTkPerKg: number;
   tiers: Tier[];
   marketDate: string;
 }
@@ -76,12 +77,6 @@ export interface AbdulFacts {
   advice: string;
   creditScore: number | null;
   loan: number | null;
-}
-
-export interface StoryFacts {
-  rahim: Sourced<RahimFacts>;
-  ladder: Sourced<Ladder>;
-  abdul: Sourced<AbdulFacts>;
 }
 
 export const SNAPSHOT_DATE = "24 Oct 2026";
@@ -141,6 +136,10 @@ export const LADDER_SNAPSHOT: Ladder = {
   bepariCost: 12.89,
   aratdarTake: 8.04,
   aratdarSharePct: 62.35,
+  gradingSpend: 0,
+  severity: "CRITICAL",
+  fairMarkupPct: 35,
+  excessTkPerKg: 28.83,
   marketDate: "2026-10-24",
   tiers: [
     { tier: "Faria", role: TIER_ROLES.Faria, buy: 36.18, sell: 40.78, margin: 4.6 },
@@ -245,20 +244,25 @@ export function abdulFrom(r: VoiceInteractResponse): AbdulFacts | null {
   };
 }
 
-interface DetectOutput {
+/** The subset of `detect_syndicate_markup_anomaly` output the overview renders. */
+export interface DetectOutput {
   grower_price_tk_per_kg: number;
   wholesale_price_tk_per_kg: number;
   retail_price_tk_per_kg: number;
   markup_pct: number;
+  severity: string;
+  fair_markup_pct: number;
+  excess_extraction_tk_per_kg: number;
   farmer_share_of_retail_pct: number;
   bepari_marketing_cost_tk_per_kg: number;
   aratdar_take_tk_per_kg: number;
   aratdar_share_of_bepari_marketing_cost_pct: number;
+  aratdar_grading_spend_tk_per_kg: number;
   market_date: string;
   tier_breakdown: { tier: string; buy_price_tk_per_kg: number; sell_price_tk_per_kg: number; gross_margin_tk_per_kg: number }[];
 }
 
-function ladderFrom(d: DetectOutput): Ladder {
+export function ladderFrom(d: DetectOutput): Ladder {
   return {
     grower: d.grower_price_tk_per_kg,
     wholesale: d.wholesale_price_tk_per_kg,
@@ -268,49 +272,13 @@ function ladderFrom(d: DetectOutput): Ladder {
     bepariCost: d.bepari_marketing_cost_tk_per_kg,
     aratdarTake: d.aratdar_take_tk_per_kg,
     aratdarSharePct: d.aratdar_share_of_bepari_marketing_cost_pct,
+    gradingSpend: d.aratdar_grading_spend_tk_per_kg,
+    severity: d.severity,
+    fairMarkupPct: d.fair_markup_pct,
+    excessTkPerKg: d.excess_extraction_tk_per_kg,
     marketDate: d.market_date,
     tiers: d.tier_breakdown.map((t) => ({
       tier: t.tier, role: TIER_ROLES[t.tier] ?? t.tier, buy: t.buy_price_tk_per_kg, sell: t.sell_price_tk_per_kg, margin: t.gross_margin_tk_per_kg,
     })),
   };
-}
-
-/** Live facts for the whole story, with per-source status for honest labelling. */
-export function useStoryFacts(): StoryFacts {
-  const [rahim, setRahim] = useState<Sourced<RahimFacts>>({ data: RAHIM_SNAPSHOT, status: "loading" });
-  const [ladder, setLadder] = useState<Sourced<Ladder>>({ data: LADDER_SNAPSHOT, status: "loading" });
-  const [abdul, setAbdul] = useState<Sourced<AbdulFacts>>({ data: ABDUL_SNAPSHOT, status: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    const cachedRahim = { data: RAHIM_SNAPSHOT, status: "cached" as const };
-    const cachedAbdul = { data: ABDUL_SNAPSHOT, status: "cached" as const };
-
-    api.voiceInteract({ preset_id: "rangpur_potato_distress" })
-      .then((r) => {
-        const facts = r.live ? rahimFrom(r.data) : null;
-        if (active) setRahim(facts ? { data: facts, status: "live" } : cachedRahim);
-      })
-      .catch(() => active && setRahim(cachedRahim));
-
-    withFallback(
-      () => mcpCall<DetectOutput>("detect_syndicate_markup_anomaly", { crop: "Cardinal Potato", upazila: "Mithapukur", retail_hub: "Dhaka Karwan Bazar" }),
-      () => null,
-    )
-      .then((r) => active && setLadder(r.live && r.data ? { data: ladderFrom(r.data), status: "live" } : { data: LADDER_SNAPSHOT, status: "cached" }))
-      .catch(() => active && setLadder({ data: LADDER_SNAPSHOT, status: "cached" }));
-
-    api.voiceInteract({ preset_id: "sunamganj_haor_flood" })
-      .then((r) => {
-        const facts = r.live ? abdulFrom(r.data) : null;
-        if (active) setAbdul(facts ? { data: facts, status: "live" } : cachedAbdul);
-      })
-      .catch(() => active && setAbdul(cachedAbdul));
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return { rahim, ladder, abdul };
 }

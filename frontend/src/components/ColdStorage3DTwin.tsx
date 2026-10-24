@@ -17,15 +17,15 @@ const NATIONAL_ROT_BASELINE = 9.0;
 
 type SlotKind = "trader" | "owner" | "farmerBooked" | "farmerOpen";
 
-// Same encoding as the story's quota chart: traders slate, plant owners sky, farmers mustard (open = full strength).
+// Same encoding as the overview quota bar: traders slate, plant owners cerulean, farmers harvest amber (open = bright).
 const COLORS: Record<SlotKind, number> = {
-  trader: 0x5f7468,
-  owner: 0x3d6f7b,
-  farmerBooked: 0x5f5920,
-  farmerOpen: 0xedb723,
+  trader: 0x64748b,
+  owner: 0x0284c7,
+  farmerBooked: 0x92400e,
+  farmerOpen: 0xf59e0b,
 };
 
-/** Assign rack slots front-row-first so the smallholder (mustard) share faces the viewer. */
+/** Assign rack slots front-row-first so the smallholder (amber) share faces the viewer. */
 function slotKinds(openShareOfFarmer: number): SlotKind[] {
   const farmer = Math.round(TOTAL * SHARES.farmer);
   const owner = Math.round(TOTAL * SHARES.owner);
@@ -61,7 +61,7 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x0a1913, 14, 30);
+    scene.fog = new THREE.Fog(0x090d16, 16, 34);
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.set(9.5, 7, 11);
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -73,26 +73,26 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     controls.maxDistance = 22;
     controls.target.set(0, 1.4, 0);
 
-    scene.add(new THREE.HemisphereLight(0xcfe3e8, 0x0e211a, 0.9));
+    scene.add(new THREE.HemisphereLight(0xe0f2fe, 0x090d16, 0.95));
     const key = new THREE.DirectionalLight(0xffffff, 1.1);
     key.position.set(6, 10, 6);
     scene.add(key);
-    const chamberLight = new THREE.PointLight(0x8bbcc7, 18, 18);
+    const chamberLight = new THREE.PointLight(0x38bdf8, 16, 18);
     chamberLight.position.set(0, 4.6, 0);
     scene.add(chamberLight);
 
-    const floor = new THREE.GridHelper(16, 32, 0x21443a, 0x17352a);
+    const floor = new THREE.GridHelper(16, 32, 0x334155, 0x1e293b);
     scene.add(floor);
     const walls = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(13, 5, 8)),
-      new THREE.LineBasicMaterial({ color: 0x2f5648 }),
+      new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 }),
     );
     walls.position.y = 2.5;
     scene.add(walls);
 
     const cube = new THREE.BoxGeometry(0.9, 0.8, 0.9);
     const shelf = new THREE.BoxGeometry(BAYS * 1.1, 0.06, 1.1);
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x44584d, metalness: 0.6, roughness: 0.5 });
+    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.45 });
     const meshes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[] = [];
     let index = 0;
     for (let row = 0; row < ROWS; row++) {
@@ -117,7 +117,7 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
       meshes.forEach((mesh, i) => {
         const kind = kinds[i];
         mesh.material.color.setHex(COLORS[kind]);
-        mesh.material.emissive.setHex(kind === "farmerOpen" ? 0xb5840b : 0x000000);
+        mesh.material.emissive.setHex(kind === "farmerOpen" ? 0xd97706 : 0x000000);
         mesh.material.emissiveIntensity = kind === "farmerOpen" ? 0.55 : 0;
       });
     };
@@ -143,8 +143,8 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     const tick = () => {
       const t = (performance.now() - start) / 1000;
       controls.update();
-      chamberLight.color.setHex(alarmOn ? 0xf42a41 : 0x8bbcc7);
-      chamberLight.intensity = alarmOn ? 14 + 10 * Math.abs(Math.sin(t * 4)) : 18;
+      chamberLight.color.setHex(alarmOn ? 0xe11d48 : 0x38bdf8);
+      chamberLight.intensity = alarmOn ? 14 + 10 * Math.abs(Math.sin(t * 4)) : 16;
       const pulsing = performance.now() < pulseUntil;
       meshes.forEach((mesh, i) => {
         if (kinds[i] !== "farmerOpen") return;
@@ -232,45 +232,45 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
   return (
     <Panel
       className={className}
-      icon={<Warehouse className="size-4 text-emerald-400" />}
-      title={`3D Cold-Storage Digital Twin · ${telemetry?.facility_name ?? focus.facilityId} / ${focus.chamberId}`}
-      actions={<Badge tone={alarm ? "red" : "emerald"}>{alarm ? "ALARM" : "NOMINAL"}</Badge>}
-      bodyClassName="flex flex-col gap-2 p-0"
+      icon={<Warehouse className="size-4 text-sky-700" aria-hidden />}
+      title={`Cold-storage chamber inspector · ${telemetry?.facility_name ?? focus.facilityId} / ${focus.chamberId}`}
+      actions={<Badge tone={alarm ? "red" : "emerald"}>{alarm ? "Alarm" : "Nominal"}</Badge>}
+      bodyClassName="flex flex-col p-0"
     >
-      <div className="relative h-[300px] min-h-[240px] flex-1 overflow-hidden rounded-t-none">
+      <div className="well relative m-3 mb-0 h-[320px] min-h-[260px] flex-1 overflow-hidden">
         <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" aria-label="Rotatable 3D cold storage racks" />
-        <div className={cn("pointer-events-none absolute inset-0 transition-colors", alarm && "bg-red-500/10")} />
-        <div className="pointer-events-none absolute left-2 top-2 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-3">
-          <TelemetryChip icon={<Thermometer className="size-3" />} label="Temp" alert={(telemetry?.temperature_c ?? 9.5) > 10}
-            value={telemetry ? `${telemetry.temperature_f.toFixed(1)}°F / ${telemetry.temperature_c.toFixed(1)}°C` : "…"} />
-          <TelemetryChip icon={<Droplets className="size-3" />} label="RH" alert={(telemetry?.relative_humidity_pct ?? 93) > 95}
+        <div className={cn("pointer-events-none absolute inset-0 transition-colors", alarm && "bg-rose-600/10")} />
+        <div className="pointer-events-none absolute top-2.5 left-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5">
+          <TelemetryChip icon={<Thermometer className="size-3" aria-hidden />} label="Chamber" alert={(telemetry?.temperature_c ?? 9.5) > 10}
+            value={telemetry ? `${telemetry.temperature_c.toFixed(1)} °C · set 9.5 °C` : "…"} />
+          <TelemetryChip icon={<Droplets className="size-3" aria-hidden />} label="RH" alert={(telemetry?.relative_humidity_pct ?? 93) > 95}
             value={telemetry ? pct(telemetry.relative_humidity_pct) : "…"} />
-          <TelemetryChip icon={<Wind className="size-3" />} label="CO₂" alert={(telemetry?.co2_ppm ?? 0) > 3000}
+          <TelemetryChip icon={<Wind className="size-3" aria-hidden />} label="CO₂" alert={(telemetry?.co2_ppm ?? 0) > 3000}
             value={telemetry ? `${telemetry.co2_ppm.toFixed(0)} ppm` : "…"} />
-          <TelemetryChip icon={<PlugZap className="size-3" />} label="Power" alert={power === "OUTAGE"}
-            value={power === "DIESEL_GENERATOR" ? "Diesel backup" : power === "OUTAGE" ? "OUTAGE" : power === "GRID" ? "Grid" : "…"} />
-          <TelemetryChip icon={<Gauge className="size-3" />} label="Rot risk" alert={(telemetry?.rot_risk_pct ?? 0) > 5}
-            value={telemetry ? `${pct(telemetry.rot_risk_pct)} vs ${NATIONAL_ROT_BASELINE}% baseline` : "…"} />
+          <TelemetryChip icon={<PlugZap className="size-3" aria-hidden />} label="Power" alert={power === "OUTAGE"}
+            value={power === "DIESEL_GENERATOR" ? "Diesel backup" : power === "OUTAGE" ? "Outage" : power === "GRID" ? "Grid" : "…"} />
+          <TelemetryChip icon={<Gauge className="size-3" aria-hidden />} label="Rot risk" alert={(telemetry?.rot_risk_pct ?? 0) > 5}
+            value={telemetry ? `${pct(telemetry.rot_risk_pct)} vs ${NATIONAL_ROT_BASELINE}%` : "…"} />
         </div>
-        <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-1.5 text-[10px]">
-          <Legend color="bg-slate-600" label="Trader hoarded 45.0%" />
-          <Legend color="bg-sky-600" label="Plant owner 32.32%" />
-          <Legend color="bg-mustard-400" label={`Smallholder 22.68% · ${facility ? `${facility.open_smallholder_quota_mt.toFixed(0)} t open` : "open quota"}`} />
+        <div className="pointer-events-none absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5">
+          <Legend color="bg-slate-500" label="Traders 45%" />
+          <Legend color="bg-sky-600" label="Owners 32.3%" />
+          <Legend color="bg-amber-500" label={`Farmers 22.7%${facility ? ` · ${facility.open_smallholder_quota_mt.toFixed(0)} t open` : ""}`} />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 border-t border-ink-700 px-3 py-2">
-        <Button variant="danger" onClick={simulatePowerCut} disabled={busy !== null}>
-          {busy === "power" ? <Spinner /> : <Zap className="size-3.5" />} Simulate Chamber Power Cut / Humidity Spike
+      <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+        <Button variant="danger" onClick={() => void simulatePowerCut()} disabled={busy !== null}>
+          {busy === "power" ? <Spinner /> : <Zap className="size-4" aria-hidden />} Simulate power outage
         </Button>
-        <Button variant="amber" onClick={simulateFlood} disabled={busy !== null}>
-          {busy === "flood" ? <Spinner /> : <CloudRain className="size-3.5" />} Simulate Sunamganj Haor 72h Flash Flood
+        <Button variant="amber" onClick={() => void simulateFlood()} disabled={busy !== null}>
+          {busy === "flood" ? <Spinner /> : <CloudRain className="size-4" aria-hidden />} Simulate haor flood
         </Button>
-        <Button onClick={reset} disabled={busy !== null}>
-          {busy === "reset" ? <Spinner /> : <RotateCcw className="size-3.5" />} Clear
+        <Button onClick={() => void reset()} disabled={busy !== null}>
+          {busy === "reset" ? <Spinner /> : <RotateCcw className="size-4" aria-hidden />} Reset
         </Button>
         {flood && (
-          <span className="text-[11px] text-amber-200">
-            Haor: {flood.rows.filter((r) => r.alert_level === "RED").length} RED · {flood.early_harvest_dispatches.length} harvest dispatches
+          <span className="text-[12.5px] text-amber-800">
+            Haor: {flood.rows.filter((r) => r.alert_level === "RED").length} red · {flood.early_harvest_dispatches.length} harvest dispatches
           </span>
         )}
       </div>
@@ -280,17 +280,17 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
 
 function TelemetryChip({ icon, label, value, alert }: { icon: ReactNode; label: string; value: string; alert: boolean }) {
   return (
-    <div className={cn("rounded-md px-2 py-1 backdrop-blur-sm ring-1",
-      alert ? "bg-red-950/70 text-red-200 ring-red-500/50" : "bg-black/50 text-slate-200 ring-white/10")}>
-      <div className="flex items-center gap-1 label text-[11px] text-slate-400">{icon}{label}</div>
-      <div className="font-mono font-semibold">{value}</div>
+    <div className={cn("rounded-md px-2 py-1 ring-1 ring-inset backdrop-blur-sm",
+      alert ? "bg-rose-950/70 text-rose-200 ring-rose-400/50" : "bg-slate-900/70 text-slate-100 ring-white/10")}>
+      <div className="flex items-center gap-1 text-[10.5px] text-slate-400">{icon}{label}</div>
+      <div className="font-mono text-[11.5px] font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex items-center gap-1 rounded bg-black/50 px-1.5 py-0.5 text-slate-200 backdrop-blur-sm">
+    <span className="flex items-center gap-1 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[11px] text-slate-200 ring-1 ring-inset ring-white/10 backdrop-blur-sm">
       <span className={cn("size-2.5 rounded-sm", color)} /> {label}
     </span>
   );

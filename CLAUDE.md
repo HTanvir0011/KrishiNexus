@@ -47,7 +47,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Component | Command (from repo root) | Port / route |
 |---|---|---|
 | Backend (FastAPI) | `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000` | `http://localhost:8000`, OpenAPI at `/docs` |
-| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: story `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/market`), whitepaper `/docs` |
+| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/market`), whitepaper `/docs` |
 | Live agent trace | WebSocket | `ws://localhost:8000/ws/agent-trace?session_id=...` (proxied as `/ws`) |
 | MCP stdio servers | `cd backend && python -m mcp_servers.<server_module>` | newline-delimited JSON-RPC on stdin/stdout |
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
@@ -81,7 +81,7 @@ in `frontend/nginx.conf`. A new frontend route needs no nginx change. Regenerate
 krishinexus-os/
 ├── AGENTS.md / CLAUDE.md               # this contract (identical copies)
 ├── MEMORY.md                           # live state + handover log
-├── memory-graph.jsonl                  # project knowledge graph: 66 entities, 104 relations (MCP memory-server JSONL)
+├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG
 ├── backend/
@@ -131,24 +131,25 @@ krishinexus-os/
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
     ├── Dockerfile · .dockerignore · nginx.conf   # node build stage -> nginx serving dist + API/ws proxy
-    ├── design/DESIGN_PLAN.md · style-tile.html   # approved redesign plan (§10: build changes) + style tile (not in the build)
+    ├── design/DESIGN_PLAN.md · style-tile.html   # §11 = Phase 8 Design System v2 (live); §1–10 + tile record Phase 7
     └── src/
         ├── main.tsx                            # self-hosted fonts (Anek Bangla Variable wdth, Tiro Bangla 400 + italic)
-        ├── index.css                           # Tailwind @theme tokens + .num .wide .label .voice .panel .card
-        ├── App.tsx                             # history router: lazy StoryPage / OsPage / DocsShell, backend bootstrap
+        ├── index.css                           # Design System v2 tokens (canvas, obsidian, shadows) + .surface .well .num .voice
+        ├── App.tsx                             # Navbar + history router: lazy StoryPage / OsPage / DocsShell, backend bootstrap
         ├── api/client.ts · api/fallback.ts     # typed REST + WebSocket client, OFFLINE-PREVIEW fallbacks
-        ├── state/store.ts                      # useSyncExternalStore global store + actions
-        ├── lib/format.ts · speech.ts · mcpExamples.ts · router.tsx (Route, navigate, Link) · summary.ts (englishSummary)
-        ├── story/                              # the scroll story at /
-        │   ├── StoryPage.tsx · Hero.tsx · parts.tsx · story.css
-        │   ├── data.ts                         # useStoryFacts: live agents first, dated snapshot (SNAPSHOT_DATE) offline
-        │   ├── geo.ts · presets.ts             # stylised delta (places, route, rivers, haors, 18 BCSA seeds), 5 farmers, team
-        │   ├── landscape/Landscape.ts · shaders.ts   # one persistent Three.js scene; camera poses driven by scroll
-        │   └── chapters/ColdChapter · RoadChapter · AnswerChapter · HaorChapter · AgentsChapter · DawnChapter (.tsx)
-        ├── os/OsPage.tsx · DocsShell.tsx       # /os views (judge, field, coop, market) and /docs without Three.js
+        ├── state/store.ts                      # useSyncExternalStore global store + actions (lang, health, offlineMode, ...)
+        ├── lib/format.ts · speech.ts · mcpExamples.ts · router.tsx (Route, navigate, Link) · summary.ts · i18n.ts (useCopy)
+        ├── story/                              # the product overview at /
+        │   ├── StoryPage.tsx                   # hero (live metric pills), bento, pipeline, team footer
+        │   ├── LiveDecisionCard.tsx            # Rahim / Abdul: runs the real orchestration on click
+        │   ├── SyndicateCard.tsx · QuotaCard.tsx · HaorCard.tsx   # bento cards wired to MCP tools; HaorCard has the SAR map
+        │   ├── PipelineSection.tsx · pipeline.ts   # the 9 LangGraph nodes, their state contracts and per-node timing
+        │   ├── useLive.ts                      # live call with status, round trip and dated-snapshot fallback
+        │   └── data.ts · presets.ts            # adapters + SNAPSHOT_DATE snapshots; 5 dialect presets, team
+        ├── os/OsPage.tsx · DocsShell.tsx       # /os workspace (judge 12-col, field, coop, market) and /docs container
         ├── components/
-        │   ├── shell/TopBar.tsx · Alerts.tsx · Backdrop.tsx
-        │   ├── ui.tsx · gauges.tsx · MosaicSvg.tsx
+        │   ├── Navbar.tsx · shell/Alerts.tsx   # sticky glass navbar (status, routes, বাং/EN, offline edge, CTA); toasts
+        │   ├── ui.tsx · gauges.tsx             # Badge Panel Button Stat ProgressBar Spinner SourceChip Segmented LiveDot; dials
         │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx
         └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx
@@ -339,34 +340,31 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
   `{"type":"relation","from","to","relationType"}`. Names are unique and every relation endpoint must exist. Load it
   with `@modelcontextprotocol/server-memory` by setting `MEMORY_FILE_PATH` to this file.
 
-### 9.1 Frontend design system (redesign of 2026-10-24; full rationale in `frontend/design/DESIGN_PLAN.md`)
+### 9.1 Frontend design system (Phase 8 Institutional Design System v2; full spec in `frontend/design/DESIGN_PLAN.md` §11)
 
 - **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
-  - `/` is the story. Chapter deep links: `/#story-cold`, `-road`, `-answer`, `-haor`, `-agents`, `-dawn`.
-  - `/os` is judge mode; `/os/field`, `/os/coop` and `/os/market` are the other views.
-  - `/docs` (with `#section` anchors) is the whitepaper.
-  - Pages are lazy chunks. Only the story and the OS load Three.js.
-- **Colour tokens keep Tailwind names with new meanings:**
-  - `ink`: night-paddy background;
-  - `slate`: husk/silt text;
-  - `emerald`: healthy / flag green;
-  - `amber`: warning;
-  - `sky`: water, radar, information;
-  - `red`: alerts;
-  - `violet`: agents;
-  - `mustard`: the single action accent (primary buttons, focus ring, Rahim's plot, the open farmer quota).
-  - Quota shares are always traders `slate`, plant owners `sky` and farmers `mustard`, in the story chart and in the 3D twin alike.
-- **Type:** Anek Bangla Variable is the system face; it is self-hosted, so the site never calls Google Fonts.
-  - Use `.num` for figures (condensed, tabular), `.wide` for titles and `.label` for small captions in sentence case. No all-caps labels.
-  - Tiro Bangla (`.voice`) is used only for words a farmer says or hears.
+  - `/` is the product overview: hero with live metrics, the live decision card, bento cards and the LangGraph pipeline.
+  - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/market` are the other seats.
+  - `/docs` (with `#section` anchors) is the whitepaper. Only `/os` loads Three.js (the cold-storage twin).
+- **Navbar** (`components/Navbar.tsx`) is rendered once in `App.tsx`. Its toggles write the store:
+  - `lang` (`en` | `bn`; components read their copy through `useCopy` from `lib/i18n.ts`);
+  - `offlineMode` (sent as `offline_mode` with every voice request).
+- **Colour:** Tailwind's default palette, used with its real meaning; there are no remapped scales.
+  - emerald-700 is the brand, growth and the recommended option;
+  - amber-600 is action and the farmer quota;
+  - rose-600 is danger, the circuit breaker and the syndicate;
+  - sky-600 is cold chain and telemetry (sky-400 inside wells);
+  - slate is text and hairlines.
+  - Surfaces: `--color-canvas` #F6F8F5, `.surface` white cards (`--shadow-card`), `.well` obsidian #090D16.
+  - `.well` is used only for the agent trace, the CAD twin and the SAR map.
+  - Quota shares: traders slate, plant owners sky, farmers amber, everywhere.
+- **Type:** Anek Bangla Variable, self-hosted, base 15px.
+  - `tabular-nums` is set on `body`; `.num` adds weight to figures.
+  - Tiro Bangla (`.voice`) is only for words a farmer says or hears.
   - The monospace face is for IDs, code and logs.
-- **Honest data on the story:**
-  - Every figure comes from `story/data.ts`, which calls the live agents and falls back to a snapshot dated `SNAPSHOT_DATE`.
-  - `SourceNote` says which one is shown (live, cached or sample).
-  - Refresh the snapshot when backend outputs change.
-- **Landscape:**
-  - `Landscape` is imperative: React passes state through its setters (`setProgress`, `setRouteMode`, `setColdDistrict`,
-    `setFlood`, ...) and never re-renders per frame.
-  - Map labels are `Anchor` elements with `data-lat/lon/alt/ch`, positioned each frame. `followTruck` labels ride with the truck.
-    Labels flip left near the right edge; overlapping labels are lifted on desktop and hidden on phones.
-  - Reduced motion snaps the camera to each chapter's still. Without WebGL, `MosaicSvg` replaces the canvas.
+  - Sentence case everywhere; Bangla headings get more line height.
+- **Honest data:**
+  - Live cards use `story/useLive.ts`: they time the live call, fall back to a dated snapshot (`SNAPSHOT_DATE`) only on network or 5xx failures, and show the source with `SourceChip`.
+  - Metric pills are computed on load; never type a result in.
+  - Brief figures stay "cited in brief".
+- **Pipeline:** `story/pipeline.ts` is the single list of LangGraph nodes, with their state reads and writes, MCP tools and files. `nodeOf` maps trace events to nodes, including token compression's DAM lookup, which is recorded under the supervisor's name.

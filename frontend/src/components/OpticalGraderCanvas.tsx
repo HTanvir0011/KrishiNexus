@@ -8,10 +8,10 @@ import { Badge } from "./ui";
 export const SCAN_DURATION_MS = 5_000;
 
 const CLASS_STYLE: Record<DetectionClass, { stroke: string; label: string }> = {
-  uniform_A: { stroke: "#3fa97c", label: "uniform_A" },
-  minor_bruise: { stroke: "#e58f2b", label: "minor_bruise" },
-  fungal_blight: { stroke: "#f2545b", label: "fungal_blight" },
-  undersized: { stroke: "#9db0a3", label: "undersized" },
+  uniform_A: { stroke: "#059669", label: "uniform_A" },
+  minor_bruise: { stroke: "#d97706", label: "minor_bruise" },
+  fungal_blight: { stroke: "#e11d48", label: "fungal_blight" },
+  undersized: { stroke: "#64748b", label: "undersized" },
 };
 
 const PRODUCE_COLOR: Record<GradeableCrop, [string, string]> = {
@@ -25,11 +25,11 @@ const PRODUCE_COLOR: Record<GradeableCrop, [string, string]> = {
 
 function drawTray(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const g = ctx.createLinearGradient(0, 0, w, h);
-  g.addColorStop(0, "#1c3a2c");
-  g.addColorStop(1, "#122a20");
+  g.addColorStop(0, "#eef2ed");
+  g.addColorStop(1, "#e2e8e0");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(255,255,255,0.035)";
+  ctx.strokeStyle = "rgba(15,23,42,0.05)";
   ctx.lineWidth = 1;
   for (let x = 0; x < w; x += 9) {
     ctx.beginPath();
@@ -90,12 +90,12 @@ function drawBox(ctx: CanvasRenderingContext2D, b: BoundingBox, sx: number, sy: 
   ctx.lineWidth = 2;
   ctx.strokeRect(x * sx, y * sy, w * sx, h * sy);
   const label = `${style.label} ${(b.confidence * 100).toFixed(0)}%`;
-  ctx.font = "600 10px 'JetBrains Mono', monospace";
+  ctx.font = "600 10px ui-monospace, Consolas, monospace";
   const tw = ctx.measureText(label).width + 8;
   const ty = Math.max(0, y * sy - 15);
   ctx.fillStyle = style.stroke;
   ctx.fillRect(x * sx, ty, tw, 14);
-  ctx.fillStyle = "#0a1913";
+  ctx.fillStyle = "#ffffff";
   ctx.fillText(label, x * sx + 4, ty + 10.5);
   ctx.globalAlpha = 1;
 }
@@ -142,11 +142,11 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
         });
         if (progress < 1) {
           const grad = ctx.createLinearGradient(lineX - 40, 0, lineX, 0);
-          grad.addColorStop(0, "rgba(52,211,153,0)");
-          grad.addColorStop(1, "rgba(52,211,153,0.35)");
+          grad.addColorStop(0, "rgba(4,120,87,0)");
+          grad.addColorStop(1, "rgba(4,120,87,0.28)");
           ctx.fillStyle = grad;
           ctx.fillRect(lineX - 40, 0, 40, height);
-          ctx.fillStyle = "#3fa97c";
+          ctx.fillStyle = "#047857";
           ctx.fillRect(lineX - 1, 0, 2, height);
         }
         setFrame(Math.round(progress * result.video_frames_analyzed));
@@ -165,23 +165,23 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
 
   const scanning = Boolean(result && scanStartedAt && frame < result.video_frames_analyzed);
   return (
-    <div ref={wrapRef} className="relative overflow-hidden rounded-xl ring-1 ring-ink-600">
+    <div ref={wrapRef} className="relative overflow-hidden rounded-xl ring-1 ring-inset ring-slate-300">
       <canvas ref={canvasRef} className="block w-full" aria-label="Optical crop grading viewport" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent px-2.5 py-1.5 font-mono text-[10px] text-emerald-200">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-white/90 to-transparent px-2.5 py-1.5 font-mono text-[10.5px] text-slate-700">
         <span className="flex items-center gap-1">
-          <ScanLine className="size-3" /> {result?.inspector_model_version ?? "yolov11n-krishi-bd-v2.1"}
+          <ScanLine className="size-3" aria-hidden /> {result?.inspector_model_version ?? "yolov11n-krishi-bd-v2.1"}
         </span>
-        <span>{result ? `frame ${frame}/${result.video_frames_analyzed}` : "ready"}</span>
+        <span className="tabular-nums">{result ? `frame ${frame}/${result.video_frames_analyzed}` : "ready"}</span>
       </div>
       {!result && (
         <div className="absolute inset-0 grid place-items-center text-center">
-          <div className="rounded-lg bg-black/45 px-3 py-2 text-xs text-slate-300">
-            <div className="bn text-sm text-slate-100">ফসলের দিকে ক্যামেরা ধরুন</div>
+          <div className="rounded-lg bg-white/90 px-3 py-2 text-[12.5px] text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <div lang="bn" className="text-[14px] font-medium text-slate-900">ফসলের দিকে ক্যামেরা ধরুন</div>
             Point the camera at the sorted harvest and tap Scan
           </div>
         </div>
       )}
-      {scanning && <div className="absolute bottom-2 left-2 rounded bg-emerald-500/90 px-2 py-0.5 text-[10px] font-bold text-ink-950">SCANNING 5s SWEEP</div>}
+      {scanning && <div className="absolute bottom-2 left-2 rounded-md bg-emerald-700 px-2 py-0.5 text-[11px] font-semibold text-white">Scanning · 5 s sweep</div>}
     </div>
   );
 }
@@ -191,28 +191,28 @@ export function CertificateCard({ result }: { result: GradeCropResult }) {
   const cert = result.digital_certificate;
   const gradeTone = result.grade_letter === "A" ? "emerald" : result.grade_letter === "B" ? "amber" : "red";
   return (
-    <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-ink-900 to-ink-900 p-3">
+    <div className="rounded-xl bg-white p-3 ring-1 ring-inset ring-emerald-700/25">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-1.5 label text-[13px] font-semibold text-emerald-300">
-            <ShieldCheck className="size-3.5" /> Digital Quality Certificate
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-emerald-800">
+            <ShieldCheck className="size-4" aria-hidden /> Digital quality certificate
           </div>
-          <div className="mt-1 text-lg font-bold text-slate-50">{result.assigned_grade}</div>
+          <div className="mt-0.5 text-[16px] font-semibold text-slate-900">{result.assigned_grade}</div>
         </div>
-        <Badge tone={gradeTone} className="text-sm">Grade-{result.grade_letter}</Badge>
+        <Badge tone={gradeTone} className="text-[13px]">Grade-{result.grade_letter}</Badge>
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-xs">
-        <div><div className="text-[10px] text-slate-500">Uniformity</div><div className="text-emerald-300">{pct(m.size_uniformity_pct)}</div></div>
-        <div><div className="text-[10px] text-slate-500">Bruising</div><div className="text-amber-300">{pct(m.mechanical_bruising_pct, 2)}</div></div>
-        <div><div className="text-[10px] text-slate-500">Rot risk</div><div className={m.rot_blight_risk_pct > 2 ? "text-red-300" : "text-emerald-300"}>{pct(m.rot_blight_risk_pct, 2)}</div></div>
-      </div>
+      <dl className="m-0 mt-2 grid grid-cols-3 gap-2">
+        <div><dt className="text-[11.5px] text-slate-500">Uniformity</dt><dd className="num m-0 text-[15px] text-emerald-700">{pct(m.size_uniformity_pct)}</dd></div>
+        <div><dt className="text-[11.5px] text-slate-500">Bruising</dt><dd className="num m-0 text-[15px] text-amber-700">{pct(m.mechanical_bruising_pct, 2)}</dd></div>
+        <div><dt className="text-[11.5px] text-slate-500">Rot risk</dt><dd className={`num m-0 text-[15px] ${m.rot_blight_risk_pct > 2 ? "text-rose-600" : "text-emerald-700"}`}>{pct(m.rot_blight_risk_pct, 2)}</dd></div>
+      </dl>
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <Badge tone="emerald"><BadgeCheck className="size-3" /> +{result.price_premium_pct}% vs ungraded</Badge>
-        <Badge tone="sky">BAU benchmark: +32% / +$947 per season</Badge>
+        <Badge tone="emerald"><BadgeCheck className="size-3" aria-hidden /> +{result.price_premium_pct}% vs ungraded</Badge>
+        <Badge tone="violet"><Fingerprint className="size-3" aria-hidden /> HMAC-SHA256 signed</Badge>
         <Badge tone="slate">{result.bounding_boxes.length} objects · {result.inference_backend}</Badge>
       </div>
-      <div className="mt-2 space-y-0.5 rounded-lg bg-black/30 p-2 font-mono text-[10px] text-slate-400">
-        <div className="flex items-center gap-1 text-slate-300"><Fingerprint className="size-3" /> {cert.cert_id}</div>
+      <div className="mt-2 space-y-0.5 rounded-lg bg-slate-50 p-2 font-mono text-[10.5px] text-slate-600 ring-1 ring-inset ring-slate-200">
+        <div className="text-slate-800">{cert.cert_id}</div>
         <div>sha256 {shortHash(cert.sha256_payload_hash, 14)}</div>
         <div>hmac&nbsp;&nbsp; {shortHash(cert.verification_hash, 14)}</div>
       </div>
