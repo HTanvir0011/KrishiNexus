@@ -4,6 +4,8 @@
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
+> `memory-graph.jsonl` is the same knowledge as a graph (MCP memory-server format); update its Phase, Metric, Next steps
+> and Repository entities in the same pass.
 
 ---
 

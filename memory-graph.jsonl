@@ -1,0 +1,170 @@
+{"type":"entity","name":"KrishiNexus OS","entityType":"Project","observations":["Edge-to-cloud multi-agent agricultural OS for Bangladeshi smallholders","International AI Builders Congress 2026, track AgriSphere AI -> FarmMarket; showcase 26 Dec 2026 at Daffodil International University","Runs without paid API keys, internet or GPU: deterministic agents seeded with Bangladesh data","Contract: AGENTS.md (mirrored as CLAUDE.md); live state: MEMORY.md; this graph: memory-graph.jsonl"]}
+{"type":"entity","name":"5-tier syndicate","entityType":"Problem","observations":["Faria -> Bepari -> Aratdar -> Paiker -> Retailer","Up to 116% retail markup (CPD July 2026, cited in brief)","Aratdars take 62.35% of Bepari marketing cost and spend Tk 0 on grading"]}
+{"type":"entity","name":"Cold-storage quota capture","entityType":"Problem","observations":["Traders 45.0% + plant owners 32.32% = 77.32% non-farmer; farmers 22.68%","Forces below-cost distress sales (Tk 5-14/kg vs Tk 15-20/kg cost)","BCSA tariff doubled: Tk 4-5.50 -> Tk 8.00-9.50/kg"]}
+{"type":"entity","name":"Haor flash floods","entityType":"Problem","observations":["2017 Boro loss: Sunamganj 65%, Kishoreganj 44%, Netrokona 21%","Monsoon cloud blinds optical satellites; Sentinel-1 SAR sees through"]}
+{"type":"entity","name":"Backend (FastAPI)","entityType":"Service","observations":["backend/main.py; port 8000; OpenAPI at /docs","Python 3.14 venv, Pydantic v2 everywhere","Routes: /mcp /rag /optimization /guardrails /agents /prompts /automation /edge /evals /health and WS /ws/agent-trace","Times are BDT (UTC+06:00) via config.now_bdt()"]}
+{"type":"entity","name":"Frontend (Vite + React)","entityType":"Service","observations":["frontend/; port 5173; React 19, TypeScript strict, Tailwind v4, Three.js r186","Vite proxy target from KNX_BACKEND_URL (default http://localhost:8000)","Routes: / story, /os judge mode (+ /os/field, /os/coop, /os/market), /docs whitepaper","Pages are lazy chunks; only story and OS load Three.js"]}
+{"type":"entity","name":"Docker Compose stack","entityType":"Deployment","observations":["docker-compose.yml: backend (python:3.14-slim, uid 10001, HEALTHCHECK /health) + frontend (node:24 build -> nginx:1.28-alpine)","Profile local-llm adds ollama + ollama-pull (qwen2.5:7b and llama3.2:3b q4_K_M, ~6.7 GB)","nginx.conf mirrors the Vite proxy; SPA fallback serves /, /os/*, /docs","Statically validated only; never run on a Docker host"]}
+{"type":"entity","name":"dam-market-mcp","entityType":"MCPServer","observations":["backend/mcp_servers/dam_market_mcp.py; 4 tools; streamable-http + stdio","Seasonal DAM price curves, tier split, pooled truck economics, 7 arats + 3 retail DCs + 66 WFP centres"]}
+{"type":"entity","name":"agri-weather-sar-mcp","entityType":"MCPServer","observations":["backend/mcp_servers/agri_weather_sar_mcp.py; 5 tools; streamable-http, sse, stdio","Live Open-Meteo weather with climatology fallback (NETWORK_BLACKOUT ContextVar)","Haor breach probability from SAR backscatter and 72 h upstream rain"]}
+{"type":"entity","name":"coldchain-iot-mcp","entityType":"MCPServer","observations":["backend/mcp_servers/coldchain_iot_mcp.py; 4 tools; streamable-http + stdio","18 seeded BCSA facilities (Munshiganj 5, Rangpur 4, Bogura 5, Thakurgaon 4)","Chamber setpoint 9.5 C; outage drift tau 36 h; telemetry labelled measured/modelled"]}
+{"type":"entity","name":"get_daily_commodity_spread","entityType":"MCPTool","observations":["Input crop, district; farm-gate/wholesale/retail spread"]}
+{"type":"entity","name":"detect_syndicate_markup_anomaly","entityType":"MCPTool","observations":["Input crop, upazila, retail_hub","Markup > 40% anomaly; ELEVATED >=40, SEVERE >=75, CRITICAL >=100","Itemises Bepari marketing cost; Aratdar share 62.35%, grading spend Tk 0"]}
+{"type":"entity","name":"find_optimal_selling_hub","entityType":"MCPTool","observations":["Input crop, weight_kg, origin_district, grade; net Tk/kg after pooled freight"]}
+{"type":"entity","name":"get_historical_seasonal_curve","entityType":"MCPTool","observations":["Input crop, month_range; DAM-modelled seasonal prices"]}
+{"type":"entity","name":"get_current_weather","entityType":"MCPTool","observations":["Input latitude, longitude; Open-Meteo live or CLIMATOLOGY_FALLBACK"]}
+{"type":"entity","name":"get_weather_by_datetime_range","entityType":"MCPTool","observations":["Input latitude, longitude, start_date, end_date (max 7 days)"]}
+{"type":"entity","name":"calculate_haor_flash_flood_risk","entityType":"MCPTool","observations":["Input upazila, sar_water_backscatter_db","Alert bands RED >=70%, ORANGE >=45%, YELLOW >=20%"]}
+{"type":"entity","name":"compute_crop_vpd_stress","entityType":"MCPTool","observations":["Input crop, crop_stage, temp_c, rh_pct; Tetens VPD + fungal risk"]}
+{"type":"entity","name":"trigger_early_harvest_window","entityType":"MCPTool","observations":["Input cluster_id, upazila, urgency_level"]}
+{"type":"entity","name":"query_cold_storage_quota","entityType":"MCPTool","observations":["Input district, radius_km, tons_needed; open smallholder quota per facility"]}
+{"type":"entity","name":"get_chamber_telemetry","entityType":"MCPTool","observations":["Input facility_id (BCSA-XXX-00), chamber_id (CH-00); temp, RH, CO2, power, rot risk"]}
+{"type":"entity","name":"calculate_dynamic_shelf_life","entityType":"MCPTool","observations":["Input crop, grade, transit_temp_c, rh_pct; Q10 model gives lambda_rot 0.012-0.09"]}
+{"type":"entity","name":"reserve_collective_storage_slot","entityType":"MCPTool","observations":["Input cluster_id, facility_id, tons, farmer_count"]}
+{"type":"entity","name":"Supervisor (LangGraph)","entityType":"Agent","observations":["backend/agents/supervisor.py: GRAPH, orchestrate(), voice_interact()","Node order: pii_guardrail -> token_compression -> crag_retrieval -> vision_grading -> syndicate_bypass -> coldchain_arbitrage -> climate_credit -> supervisor_review -> (re-plan max 2) -> voice_synthesizer","Returns NEEDS_CLARIFICATION when the crop is unknown","Agents make no live LLM calls; ModelRouter records which model would serve each step"]}
+{"type":"entity","name":"Vision Grading Agent","entityType":"Agent","observations":["Agent 1, backend/agents/vision_grading_agent.py","Grades A/B/C with bari-standard thresholds; HMAC-signed DigitalQualityCertificate"]}
+{"type":"entity","name":"Syndicate Bypass Agent","entityType":"Agent","observations":["Agent 2, backend/agents/syndicate_bypass_agent.py","Exposes tier markup and matches the lot to a 5-ton union truck pool (5 km radius)"]}
+{"type":"entity","name":"Coldchain Arbitrage Agent","entityType":"Agent","observations":["Agent 3, backend/agents/coldchain_arbitrage_agent.py","Blocks below-floor Faria offers when pooled B2B net beats the floor; evaluates storage releases at +30/+60/+90 days","Reserves a slot only when storing beats the pooled sale and the chamber is in band"]}
+{"type":"entity","name":"Climate Credit Agent","entityType":"Agent","observations":["Agent 4, backend/agents/climate_credit_agent.py","72 h flood clearance + credit score 300-850; 6% p.a., cap Tk 50,000"]}
+{"type":"entity","name":"CRAG pipeline","entityType":"Module","observations":["backend/rag/crag_pipeline.py: HyDE dialect rewrite, detect_intents, Corrective-RAG grading, MCP augmentation","Intents: STORAGE_CONDITIONS, STORAGE_ACCESS, SELLING_CHANNEL, PRICE, DISEASE, PESTICIDE_SAFETY, FLOOD, HARVEST, CREDIT, TRANSPORT, GENERAL","CORRECT >= 0.70, AMBIGUOUS >= 0.45"]}
+{"type":"entity","name":"Hybrid retriever","entityType":"Module","observations":["backend/rag/hybrid_retriever.py: BM25 + 384-dim hashing embeddings, RRF k=60, logistic reranker"]}
+{"type":"entity","name":"GraphRAG","entityType":"Module","observations":["backend/rag/graph_rag.py: SupplyChainGraph on NetworkX, Neo4j-compatible Cypher"]}
+{"type":"entity","name":"Bangla lexicon","entityType":"Module","observations":["backend/rag/lexicon.py: dialect normalisation, concepts, crop and district detection","Crop names also match English plurals (potatoes, chillies) since 2026-10-24"]}
+{"type":"entity","name":"Knowledge seed","entityType":"Dataset","observations":["backend/rag/knowledge_seed.py: 18 passages incl. AGRI-FIN-01, 8 graph rules","Brief figures attributed as cited in brief"]}
+{"type":"entity","name":"PII scrubber","entityType":"Module","observations":["backend/guardrails/pii_scrubber.py: NID, phone, bKash redaction + PIIVault"]}
+{"type":"entity","name":"Financial circuit breaker","entityType":"Module","observations":["backend/guardrails/financial_circuit.py: delta-Pi arbitrage check + DAE dosage check","Warehouse-receipt credit LTV 70%, 9% p.a."]}
+{"type":"entity","name":"Token optimizer","entityType":"Module","observations":["backend/optimization/token_compressor.py: LLMLingua-style compression, rolling memory","168-h weather JSON 8.2-9.0x, numbers preserved"]}
+{"type":"entity","name":"Prompt registry","entityType":"Module","observations":["backend/prompts/prompt_registry.py: versioned XML prompts v1.0 -> v1.2-dspy-optimized; agents read decision parameters from it"]}
+{"type":"entity","name":"Truck pools","entityType":"Module","observations":["backend/automation/workflows.py: TRUCK_POOLS, durable in backend/.state/truck_pools.json","5,000 kg, union radius 5 km, deadline 8 h, auto-dispatch at >=80% fill; n8n-style jobs"]}
+{"type":"entity","name":"Bangla voice pipeline","entityType":"Module","observations":["backend/edge_node/bangla_voice.py: 5 voice presets, unit conversion (1 maund = 40 kg), SSML","Speech-to-text needs faster-whisper (untested); presets and typed text work"]}
+{"type":"entity","name":"Optical grader","entityType":"Module","observations":["backend/edge_node/optical_grader.py: simulated sweep, classical CV, optional YOLO; no trained weights ship"]}
+{"type":"entity","name":"Local LLM manager","entityType":"Module","observations":["backend/edge_node/ollama_local.py: Ollama / llama.cpp / vLLM with fallback; LoRA dataset generated, adapter never trained"]}
+{"type":"entity","name":"Evaluation engine","entityType":"Module","observations":["backend/evals/regression_suite.py: RAG metrics on 19 labelled questions + 100-case seeded regression (seed 20261226)","Metrics are computed, never hard-coded; targets shown beside them"]}
+{"type":"entity","name":"Story page","entityType":"UI","observations":["frontend/src/story/StoryPage.tsx at route /","7 chapters: hero, cold, road, answer, haor, agents, dawn; deep links /#story-<chapter>","Figures from story/data.ts: live agents first, snapshot dated 24 Oct 2026 offline"]}
+{"type":"entity","name":"Landscape engine","entityType":"UI","observations":["frontend/src/story/landscape/Landscape.ts + shaders.ts: one persistent Three.js scene of a stylised delta","Scroll progress P in [0,7) drives camera poses; chapters hold 60% then blend","Labels flip at the right edge; overlaps lift on desktop, hide on phones","Reduced motion snaps to stills; MosaicSvg replaces it without WebGL"]}
+{"type":"entity","name":"Live OS page","entityType":"UI","observations":["frontend/src/os/OsPage.tsx at /os: judge mode, farmer's phone, co-op and cold storage, market and credit","Reuses FarmerZeroUIApp, CommandCenter (ColdStorage3DTwin, TruckPoolMap, AgentTraceVisualizer), BuyerBankPortal"]}
+{"type":"entity","name":"Whitepaper page","entityType":"UI","observations":["frontend/src/os/DocsShell.tsx + pages/DocsPage.tsx at /docs; no Three.js","5 sections: provenance, 13-tool MCP inspector, AI depth matrix, live metrics + regression, B2B economics"]}
+{"type":"entity","name":"Design system","entityType":"Decision","observations":["Palette remap on Tailwind names: ink night paddy, slate husk, emerald healthy, amber warning, sky water/radar, red alerts, violet agents, mustard single action accent","Quota colours everywhere: traders slate, plant owners sky, farmers mustard","Fonts self-hosted: Anek Bangla Variable (system), Tiro Bangla (spoken words only)","Plan: frontend/design/DESIGN_PLAN.md (approved 2026-10-24)"]}
+{"type":"entity","name":"Rahim Mia","entityType":"Persona","observations":["Potato farmer, Mithapukur, Rangpur; Rangpuri dialect","Question: এলা বেচমু না হিমাগারত থুমু? (sell now or keep in cold storage?)","Live run 24 Oct 2026: Faria Tk 12 (blocked, below Tk 15 floor); pooled truck Tk 61.91/kg = Tk 24,764 for 400 kg; storage Tk 8,298; markup 115%"]}
+{"type":"entity","name":"Abdul","entityType":"Persona","observations":["Boro rice farmer, Tahirpur, Sunamganj, beside Tanguar haor; Sylheti","Question: অখন কাটমু নি? (should I cut it now?)","Today 4.6% GREEN; simulated 2017 flood (+320 mm) gives 99.7% RED, harvest within 5 h"]}
+{"type":"entity","name":"Delta-Pi formula","entityType":"Formula","observations":["Delta-Pi = [Q(1-lambda_rot)E[P_future] - Q(C_storage + C_handling) - C_transport_storage] - [Q P_spot - C_transport_market]","Block spot sale iff P_spot < floor and open quota >= Q and Delta-Pi > 0"]}
+{"type":"entity","name":"Aratdar take formula","entityType":"Formula","observations":["M = wholesale - grower; C_bepari = 0.8 x M x 0.70; aratdar_take = 0.6235 x C_bepari"]}
+{"type":"entity","name":"Haor breach formula","entityType":"Formula","observations":["w = 1/(1+e^((dB+16.5)/1.6)), r = R72/trigger, z = -5 + 3.2r + 2.6w + 2.0 vulnerability + 1.2 seasonal_exposure, p = 1/(1+e^-z)"]}
+{"type":"entity","name":"Production cost floor","entityType":"Constant","observations":["Tk 15/kg for Cardinal and Diamant potato (dam_market_mcp.SEASONAL_CURVES)"]}
+{"type":"entity","name":"Pooled truck economics","entityType":"Constant","observations":["5,000 kg; Tk 68/km + Tk 1,500/trip + tolls (Jamuna Tk 1,800, Padma Tk 2,800); + Tk 0.10/kg pooling fee; road = haversine x 1.32"]}
+{"type":"entity","name":"WFP aggregation centres","entityType":"Constant","observations":["66 centres: 62 Cox's Bazar + 4 Kurigram (dam_market_mcp.WFP_CENTRES_BY_DISTRICT)"]}
+{"type":"entity","name":"Latest metrics","entityType":"Metric","observations":["2026-10-24: faithfulness, answer relevancy, context precision, context recall all 1.00 on 19 questions; gold doc first 19/19","MCP JSON validity 22/22; PII recall 12/12; regression 100/100","Held-out probe 9/10 (miss: negation, loan without collateral)"]}
+{"type":"entity","name":"Phase 0-6","entityType":"Phase","observations":["Done 2026-10-22: memory bank, Docker files, 3 MCP servers, RAG + guardrails, LangGraph agents, edge node, React frontend, evals + /docs","6b brief alignment (WFP 62/4, distress Tk 5-14, 62.35% field); 6c retrieval intent fix (precision 0.9211 -> 1.00)"]}
+{"type":"entity","name":"Phase 7 immersive redesign","entityType":"Phase","observations":["Approved and built 2026-10-24: story at /, OS at /os, stylised delta, bilingual headlines, procedural imagery","Verified with headless Chrome (puppeteer-core, SwiftShader): chapters, interactions, phone, reduced motion, offline, no-WebGL, OS, docs","Not verified: real GPU browser, real phone, screen reader, Lighthouse"]}
+{"type":"entity","name":"Next steps","entityType":"Task","observations":["Run docker compose up --build on a Docker host and check nginx proxying, /ws, SSE, pool persistence","Polish: plain-language step summaries in frontend/src/story/chapters/AgentsChapter.tsx","Refresh story/data.ts snapshot when backend outputs change"]}
+{"type":"entity","name":"Known gaps","entityType":"Gap","observations":["No live LLM calls; no trained YOLO weights or LoRA adapter; Whisper STT untested","DAM/BCSA/IoT figures are seeded data, not live feeds","Retrieval has no negation handling; eval set written by the rule authors","Three.js shared chunk 559 kB; rivers alias at far zoom under SwiftShader"]}
+{"type":"entity","name":"GitHub HTanvir0011/KrishiNexus","entityType":"Repository","observations":["Public; main at 11336ad (2026-10-24, redesign), previous 2d918e6","Published from C:\\Users\\Asus\\Downloads\\congress\\Claude to push: project files at root + README.md, assets/, .gitignore","Mirror backend/ and frontend/ and copy root files; never mirror the root"]}
+{"type":"entity","name":"Local working repo","entityType":"Repository","observations":["C:\\Users\\Asus\\Downloads\\congress\\Claude (krishinexus-os inside); branch main, commit 9b190e7; origin is a placeholder URL","Redesign present as uncommitted working-tree changes"]}
+{"type":"entity","name":"Commit identity rule","entityType":"Decision","observations":["All commits authored and committed as HTanvir0011 <hossin23105101466@diu.edu.bd>","No AI or Claude co-author trailers"]}
+{"type":"entity","name":"Integrity rules","entityType":"Decision","observations":["Never hard-code evaluation results","Label simulated output: inference_backend, telemetry_source, data_source, OFFLINE-PREVIEW certificates","Brief figures without a primary source shown as cited in brief"]}
+{"type":"entity","name":"Dev machine notes","entityType":"Environment","observations":["Port 8000 is sometimes held by claude-science.exe; then run backend elsewhere and set KNX_BACKEND_URL (launch config krishinexus-frontend-8002 serves 5175 -> 8002)","Inline Bangla in curl from Git Bash arrives garbled; send UTF-8 files with --data-binary","Screenshots: puppeteer-core + Chrome; Edge launcher exits immediately"]}
+{"type":"entity","name":"Team","entityType":"Organization","observations":["Tanvir Hossin, Team Lead, Bangladesh","Md. Omar Faruk, AI/ML Engineer, Bangladesh","Md. Abdur Rahman, Full-Stack & Backend Developer, Bangladesh","Mohammed Mahmud Parvez, Full-Stack Developer, Bangladesh","Md. Morsalin, Full-Stack & Backend Developer, Bangladesh","Md Rifat, Domain Expert (Network Engineering), USA"]}
+{"type":"relation","from":"KrishiNexus OS","to":"5-tier syndicate","relationType":"addresses"}
+{"type":"relation","from":"KrishiNexus OS","to":"Cold-storage quota capture","relationType":"addresses"}
+{"type":"relation","from":"KrishiNexus OS","to":"Haor flash floods","relationType":"addresses"}
+{"type":"relation","from":"Backend (FastAPI)","to":"KrishiNexus OS","relationType":"part_of"}
+{"type":"relation","from":"Frontend (Vite + React)","to":"KrishiNexus OS","relationType":"part_of"}
+{"type":"relation","from":"Docker Compose stack","to":"Backend (FastAPI)","relationType":"deploys"}
+{"type":"relation","from":"Docker Compose stack","to":"Frontend (Vite + React)","relationType":"deploys"}
+{"type":"relation","from":"Frontend (Vite + React)","to":"Backend (FastAPI)","relationType":"proxies_to"}
+{"type":"relation","from":"dam-market-mcp","to":"Backend (FastAPI)","relationType":"hosted_by"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"Backend (FastAPI)","relationType":"hosted_by"}
+{"type":"relation","from":"coldchain-iot-mcp","to":"Backend (FastAPI)","relationType":"hosted_by"}
+{"type":"relation","from":"dam-market-mcp","to":"get_daily_commodity_spread","relationType":"exposes"}
+{"type":"relation","from":"dam-market-mcp","to":"detect_syndicate_markup_anomaly","relationType":"exposes"}
+{"type":"relation","from":"dam-market-mcp","to":"find_optimal_selling_hub","relationType":"exposes"}
+{"type":"relation","from":"dam-market-mcp","to":"get_historical_seasonal_curve","relationType":"exposes"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"get_current_weather","relationType":"exposes"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"get_weather_by_datetime_range","relationType":"exposes"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"calculate_haor_flash_flood_risk","relationType":"exposes"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"compute_crop_vpd_stress","relationType":"exposes"}
+{"type":"relation","from":"agri-weather-sar-mcp","to":"trigger_early_harvest_window","relationType":"exposes"}
+{"type":"relation","from":"coldchain-iot-mcp","to":"query_cold_storage_quota","relationType":"exposes"}
+{"type":"relation","from":"coldchain-iot-mcp","to":"get_chamber_telemetry","relationType":"exposes"}
+{"type":"relation","from":"coldchain-iot-mcp","to":"calculate_dynamic_shelf_life","relationType":"exposes"}
+{"type":"relation","from":"coldchain-iot-mcp","to":"reserve_collective_storage_slot","relationType":"exposes"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Backend (FastAPI)","relationType":"part_of"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"PII scrubber","relationType":"runs"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Token optimizer","relationType":"runs"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"CRAG pipeline","relationType":"runs"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Vision Grading Agent","relationType":"orchestrates"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Syndicate Bypass Agent","relationType":"orchestrates"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Coldchain Arbitrage Agent","relationType":"orchestrates"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Climate Credit Agent","relationType":"orchestrates"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"Bangla voice pipeline","relationType":"runs"}
+{"type":"relation","from":"Supervisor (LangGraph)","to":"get_daily_commodity_spread","relationType":"calls"}
+{"type":"relation","from":"Vision Grading Agent","to":"Optical grader","relationType":"uses"}
+{"type":"relation","from":"Vision Grading Agent","to":"CRAG pipeline","relationType":"uses"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"get_daily_commodity_spread","relationType":"calls"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"detect_syndicate_markup_anomaly","relationType":"calls"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"find_optimal_selling_hub","relationType":"calls"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"Truck pools","relationType":"uses"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"5-tier syndicate","relationType":"addresses"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"query_cold_storage_quota","relationType":"calls"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"get_chamber_telemetry","relationType":"calls"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"calculate_dynamic_shelf_life","relationType":"calls"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"reserve_collective_storage_slot","relationType":"calls"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"get_historical_seasonal_curve","relationType":"calls"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"Financial circuit breaker","relationType":"uses"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"Delta-Pi formula","relationType":"applies"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"Cold-storage quota capture","relationType":"addresses"}
+{"type":"relation","from":"Climate Credit Agent","to":"get_current_weather","relationType":"calls"}
+{"type":"relation","from":"Climate Credit Agent","to":"get_weather_by_datetime_range","relationType":"calls"}
+{"type":"relation","from":"Climate Credit Agent","to":"calculate_haor_flash_flood_risk","relationType":"calls"}
+{"type":"relation","from":"Climate Credit Agent","to":"compute_crop_vpd_stress","relationType":"calls"}
+{"type":"relation","from":"Climate Credit Agent","to":"trigger_early_harvest_window","relationType":"calls"}
+{"type":"relation","from":"Climate Credit Agent","to":"Haor flash floods","relationType":"addresses"}
+{"type":"relation","from":"Vision Grading Agent","to":"Prompt registry","relationType":"reads"}
+{"type":"relation","from":"Syndicate Bypass Agent","to":"Prompt registry","relationType":"reads"}
+{"type":"relation","from":"Coldchain Arbitrage Agent","to":"Prompt registry","relationType":"reads"}
+{"type":"relation","from":"Climate Credit Agent","to":"Prompt registry","relationType":"reads"}
+{"type":"relation","from":"CRAG pipeline","to":"Hybrid retriever","relationType":"uses"}
+{"type":"relation","from":"CRAG pipeline","to":"GraphRAG","relationType":"uses"}
+{"type":"relation","from":"CRAG pipeline","to":"Bangla lexicon","relationType":"uses"}
+{"type":"relation","from":"CRAG pipeline","to":"Knowledge seed","relationType":"retrieves_from"}
+{"type":"relation","from":"CRAG pipeline","to":"query_cold_storage_quota","relationType":"calls"}
+{"type":"relation","from":"CRAG pipeline","to":"find_optimal_selling_hub","relationType":"calls"}
+{"type":"relation","from":"CRAG pipeline","to":"get_daily_commodity_spread","relationType":"calls"}
+{"type":"relation","from":"CRAG pipeline","to":"get_current_weather","relationType":"calls"}
+{"type":"relation","from":"CRAG pipeline","to":"compute_crop_vpd_stress","relationType":"calls"}
+{"type":"relation","from":"Bangla voice pipeline","to":"Bangla lexicon","relationType":"uses"}
+{"type":"relation","from":"Local LLM manager","to":"Backend (FastAPI)","relationType":"part_of"}
+{"type":"relation","from":"Evaluation engine","to":"CRAG pipeline","relationType":"measures"}
+{"type":"relation","from":"Evaluation engine","to":"Financial circuit breaker","relationType":"measures"}
+{"type":"relation","from":"Evaluation engine","to":"Latest metrics","relationType":"produces"}
+{"type":"relation","from":"detect_syndicate_markup_anomaly","to":"Aratdar take formula","relationType":"applies"}
+{"type":"relation","from":"calculate_haor_flash_flood_risk","to":"Haor breach formula","relationType":"applies"}
+{"type":"relation","from":"Financial circuit breaker","to":"Production cost floor","relationType":"uses"}
+{"type":"relation","from":"find_optimal_selling_hub","to":"Pooled truck economics","relationType":"uses"}
+{"type":"relation","from":"find_optimal_selling_hub","to":"WFP aggregation centres","relationType":"uses"}
+{"type":"relation","from":"Story page","to":"Frontend (Vite + React)","relationType":"part_of"}
+{"type":"relation","from":"Live OS page","to":"Frontend (Vite + React)","relationType":"part_of"}
+{"type":"relation","from":"Whitepaper page","to":"Frontend (Vite + React)","relationType":"part_of"}
+{"type":"relation","from":"Story page","to":"Landscape engine","relationType":"renders"}
+{"type":"relation","from":"Story page","to":"Supervisor (LangGraph)","relationType":"calls"}
+{"type":"relation","from":"Story page","to":"detect_syndicate_markup_anomaly","relationType":"calls"}
+{"type":"relation","from":"Story page","to":"calculate_haor_flash_flood_risk","relationType":"calls"}
+{"type":"relation","from":"Story page","to":"query_cold_storage_quota","relationType":"calls"}
+{"type":"relation","from":"Story page","to":"Rahim Mia","relationType":"features"}
+{"type":"relation","from":"Story page","to":"Abdul","relationType":"features"}
+{"type":"relation","from":"Live OS page","to":"Supervisor (LangGraph)","relationType":"calls"}
+{"type":"relation","from":"Live OS page","to":"Truck pools","relationType":"displays"}
+{"type":"relation","from":"Whitepaper page","to":"Evaluation engine","relationType":"runs"}
+{"type":"relation","from":"Design system","to":"Frontend (Vite + React)","relationType":"governs"}
+{"type":"relation","from":"Phase 7 immersive redesign","to":"Story page","relationType":"built"}
+{"type":"relation","from":"Phase 7 immersive redesign","to":"Design system","relationType":"established"}
+{"type":"relation","from":"Phase 7 immersive redesign","to":"Phase 0-6","relationType":"follows"}
+{"type":"relation","from":"Phase 0-6","to":"Backend (FastAPI)","relationType":"built"}
+{"type":"relation","from":"Next steps","to":"Docker Compose stack","relationType":"verifies"}
+{"type":"relation","from":"Known gaps","to":"KrishiNexus OS","relationType":"limits"}
+{"type":"relation","from":"Integrity rules","to":"KrishiNexus OS","relationType":"governs"}
+{"type":"relation","from":"GitHub HTanvir0011/KrishiNexus","to":"KrishiNexus OS","relationType":"publishes"}
+{"type":"relation","from":"Local working repo","to":"KrishiNexus OS","relationType":"contains"}
+{"type":"relation","from":"Commit identity rule","to":"GitHub HTanvir0011/KrishiNexus","relationType":"governs"}
+{"type":"relation","from":"Dev machine notes","to":"Local working repo","relationType":"describes"}
+{"type":"relation","from":"Team","to":"KrishiNexus OS","relationType":"builds"}

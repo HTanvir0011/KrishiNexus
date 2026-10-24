@@ -81,6 +81,7 @@ in `frontend/nginx.conf`. A new frontend route needs no nginx change. Regenerate
 krishinexus-os/
 ├── AGENTS.md / CLAUDE.md               # this contract (identical copies)
 ├── MEMORY.md                           # live state + handover log
+├── memory-graph.jsonl                  # project knowledge graph: 66 entities, 104 relations (MCP memory-server JSONL)
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG
 ├── backend/
@@ -334,6 +335,9 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
 - Crop names in `rag/lexicon.CROP_TERMS` also match English plurals ("potatoes", "chillies"): `detect_crop` calls
   `_contains(..., plural=True)`. Concept and district matching stay exact.
 - Shell heredocs fail on apostrophes in this environment's Bash tool; append to files with the editor instead.
+- `memory-graph.jsonl`: one JSON object per line, `{"type":"entity","name","entityType","observations"}` or
+  `{"type":"relation","from","to","relationType"}`. Names are unique and every relation endpoint must exist. Load it
+  with `@modelcontextprotocol/server-memory` by setting `MEMORY_FILE_PATH` to this file.
 
 ### 9.1 Frontend design system (redesign of 2026-10-24; full rationale in `frontend/design/DESIGN_PLAN.md`)
 
