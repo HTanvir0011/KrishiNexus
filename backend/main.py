@@ -34,6 +34,7 @@ GET    /edge/local-models            Ollama / llama.cpp / vLLM runtimes, Q4_K_M 
 POST   /edge/local-inference         On-device generation (live runtime or offline-blackout fallback)
 GET    /edge/lora-dataset            krishi-bangla-lora-v1 SFT examples (json or jsonl)
 GET    /evals/metrics                Measured RAGAS-style metrics, MCP schema validity, PII recall
+GET    /evals/holdout               Frozen 66-probe blind retrieval test (cached 10 min)
 POST   /evals/run-regression         Seeded 5-category regression suite (20 per category = 100 cases)
 
 Run:  uvicorn main:app --reload --port 8000
@@ -74,6 +75,7 @@ from automation.workflows import (
 )
 from config import MODEL_ROUTER, RoutingDecision, TaskType, now_bdt, settings
 from edge_node.bangla_voice import VOICE_PRESETS, VoicePreset
+from evals.holdout_probe import HoldoutReport, get_holdout_report
 from evals.regression_suite import CATEGORY_RUNNERS, EVALUATION_ENGINE, RagasReport, RegressionReport, RegressionRequest
 from edge_node.ollama_local import (
     EDGE_ENGINE,
@@ -572,7 +574,7 @@ async def edge_local_inference(
 @app.get("/edge/lora-dataset", tags=["edge"], response_model=None)
 async def edge_lora_dataset(
     category: str | None = None,
-    split: Literal["train", "eval"] | None = None,
+    split: Literal["train", "val", "test"] | None = None,
     limit: Annotated[int, Query(ge=1, le=3_200)] = 20,
     format: Literal["json", "jsonl"] = "json",
 ) -> list[SftExample] | PlainTextResponse:
@@ -593,6 +595,12 @@ async def edge_lora_dataset(
 async def evals_metrics(refresh: bool = False) -> RagasReport:
     """Measured RAGAS-style retrieval metrics, MCP schema validity and PII recall (cached 10 minutes)."""
     return await EVALUATION_ENGINE.get_ragas_metrics(max_age_s=0.0 if refresh else 600.0)
+
+
+@app.get("/evals/holdout", response_model=HoldoutReport, tags=["evals"])
+async def evals_holdout(refresh: bool = False) -> HoldoutReport:
+    """The frozen 66-probe blind retrieval test, computed live (cached 10 minutes). Never tune rules against it."""
+    return await get_holdout_report(max_age_s=0.0 if refresh else 600.0)
 
 
 @app.post("/evals/run-regression", response_model=RegressionReport, tags=["evals"])

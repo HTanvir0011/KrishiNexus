@@ -15,6 +15,8 @@ const COPY = {
     timing: "Last run",
     notYet: "Run a farmer decision above (or in the live OS) to time each node.",
     replan: "A conditional edge sends Supervisor review back to Cold-chain arbitrage when the chosen chamber is out of band, at most twice.",
+    nodesAria: "LangGraph nodes in run order",
+    nodeTime: "Node time", mcpCalls: "Traced MCP calls", mcpTime: "Traced MCP time",
   },
   bn: {
     title: "একটি প্রশ্ন, নয়টি ল্যাংগ্রাফ নোড",
@@ -24,11 +26,14 @@ const COPY = {
     timing: "শেষ রান",
     notYet: "প্রতিটি নোডের সময় মাপতে উপরে (বা লাইভ ওএস-এ) একটি সিদ্ধান্ত চালান।",
     replan: "নির্বাচিত চেম্বার সঠিক তাপমাত্রায় না থাকলে সুপারভাইজার কোল্ড-চেইন এজেন্টকে আবার পাঠায়, সর্বোচ্চ দুবার।",
+    nodesAria: "রান-ক্রমে ল্যাংগ্রাফ নোডগুলো",
+    nodeTime: "নোডের সময়", mcpCalls: "ট্রেস হওয়া এমসিপি কল", mcpTime: "ট্রেস হওয়া এমসিপি সময়",
   },
 };
 
 export function PipelineSection() {
   const c = useCopy(COPY);
+  const lang = useAppState((s) => s.lang);
   const [selected, setSelected] = useState("crag_retrieval");
   const traces = useAppState((s) => s.traces);
   const sessionId = useAppState((s) => s.activeSessionId);
@@ -42,7 +47,7 @@ export function PipelineSection() {
       <p className="m-0 mt-2 max-w-[44rem] text-[15px] text-slate-600">{c.lede.split("`").map((part, i) => (i % 2 ? <code key={i} className="font-mono text-[13px] text-slate-800">{part}</code> : part))}</p>
 
       <div className="scroll-thin mt-6 overflow-x-auto pb-2">
-        <ol className="m-0 flex min-w-max list-none items-center gap-1 p-0" aria-label="LangGraph nodes in run order">
+        <ol className="m-0 flex min-w-max list-none items-center gap-1 p-0" aria-label={c.nodesAria}>
           {PIPELINE.map((n, i) => (
             <Fragment key={n.id}>
               <li>
@@ -51,7 +56,7 @@ export function PipelineSection() {
                     selected === n.id ? "bg-emerald-700 text-white ring-emerald-700" : "bg-white text-slate-800 ring-slate-200 hover:bg-slate-50")}>
                   <span className={cn("num grid size-5 place-items-center rounded-full text-[11px]",
                     selected === n.id ? "bg-white/20 text-white" : timings[n.id] ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-500")}>{i + 1}</span>
-                  {n.short}
+                  {lang === "bn" ? n.short_bn : n.short}
                 </button>
               </li>
               {i < PIPELINE.length - 1 && <li aria-hidden className="text-slate-300"><ChevronRight className="size-4" /></li>}
@@ -62,8 +67,8 @@ export function PipelineSection() {
 
       <div className="surface mt-3 grid gap-6 p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="min-w-0">
-          <h3 className="m-0 text-[18px] font-semibold text-slate-900">{node.title}</h3>
-          <p className="m-0 mt-1 text-[14.5px] text-slate-700">{node.does}</p>
+          <h3 className="m-0 text-[18px] font-semibold text-slate-900">{lang === "bn" ? node.title_bn : node.title}</h3>
+          <p className="m-0 mt-1 text-[14.5px] text-slate-700">{lang === "bn" ? node.does_bn : node.does}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Fields label={c.reads} items={node.reads} />
             <Fields label={c.writes} items={node.writes} accent />
@@ -83,9 +88,9 @@ export function PipelineSection() {
             <div className="mb-1.5 text-[12.5px] font-medium text-slate-500">{c.timing}</div>
             {t ? (
               <dl className="m-0 grid grid-cols-3 gap-2">
-                <Metric label="Node time" value={t.wallMs !== null ? `${Math.round(t.wallMs)} ms` : "-"} />
-                <Metric label="Traced MCP calls" value={String(t.mcpCalls)} />
-                <Metric label="Traced MCP time" value={`${Math.round(t.mcpMs)} ms`} />
+                <Metric label={c.nodeTime} value={t.wallMs !== null ? `${Math.round(t.wallMs)} ms` : "-"} />
+                <Metric label={c.mcpCalls} value={String(t.mcpCalls)} />
+                <Metric label={c.mcpTime} value={`${Math.round(t.mcpMs)} ms`} />
               </dl>
             ) : <p className="m-0 text-[13px] text-slate-500">{c.notYet}</p>}
           </div>

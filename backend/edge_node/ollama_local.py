@@ -20,6 +20,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -34,6 +35,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from config import MODEL_CATALOG, now_bdt, settings
 from mcp_servers.agri_weather_sar_mcp import NETWORK_BLACKOUT
+from mcp_servers.base import stable_unit
 from optimization.token_compressor import estimate_tokens
 
 LLAMACPP_URL = os.getenv("KNX_LLAMACPP_URL", "http://localhost:8080")
@@ -337,7 +339,13 @@ EDGE_ENGINE = LocalEdgeInferenceEngine()
 # ---------------------------------------------------------------------------
 
 DATASET_PLAN: dict[str, int] = {"market_negotiation": 1_200, "storage_qa": 800, "arbitrage_math": 700, "flood_harvest": 500}
-EVAL_FRACTION = 0.10
+# Family-aware split v2. The old split (every 10th example was "eval") leaked: templates cycle with the index, so
+# nearly every eval example shared its exact template — and for storage_qa its exact response sentence — with train.
+# Now whole families move together, and three OOD families are held out of training entirely to measure generalisation.
+TEST_FRACTION, VAL_FRACTION = 0.10, 0.10
+NEGOTIATION_HOLDOUT_DIALECT = "Chittagonian"
+ARBITRAGE_HOLDOUT_MONTHS = 7
+_MONTHS_RE = re.compile(r"(\d+) মাস পর")
 CROP_BN_SHORT = {"Cardinal Potato": "কার্ডিনাল আলু", "Diamant Potato": "ডায়মন্ড আলু", "Green Chili": "কাঁচা মরিচ", "Brinjal": "বেগুন"}
 NEGOTIATION_TEMPLATES: tuple[tuple[str, str], ...] = (
     ("Rangpuri", "বাহে, হামার {qty} মণ {crop} আছে, ফড়িয়া {offer} টাকা কেজি দিবার চায়। বেচমু?"),
@@ -354,7 +362,7 @@ STORAGE_QUESTIONS: tuple[str, ...] = (
 
 class SftExample(BaseModel):
     example_id: str
-    split: Literal["train", "eval"]
+    split: Literal["train", "val", "test"]
     category: str
     dialect: str
     instruction: str
@@ -365,7 +373,9 @@ class SftExample(BaseModel):
 class DatasetStats(BaseModel):
     total_examples: int
     train_examples: int
-    eval_examples: int
+    val_examples: int
+    test_examples: int
+    holdouts: dict[str, str]
     by_category: dict[str, int]
     by_dialect: dict[str, int]
     avg_instruction_tokens: float
@@ -470,8 +480,42 @@ def _flood(i: int, rng: np.random.Generator) -> SftExample:
         example_id="", split="train", category="flood_harvest", dialect="Sylheti" if i % 2 else "Standard Bangla",
         instruction=f"{profile.name_bn} হাওরে উজানে ৭২ ঘণ্টায় {to_bangla_digits(rain)} মিমি বৃষ্টি, রাডারে পানির সংকেত "
                     f"{to_bangla_digits(sar)} ডিবি। ধান কাটব কখন?",
-        response=f"বাঁধ ভাঙার সম্ভাবনা {to_bangla_digits(round(probability * 100))}% ({alert})। {advice}",
+        response=f"{profile.name_bn} হাওরে বাঁধ ভাঙার সম্ভাবনা {to_bangla_digits(round(probability * 100))}% ({alert})। {advice}",
         source="agri-weather-sar-mcp breach_probability")
+
+
+@lru_cache(maxsize=1)
+def flood_holdout_name_bn() -> str:
+    """Held-out haor for the OOD test: deterministic, never the Tahirpur demo upazila."""
+    from mcp_servers.agri_weather_sar_mcp import HAOR_UPAZILAS
+
+    names = [profile.name_bn for name, profile in HAOR_UPAZILAS.items() if name != "Tahirpur"]
+    return max(names, key=lambda name: stable_unit("flood-holdout", name))
+
+
+def _family_split(category: str, dialect: str, instruction: str, response: str, source: str) -> Literal["train", "val", "test"]:
+    """Assign a split so whole families move together; the three OOD families go to test in full."""
+    if category == "market_negotiation":
+        if dialect == NEGOTIATION_HOLDOUT_DIALECT:
+            return "test"
+        crop, district = source.split("market_prices(")[1].split(", ")[:2]
+        unit = stable_unit("split-v2", category, dialect, crop, district)  # whole (dialect, crop, district) cells
+    elif category == "arbitrage_math":
+        months = _MONTHS_RE.search(instruction)
+        if months and int(months.group(1)) == ARBITRAGE_HOLDOUT_MONTHS:
+            return "test"
+        unit = stable_unit("split-v2", category, response)  # identical math traces never straddle splits
+    elif category == "flood_harvest":
+        if instruction.startswith(flood_holdout_name_bn()):
+            return "test"
+        unit = stable_unit("split-v2", category, response)  # identical alerts never straddle splits
+    else:  # storage_qa: the response sentence is the family; one sentence never straddles splits
+        unit = stable_unit("split-v2", category, response)
+    if unit < TEST_FRACTION:
+        return "test"
+    if unit < TEST_FRACTION + VAL_FRACTION:
+        return "val"
+    return "train"
 
 
 @lru_cache(maxsize=1)
@@ -494,9 +538,10 @@ def build_sft_dataset() -> tuple[SftExample, ...]:
             else:
                 example = _flood(i, rng)
             examples.append(example)
-    eval_every = round(1 / EVAL_FRACTION)
-    return tuple(e.model_copy(update={"example_id": f"KBL-{n:05d}", "split": "eval" if n % eval_every == 0 else "train"})
-                 for n, e in enumerate(examples, start=1))
+    return tuple(e.model_copy(update={
+        "example_id": f"KBL-{n:05d}",
+        "split": _family_split(e.category, e.dialect, e.instruction, e.response, e.source),
+    }) for n, e in enumerate(examples, start=1))
 
 
 def dataset_stats(examples: tuple[SftExample, ...]) -> DatasetStats:
@@ -508,12 +553,23 @@ def dataset_stats(examples: tuple[SftExample, ...]) -> DatasetStats:
     for e in examples:
         by_category[e.category] = by_category.get(e.category, 0) + 1
         by_dialect[e.dialect] = by_dialect.get(e.dialect, 0) + 1
-    evals = sum(e.split == "eval" for e in examples)
+    by_split = {"train": 0, "val": 0, "test": 0}
+    for e in examples:
+        by_split[e.split] += 1
     return DatasetStats(
-        total_examples=len(examples), train_examples=len(examples) - evals, eval_examples=evals, by_category=by_category,
+        total_examples=len(examples), train_examples=by_split["train"], val_examples=by_split["val"],
+        test_examples=by_split["test"],
+        holdouts={
+            "market_negotiation": f"OOD: the {NEGOTIATION_HOLDOUT_DIALECT} dialect template is fully held out in test; "
+                                  "IID families are whole (dialect, crop, district) cells",
+            "arbitrage_math": f"OOD: holding_months == {ARBITRAGE_HOLDOUT_MONTHS} is fully held out in test",
+            "flood_harvest": f"OOD: the {flood_holdout_name_bn()} haor is fully held out in test",
+            "storage_qa": "split by response sentence; one sentence never straddles splits",
+        },
+        by_category=by_category,
         by_dialect=by_dialect, avg_instruction_tokens=round(float(np.mean(instr)), 1), avg_response_tokens=round(float(np.mean(resp)), 1),
         total_tokens=int(sum(instr) + sum(resp)), jsonl_sha256=hashlib.sha256(jsonl.encode()).hexdigest(),
-        generator="edge_node.ollama_local.build_sft_dataset (deterministic, seed 20261022)",
+        generator="edge_node.ollama_local.build_sft_dataset (deterministic, seed 20261022, family-aware split v2)",
     )
 
 
@@ -531,11 +587,14 @@ def lora_adapter_spec() -> LoraAdapterSpec:
         epochs=3, max_seq_len=2048, effective_batch_size=16, trainable_params_m=round(per_layer * layers / 1e6, 1),
         status="adapter_present" if present else "dataset_ready_not_trained", adapter_path=str(adapter_path),
         adapter_present=present, dataset=stats,
-        training_command=("python -m edge_node.train_lora is not bundled; train with PEFT/TRL SFTTrainer on the JSONL from "
-                          "GET /edge/lora-dataset?format=jsonl using the hyper-parameters above"),
-        gguf_export_command="python llama.cpp/convert_lora_to_gguf.py <adapter_dir> --base <Qwen2.5-7B-Instruct dir> "
-                            "--outfile krishi-bangla-lora-v1.gguf",
-        ollama_modelfile=f"FROM {base.ollama_tag}\nADAPTER ./krishi-bangla-lora-v1.gguf\nPARAMETER temperature 0.2\n"
+        training_command=("export splits with training/prepare_data.py, then train with PEFT/TRL SFTTrainer per "
+                          "TRAINING_PLAN.md section 4 (QLoRA on a 4 GB kiosk GPU uses the Qwen2.5-1.5B retarget there)"),
+        # Ollama >= 0.34.2 removed LoRA adapter loading ("LoRA adapters are no longer supported"), so the adapter is
+        # merged into the base and shipped as one quantized GGUF instead of an ADAPTER file.
+        gguf_export_command="merge with peft merge_and_unload, then python llama.cpp/convert_hf_to_gguf.py <merged_dir> "
+                            "--outtype f16 --outfile krishi-bangla-f16.gguf && llama-quantize krishi-bangla-f16.gguf "
+                            "krishi-bangla-q4_K_M.gguf Q4_K_M (see TRAINING_PLAN.md section 5)",
+        ollama_modelfile="FROM ./krishi-bangla-q4_K_M.gguf\nPARAMETER temperature 0.2\n"
                          "SYSTEM You are KrishiNexus, a Bangla-speaking agricultural market and storage advisor.",
     )
 

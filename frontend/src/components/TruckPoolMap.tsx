@@ -3,12 +3,58 @@ import { useMemo } from "react";
 
 import type { PoolLot, PoolView } from "../api/client";
 import { cn, kg, tk } from "../lib/format";
+import { useCopy } from "../lib/i18n";
 import { setState, useAppState } from "../state/store";
 import { Badge, Panel, ProgressBar } from "./ui";
 
 const R = 128;
 const C = 150;
 const GRADE_FILL: Record<PoolLot["grade"], string> = { A: "#059669", B: "#d97706", C: "#e11d48" };
+
+const COPY = {
+  en: {
+    title: "5-ton union truck pool",
+    selectPool: "Select truck pool",
+    loading: "Loading pools…",
+    radar: "Radar of {n} micro-lots within {km} km of the union",
+    grade: "Grade",
+    dispatchLocked: "Dispatch locked",
+    toFill: "{kg} to fill",
+    pooledLots: "{n} micro-lots pooled",
+    rosterFarmers: "{n} farmers in the union",
+    freight: "Freight",
+    freightDetail: "Tk 68/km + Tk 1,500/trip + bridge tolls, + Tk 0.10/kg pooling fee",
+    thisLot: "This lot",
+    lotNumbers: "{freight}/kg freight · {net}/kg net",
+    destination: "Destination",
+    destinationPending: "chosen when a farmer's decision matches this pool",
+    truck: "Truck",
+    dispatchLine: "{price}/kg · escrow {escrow} locked {amount} · ETA {eta} h",
+  },
+  bn: {
+    title: "৫ টনের ইউনিয়ন ট্রাক পুল",
+    selectPool: "ট্রাক পুল বাছাই করুন",
+    loading: "পুল লোড হচ্ছে…",
+    radar: "ইউনিয়নের {km} কিমির মধ্যে {n}টি মাইক্রো-লটের রাডার",
+    grade: "গ্রেড",
+    dispatchLocked: "ডিসপ্যাচ লক হয়েছে",
+    toFill: "আর {kg} বাকি",
+    pooledLots: "{n}টি মাইক্রো-লট পুল হয়েছে",
+    rosterFarmers: "ইউনিয়নে {n} জন কৃষক",
+    freight: "ভাড়া",
+    freightDetail: "প্রতি কিমি Tk 68 + প্রতি ট্রিপ Tk 1,500 + ব্রিজ টোল, + প্রতি কেজি Tk 0.10 পুলিং ফি",
+    thisLot: "এই লট",
+    lotNumbers: "{freight}/কেজি ভাড়া · {net}/কেজি নিট",
+    destination: "গন্তব্য",
+    destinationPending: "কৃষকের সিদ্ধান্ত এই পুলের সাথে মিললে ঠিক হবে",
+    truck: "ট্রাক",
+    dispatchLine: "{price}/কেজি · এসক্রো {escrow} লক {amount} · ETA {eta} ঘণ্টা",
+  },
+};
+
+function fmt(s: string, vars: Record<string, string | number>): string {
+  return s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
+}
 
 function angleOf(farmerId: string): number {
   let h = 0;
@@ -17,6 +63,7 @@ function angleOf(farmerId: string): number {
 }
 
 function LotDot({ lot, radiusKm }: { lot: PoolLot; radiusKm: number }) {
+  const c = useCopy(COPY);
   const a = angleOf(lot.farmer_id);
   const r = (Math.min(lot.distance_km, radiusKm) / radiusKm) * R;
   const x = C + r * Math.cos(a);
@@ -28,13 +75,14 @@ function LotDot({ lot, radiusKm }: { lot: PoolLot; radiusKm: number }) {
       <line x1={C} y1={C} x2={x} y2={y} stroke={fill} strokeOpacity={0.25} strokeDasharray="2 3" />
       {lot.source === "farmer" && <circle cx={x} cy={y} r={size + 6} fill="none" stroke="#047857" strokeWidth={1.5} className="animate-pulse-soft" />}
       <circle cx={x} cy={y} r={size} fill={fill} stroke="#ffffff" strokeWidth={1.5}>
-        <title>{`${lot.farmer_id}: ${lot.weight_kg} kg Grade-${lot.grade}, ${lot.distance_km} km`}</title>
+        <title>{`${lot.farmer_id}: ${lot.weight_kg} kg ${c.grade}-${lot.grade}, ${lot.distance_km} km`}</title>
       </circle>
     </g>
   );
 }
 
 export function TruckPoolMap({ className }: { className?: string }) {
+  const c = useCopy(COPY);
   const pools = useAppState((s) => s.pools);
   const focusId = useAppState((s) => s.focusPoolId);
   const voice = useAppState((s) => s.lastVoice);
@@ -45,20 +93,20 @@ export function TruckPoolMap({ className }: { className?: string }) {
 
   return (
     <Panel className={className} icon={<Truck className="size-4 text-amber-600" aria-hidden />}
-      title={pool ? `5-ton union truck pool · ${pool.upazila}, ${pool.district}` : "5-ton union truck pool"}
+      title={pool ? `${c.title} · ${pool.upazila}, ${pool.district}` : c.title}
       actions={
-        <select value={pool?.pool_id ?? ""} onChange={(e) => setState({ focusPoolId: e.target.value })} aria-label="Select truck pool"
+        <select value={pool?.pool_id ?? ""} onChange={(e) => setState({ focusPoolId: e.target.value })} aria-label={c.selectPool}
           className="min-h-8 rounded-lg border border-slate-300 bg-white px-2 text-[12.5px] text-slate-800">
           {pools.map((p) => <option key={p.pool_id} value={p.pool_id}>{p.pool_id}</option>)}
         </select>
       }
       bodyClassName="flex flex-col gap-3">
       {!pool ? (
-        <div className="py-10 text-center text-[13px] text-slate-500">Loading pools…</div>
+        <div className="py-10 text-center text-[13px] text-slate-500">{c.loading}</div>
       ) : (
         <>
           <div className="relative mx-auto w-full max-w-[280px]">
-            <svg viewBox="0 0 300 300" className="w-full" role="img" aria-label={`Radar of ${pool.smallholders} micro-lots within ${pool.union_radius_km} km of the union`}>
+            <svg viewBox="0 0 300 300" className="w-full" role="img" aria-label={fmt(c.radar, { n: pool.smallholders, km: pool.union_radius_km })}>
               <defs>
                 <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor="#047857" stopOpacity="0" />
@@ -81,7 +129,7 @@ export function TruckPoolMap({ className }: { className?: string }) {
           </div>
           <div className="flex justify-center gap-3 text-[12px] text-slate-600">
             {(["A", "B", "C"] as const).map((g) => (
-              <span key={g} className="flex items-center gap-1"><span className="size-2.5 rounded-full" style={{ background: GRADE_FILL[g] }} /> Grade-{g}</span>
+              <span key={g} className="flex items-center gap-1"><span className="size-2.5 rounded-full" style={{ background: GRADE_FILL[g] }} /> {c.grade}-{g}</span>
             ))}
           </div>
 
@@ -89,39 +137,39 @@ export function TruckPoolMap({ className }: { className?: string }) {
             <div className="mb-1 flex items-baseline justify-between text-[13px]">
               <span className="num text-slate-900">{kg(pool.loaded_kg)} / {kg(pool.capacity_kg)}</span>
               {pool.status === "DISPATCHED"
-                ? <Badge tone="amber"><Lock className="size-3" aria-hidden /> Dispatch locked</Badge>
-                : <span className="text-slate-600">{kg(pool.remaining_kg)} to fill</span>}
+                ? <Badge tone="amber"><Lock className="size-3" aria-hidden /> {c.dispatchLocked}</Badge>
+                : <span className="text-slate-600">{fmt(c.toFill, { kg: kg(pool.remaining_kg) })}</span>}
             </div>
             <ProgressBar value={pool.loaded_kg} max={pool.capacity_kg} tone={pool.status === "DISPATCHED" ? "amber" : "emerald"} />
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge tone="emerald">{pool.smallholders} micro-lots pooled</Badge>
-              <Badge tone="slate">{pool.roster_size} farmers in the union</Badge>
+              <Badge tone="emerald">{fmt(c.pooledLots, { n: pool.smallholders })}</Badge>
+              <Badge tone="slate">{fmt(c.rosterFarmers, { n: pool.roster_size })}</Badge>
               <Badge tone="slate">{pool.crop}</Badge>
             </div>
           </div>
 
           <dl className="m-0 grid gap-2 rounded-lg bg-slate-50 p-3 text-[12.5px] ring-1 ring-inset ring-slate-200">
             <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">Freight</dt>
-              <dd className="m-0 text-right text-slate-800">Tk 68/km + Tk 1,500/trip + bridge tolls, + Tk 0.10/kg pooling fee</dd>
+              <dt className="text-slate-500">{c.freight}</dt>
+              <dd className="m-0 text-right text-slate-800">{c.freightDetail}</dd>
             </div>
             {leg && (
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">This lot</dt>
-                <dd className="num m-0 text-right text-slate-900">{tk(leg.pooled_transport_tk_per_kg)}/kg freight · {tk(leg.b2b_net_tk_per_kg)}/kg net</dd>
+                <dt className="text-slate-500">{c.thisLot}</dt>
+                <dd className="num m-0 text-right text-slate-900">{fmt(c.lotNumbers, { freight: tk(leg.pooled_transport_tk_per_kg), net: tk(leg.b2b_net_tk_per_kg) })}</dd>
               </div>
             )}
             <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">Destination</dt>
-              <dd className={cn("m-0 text-right", destination ? "text-slate-900" : "text-slate-500")}>{destination ?? "chosen when a farmer's decision matches this pool"}</dd>
+              <dt className="text-slate-500">{c.destination}</dt>
+              <dd className={cn("m-0 text-right", destination ? "text-slate-900" : "text-slate-500")}>{destination ?? c.destinationPending}</dd>
             </div>
           </dl>
 
           {pool.dispatch && (
             <div className="rounded-lg bg-amber-100/60 p-3 text-[12.5px] text-amber-900 ring-1 ring-inset ring-amber-600/25">
-              <div className="font-semibold">Truck {pool.dispatch.truck_booking_id} → {pool.dispatch.buyer_name}</div>
+              <div className="font-semibold">{c.truck} {pool.dispatch.truck_booking_id} → {pool.dispatch.buyer_name}</div>
               <div className="num font-medium text-amber-800">
-                {tk(pool.dispatch.contract_price_tk_per_kg)}/kg · escrow {pool.dispatch.escrow_id} locked {tk(pool.dispatch.escrow_amount_tk, 0)} · ETA {pool.dispatch.eta_hours.toFixed(1)} h
+                {fmt(c.dispatchLine, { price: tk(pool.dispatch.contract_price_tk_per_kg), escrow: pool.dispatch.escrow_id, amount: tk(pool.dispatch.escrow_amount_tk, 0), eta: pool.dispatch.eta_hours.toFixed(1) })}
               </div>
             </div>
           )}

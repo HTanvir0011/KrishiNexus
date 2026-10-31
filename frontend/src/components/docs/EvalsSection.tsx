@@ -1,7 +1,7 @@
-import { CheckCircle2, FlaskConical, Play, RefreshCw, XCircle } from "lucide-react";
+import { CheckCircle2, EyeOff, FlaskConical, Play, RefreshCw, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { api, ApiError, type RagasReport, type RegressionCase, type RegressionReport } from "../../api/client";
+import { api, ApiError, type HoldoutReport, type RagasReport, type RegressionCase, type RegressionReport } from "../../api/client";
 import { cn } from "../../lib/format";
 import { Badge, Button, ProgressBar, Spinner } from "../ui";
 
@@ -52,6 +52,102 @@ function CaseRow({ c }: { c: RegressionCase }) {
           <div className="text-emerald-700">proof: {c.proof}</div>
           <div>expected: {JSON.stringify(c.expected)}</div>
           <div>actual:&nbsp;&nbsp; {JSON.stringify(c.actual)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HoldoutRow({ label, n, top1, top3 }: { label: string; n: number; top1: number; top3?: number }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
+        <span className="truncate text-slate-700">{label} <span className="text-slate-400">· n = {n}</span></span>
+        <span className="num shrink-0 tabular-nums text-slate-900">
+          {(top1 * 100).toFixed(0)}%{top3 !== undefined && <span className="text-slate-500"> / {(top3 * 100).toFixed(0)}%</span>}
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 rounded-full bg-slate-100" aria-hidden>
+        <div className="h-full rounded-full bg-sky-600" style={{ width: `${top1 * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function HoldoutPanel() {
+  const [report, setReport] = useState<HoldoutReport | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showMisses, setShowMisses] = useState(false);
+
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setReport(await api.holdoutProbe());
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="surface p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-slate-900">
+          <EyeOff className="size-4 text-sky-700" /> Blind holdout probe — frozen test set
+        </h3>
+        <Button variant="primary" onClick={run} disabled={busy}>{busy ? <Spinner /> : <Play className="size-3.5" />} Run the 66 blind probes</Button>
+      </div>
+      <p className="mt-2 max-w-[75ch] text-[13px] leading-relaxed text-slate-600">
+        The curated set above was written by the same hands that wrote the retrieval rules. These 66 farmer questions were
+        not: they were generated blind to the rules, across six dialects and surface forms plus paraphrase, negation and
+        cross-document traps, then frozen. The rules are never tuned against this set, so this is the honest
+        generalisation number — expect it to be lower than the curated metrics.
+      </p>
+      {error && <p className="mt-3 text-[13px] text-rose-600">{error}</p>}
+      {report && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+            <div>
+              <div className="num text-[32px] leading-none text-slate-900">{(report.top1_gold * 100).toFixed(1)}%</div>
+              <div className="mt-1 text-[12px] text-slate-500">gold doc ranked first</div>
+            </div>
+            <div>
+              <div className="num text-[32px] leading-none text-slate-600">{(report.top3_gold * 100).toFixed(1)}%</div>
+              <div className="mt-1 text-[12px] text-slate-500">gold doc in the top 3</div>
+            </div>
+            <div className="pb-1 text-[12px] tabular-nums text-slate-500">
+              {report.probes} probes · live run in <span className="font-mono">{report.duration_ms.toFixed(0)} ms</span>
+            </div>
+          </div>
+          <div className="grid gap-x-8 gap-y-4 border-t border-slate-100 pt-4 md:grid-cols-2">
+            <div className="space-y-2.5">
+              <div className="text-[12px] font-medium text-slate-500">By probe kind — top-1 / top-3</div>
+              {Object.entries(report.by_kind).map(([kind, s]) => <HoldoutRow key={kind} label={kind.replace("_", "-")} n={s.n} top1={s.top1} top3={s.top3} />)}
+            </div>
+            <div className="space-y-2.5">
+              <div className="text-[12px] font-medium text-slate-500">By dialect / surface form — top-1</div>
+              {Object.entries(report.by_dialect).map(([d, s]) => <HoldoutRow key={d} label={d} n={s.n} top1={s.top1} />)}
+            </div>
+          </div>
+          <div>
+            <button type="button" onClick={() => setShowMisses((v) => !v)}
+              className="text-[13px] font-medium text-sky-700 transition-colors hover:text-sky-900">
+              {showMisses ? "Hide" : "Show"} the {report.misses.length} top-1 misses
+            </button>
+            {showMisses && (
+              <ul className="m-0 mt-2 list-none space-y-1.5 p-0">
+                {report.misses.map((m, i) => (
+                  <li key={i} className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200 ring-inset">
+                    <div className="font-mono text-[11px] tabular-nums text-slate-500">{m.kind} · gold {m.gold} → got {m.got}</div>
+                    <div className="truncate text-[12.5px] text-slate-800">{m.question}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -131,6 +227,8 @@ export function EvalsSection() {
           </>
         )}
       </div>
+
+      <HoldoutPanel />
 
       <div className="surface p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">

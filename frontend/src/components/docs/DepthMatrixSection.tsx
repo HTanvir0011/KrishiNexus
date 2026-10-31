@@ -26,10 +26,10 @@ const MATRIX: { category: string; implementation: string; evidence: string; stat
   { category: "Guardrails & privacy", implementation: "Presidio-compatible BD PII scrubber with vault, ΔΠ and DAE circuit-breakers", evidence: "POST /guardrails/verify", status: "Live" },
   { category: "Model routing", implementation: "Cheap-to-reasoning router over Ollama, Gemini Flash, DeepSeek-R1, Claude Sonnet 5.5", evidence: "GET /optimization/route", status: "Live" },
   { category: "Local / on-device LLMs", implementation: "Ollama / llama.cpp / vLLM runtime manager, Q4_K_M telemetry, offline fallback", evidence: "GET /edge/local-models", status: "Partial", note: "Live generation needs a local runtime with the models pulled" },
-  { category: "Fine-tuning", implementation: "krishi-bangla-lora-v1 QLoRA spec + 3,200-example generated SFT dataset", evidence: "GET /edge/lora-dataset", status: "Partial", note: "Adapter not trained yet" },
+  { category: "Fine-tuning", implementation: "krishi-bangla-lora-v1 QLoRA spec + generated SFT dataset with a family-aware train/val/test split (dialect, timing and region holdouts)", evidence: "GET /edge/lora-dataset", status: "Partial", note: "Adapter not trained yet; recipe in TRAINING_PLAN.md" },
   { category: "Multimodal", implementation: "Optical grader (classical CV on photos, sweep simulation), Bangla dialect voice + SSML", evidence: "POST /edge/grade-crop", status: "Partial", note: "No trained YOLO weights; audio STT needs a Whisper model" },
   { category: "Real-time explainability", implementation: "WebSocket stream of every thought, MCP call, CRAG grade and guardrail", evidence: "WS /ws/agent-trace", status: "Live" },
-  { category: "Evaluation", implementation: "Measured RAGAS-style metrics + seeded 100-case regression suite", evidence: "/evals/*", status: "Live", note: "Deterministic rubric judge; no LLM judge" },
+  { category: "Evaluation", implementation: "Measured RAGAS-style metrics + seeded 100-case regression suite + frozen 66-probe blind retrieval holdout", evidence: "/evals/*", status: "Live", note: "Deterministic rubric judge; no LLM judge" },
   { category: "Frontend & visual", implementation: "React + Three.js digital twin, split-screen judge mode, live trace", evidence: "this app", status: "Live" },
   { category: "AI development lifecycle", implementation: "AGENTS.md / CLAUDE.md spec-driven build in 6 verified steps", evidence: "AGENTS.md", status: "Live", note: "BMAD-METHOD not used" },
 ];
@@ -229,7 +229,9 @@ function LocalTester() {
               ))}</tbody>
             </table>
           </div>
-          <div className="text-[12.5px] text-slate-700">LoRA {r.data.lora_adapter.name}: <Badge tone="amber">{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples</div>
+          <div className="text-[12.5px] text-slate-700">LoRA {r.data.lora_adapter.name}: <Badge tone="amber">{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples
+            {r.data.lora_adapter.dataset.train_examples !== undefined &&
+              <span className="tabular-nums"> · split {r.data.lora_adapter.dataset.train_examples.toLocaleString()}/{r.data.lora_adapter.dataset.val_examples}/{r.data.lora_adapter.dataset.test_examples}</span>}</div>
         </>
       )}
     </div>

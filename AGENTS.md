@@ -82,8 +82,13 @@ krishinexus-os/
 ├── AGENTS.md / CLAUDE.md               # this contract (identical copies)
 ├── MEMORY.md                           # live state + handover log
 ├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
+├── TRAINING_PLAN.md                    # Phase 9: SFT split v2, 4 GB-GPU training recipe (not yet run), honest eval design
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG
+├── training/
+│   ├── prepare_data.py                 # run with the backend venv: exports train/val/test JSONL, re-asserts no leakage
+│   ├── .venv/                          # Python 3.12 venv reserved for GPU training (empty until the run)
+│   └── data/                           # generated JSONL + split_report.json (derived; regenerate any time)
 ├── backend/
 │   ├── requirements.txt                # fastapi uvicorn pydantic httpx numpy python-dotenv websockets networkx langgraph pillow
 │   ├── requirements.lock               # exact verified versions (pip freeze) installed by the Docker image
@@ -127,6 +132,7 @@ krishinexus-os/
 │   │   ├── optical_grader.py           # OpticalCropGrader (OPTICAL_GRADER), certificates
 │   │   └── ollama_local.py             # LocalEdgeInferenceEngine (EDGE_ENGINE), LoRA spec, SFT dataset
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
+│   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner; a FROZEN test set
 │   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed)
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
@@ -220,6 +226,7 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /edge/lora-dataset?category&split&limit&format=json\|jsonl` | → `list[SftExample]` or JSONL | 4 |
 | `GET /evals/metrics?refresh` | → `RagasReport` (cached 10 min) | 6 |
 | `POST /evals/run-regression` | `RegressionRequest` (`sample_size` 1–20 per category) → `RegressionReport` | 6 |
+| `GET /evals/holdout?refresh` | → `HoldoutReport` (frozen 66-probe blind retrieval test; cached 10 min) | 9 |
 
 LangGraph node order (`agents/supervisor.py`): `pii_guardrail → token_compression → crag_retrieval → vision_grading →
 syndicate_bypass → coldchain_arbitrage → climate_credit → supervisor_review →(re-plan, max 2)→ coldchain_arbitrage |
@@ -256,7 +263,9 @@ voice_synthesizer → END`. `trace_events`, `errors`, `node_path` use `operator.
 | Road distance | haversine × 1.32 circuity | `bd_geo.ROAD_CIRCUITY_FACTOR` |
 | Selling hubs | 7 arats, 3 urban retail DCs, 66 WFP centres (62 Cox's Bazar + 4 Kurigram) | `dam_market_mcp.SELLING_HUBS`, `WFP_CENTRES_BY_DISTRICT` |
 | Distress price (regression) | non-control circuit-breaker cases sample P_spot uniformly in Tk 5–14/kg | `regression_suite.DISTRESS_SPOT_RANGE_TK` |
-| Knowledge seed | 18 passages (incl. `AGRI-FIN-01` for UCB/iFarmer); RAG eval set 19 questions | `rag/knowledge_seed.KNOWLEDGE_DOCS`, `regression_suite.RAG_EVAL_SET` |
+| Knowledge seed | 18 passages (incl. `AGRI-FIN-01` for UCB/iFarmer); RAG eval set 19 curated questions + 66 frozen blind probes | `rag/knowledge_seed.KNOWLEDGE_DOCS`, `regression_suite.RAG_EVAL_SET`, `evals/holdout_probe.HOLDOUT_PROBES` |
+| Blind holdout probe | 66 frozen probes (never tune against them); live at `GET /evals/holdout?refresh`, cached 10 min, with a run-live card in the whitepaper's EvalsSection | `evals/holdout_probe.get_holdout_report`, route in `main.py` |
+| SFT split v2 | train 2,301 / val 239 / test 660; OOD holdouts fully in test: Chittagonian dialect, holding_months 7, খালিয়াজুরী haor; families (response groups, negotiation cells) never straddle splits | `ollama_local._family_split`, re-asserted by `training/prepare_data.py` |
 | BCSA facilities | 18 seeded (Munshiganj 5, Rangpur 4, Bogura 5, Thakurgaon 4); tariff Tk 8.00–9.50; chamber ≈1,800 MT | `coldchain_iot_mcp.FACILITIES` |
 | District storage gap | Munshiganj 540,760 / 1,000,738 MT; Rangpur 412,300 / 1,086,500; Bogura 368,900 / 1,245,200; Thakurgaon 214,700 / 612,400 | `coldchain_iot_mcp.DISTRICT_STORAGE_STATS` |
 | Chamber setpoint | 9.5°C; outage drift τ = 36 h toward ambient; CO₂ +380 ppm/h | `coldchain_iot_mcp` |
@@ -335,6 +344,9 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
   existing references). Network calls go through `api/client.ts`; `withFallback` masks only network/5xx failures.
 - Crop names in `rag/lexicon.CROP_TERMS` also match English plurals ("potatoes", "chillies"): `detect_crop` calls
   `_contains(..., plural=True)`. Concept and district matching stay exact.
+- Held-out test sets are frozen: never tune retrieval rules, prompts or training data against
+  `evals/holdout_probe.py` or the SFT test split. Improve on separately written dev paraphrases, then re-measure on a
+  freshly generated blind batch (TRAINING_PLAN.md §7).
 - Shell heredocs fail on apostrophes in this environment's Bash tool; append to files with the editor instead.
 - `memory-graph.jsonl`: one JSON object per line, `{"type":"entity","name","entityType","observations"}` or
   `{"type":"relation","from","to","relationType"}`. Names are unique and every relation endpoint must exist. Load it
@@ -345,7 +357,8 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
 - **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
   - `/` is the product overview: hero with live metrics, the live decision card, bento cards and the LangGraph pipeline.
   - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/market` are the other seats.
-  - `/docs` (with `#section` anchors) is the whitepaper. Only `/os` loads Three.js (the cold-storage twin).
+  - `/docs` (with `#section` anchors) is the whitepaper. Only `/os` loads Three.js: the cold-storage twin is
+    `React.lazy` in `pages/CommandCenter.tsx`, so it arrives in its own chunk after the OS paints.
 - **Navbar** (`components/Navbar.tsx`) is rendered once in `App.tsx`. Its toggles write the store:
   - `lang` (`en` | `bn`; components read their copy through `useCopy` from `lib/i18n.ts`);
   - `offlineMode` (sent as `offline_mode` with every voice request).

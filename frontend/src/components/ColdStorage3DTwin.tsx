@@ -5,6 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { api, ApiError } from "../api/client";
 import { cn, pct } from "../lib/format";
+import { useCopy } from "../lib/i18n";
 import { getState, pushAlert, refreshQuota, refreshTelemetry, setState, useAppState } from "../state/store";
 import { Badge, Button, Panel, Spinner } from "./ui";
 
@@ -39,7 +40,60 @@ function slotKinds(openShareOfFarmer: number): SlotKind[] {
   return kinds;
 }
 
+const COPY = {
+  en: {
+    title: "Cold-storage chamber inspector",
+    alarm: "Alarm",
+    nominal: "Nominal",
+    canvasLabel: "Rotatable 3D cold storage racks",
+    chips: { chamber: "Chamber", power: "Power", rot: "Rot risk", set: "set", vs: "vs", diesel: "Diesel backup", outage: "Outage", grid: "Grid" },
+    legend: { traders: "Traders 45%", owners: "Owners 32.3%", farmers: "Farmers 22.7%", open: "t open" },
+    buttons: { power: "Simulate power outage", flood: "Simulate haor flood", reset: "Reset" },
+    floodLine: "Haor: {red} red · {trucks} harvest dispatches",
+    alerts: {
+      powerTitle: "Chamber power cut injected",
+      powerBody: "{msg} coldchain-iot-mcp now routes smallholder slots to {dest}.",
+      nextFacility: "the next open facility",
+      powerFail: "Power-cut simulation failed",
+      floodTitle: "Sentinel-1 SAR flash-flood alert",
+      floodBody: "{msg} {red} haor upazilas RED; {trucks} early-harvest truck dispatches; {farmers} farmers queued for Bangla voice calls.",
+      floodFail: "Flood simulation failed",
+      resetTitle: "Anomalies cleared",
+      resetBody: "Chamber and haor back to live conditions.",
+      resetFail: "Reset failed",
+      unreachable: "Backend unreachable",
+    },
+  },
+  bn: {
+    title: "কোল্ড স্টোরেজ চেম্বার ইন্সপেক্টর",
+    alarm: "অ্যালার্ম",
+    nominal: "স্বাভাবিক",
+    canvasLabel: "ঘোরানো যায় এমন 3D কোল্ড স্টোরেজ র‍্যাক",
+    chips: { chamber: "চেম্বার", power: "পাওয়ার", rot: "পচনের ঝুঁকি", set: "সেট", vs: "বনাম", diesel: "ডিজেল ব্যাকআপ", outage: "বিদ্যুৎ নেই", grid: "গ্রিড" },
+    legend: { traders: "ট্রেডার 45%", owners: "মালিক 32.3%", farmers: "কৃষক 22.7%", open: "t খালি" },
+    buttons: { power: "বিদ্যুৎ বিভ্রাট সিমুলেট করুন", flood: "হাওর বন্যা সিমুলেট করুন", reset: "রিসেট" },
+    floodLine: "হাওর: {red} লাল · {trucks} হারভেস্ট ডিসপ্যাচ",
+    alerts: {
+      powerTitle: "চেম্বারে পাওয়ার কাট ইনজেক্ট হয়েছে",
+      powerBody: "{msg} coldchain-iot-mcp এখন প্রান্তিক কৃষকের স্লট {dest}-এ পাঠাচ্ছে।",
+      nextFacility: "পরবর্তী খালি ফ্যাসিলিটি",
+      powerFail: "পাওয়ার-কাট সিমুলেশন ব্যর্থ",
+      floodTitle: "Sentinel-1 SAR আকস্মিক বন্যা সতর্কতা",
+      floodBody: "{msg} {red}টি হাওর উপজেলা RED; {trucks}টি আর্লি-হারভেস্ট ট্রাক ডিসপ্যাচ; {farmers} জন কৃষক বাংলা ভয়েস কলের অপেক্ষায়।",
+      floodFail: "বন্যা সিমুলেশন ব্যর্থ",
+      resetTitle: "অ্যানোমালি মুছে ফেলা হয়েছে",
+      resetBody: "চেম্বার ও হাওর আবার লাইভ অবস্থায়।",
+      resetFail: "রিসেট ব্যর্থ",
+      unreachable: "ব্যাকএন্ডে সংযোগ নেই",
+    },
+  },
+};
+
+/** Fill {slot}s so only the words live in COPY. */
+const fmt = (t: string, vals: Record<string, string | number>) => t.replace(/\{(\w+)\}/g, (_, k: string) => String(vals[k] ?? ""));
+
 export function ColdStorage3DTwin({ className }: { className?: string }) {
+  const c = useCopy(COPY);
   const mountRef = useRef<HTMLDivElement>(null);
   const telemetry = useAppState((s) => s.telemetry);
   const quota = useAppState((s) => s.quota);
@@ -190,9 +244,9 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
       const before = getState().quota?.facilities.find((f) => f.power_status !== "OUTAGE" && f.facility_id !== focus.facilityId);
       const response = await api.simulatePowerCut(focus.facilityId);
       await Promise.all([refreshTelemetry(), refreshQuota()]);
-      pushAlert("danger", "Chamber power cut injected", `${response.message} coldchain-iot-mcp now routes smallholder slots to ${before?.name ?? "the next open facility"}.`);
+      pushAlert("danger", c.alerts.powerTitle, fmt(c.alerts.powerBody, { msg: response.message, dest: before?.name ?? c.alerts.nextFacility }));
     } catch (error) {
-      pushAlert("danger", "Power-cut simulation failed", error instanceof ApiError ? error.message : "Backend unreachable");
+      pushAlert("danger", c.alerts.powerFail, error instanceof ApiError ? error.message : c.alerts.unreachable);
     } finally {
       setBusy(null);
     }
@@ -205,10 +259,10 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
       const report = await api.sarFloodCheck();
       setState({ floodReport: report });
       const red = report.voice_alerts.filter((a) => a.alert_level === "RED");
-      pushAlert("warn", "Sentinel-1 SAR flash-flood alert", `${injected.message} ${red.length} haor upazilas RED; ${report.early_harvest_dispatches.length} early-harvest truck dispatches; ${report.voice_alerts.reduce((s, a) => s + a.recipients, 0).toLocaleString()} farmers queued for Bangla voice calls.`);
+      pushAlert("warn", c.alerts.floodTitle, fmt(c.alerts.floodBody, { msg: injected.message, red: red.length, trucks: report.early_harvest_dispatches.length, farmers: report.voice_alerts.reduce((s, a) => s + a.recipients, 0).toLocaleString() }));
       void api.voiceInteract({ preset_id: "sunamganj_haor_flood", offline_mode: getState().offlineMode }).then((r) => setState({ lastVoice: r.data }));
     } catch (error) {
-      pushAlert("danger", "Flood simulation failed", error instanceof ApiError ? error.message : "Backend unreachable");
+      pushAlert("danger", c.alerts.floodFail, error instanceof ApiError ? error.message : c.alerts.unreachable);
     } finally {
       setBusy(null);
     }
@@ -220,9 +274,9 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
       await api.clearAnomalies();
       setState({ floodReport: null });
       await Promise.all([refreshTelemetry(), refreshQuota()]);
-      pushAlert("success", "Anomalies cleared", "Chamber and haor back to live conditions.");
+      pushAlert("success", c.alerts.resetTitle, c.alerts.resetBody);
     } catch (error) {
-      pushAlert("danger", "Reset failed", error instanceof ApiError ? error.message : "Backend unreachable");
+      pushAlert("danger", c.alerts.resetFail, error instanceof ApiError ? error.message : c.alerts.unreachable);
     } finally {
       setBusy(null);
     }
@@ -233,44 +287,44 @@ export function ColdStorage3DTwin({ className }: { className?: string }) {
     <Panel
       className={className}
       icon={<Warehouse className="size-4 text-sky-700" aria-hidden />}
-      title={`Cold-storage chamber inspector · ${telemetry?.facility_name ?? focus.facilityId} / ${focus.chamberId}`}
-      actions={<Badge tone={alarm ? "red" : "emerald"}>{alarm ? "Alarm" : "Nominal"}</Badge>}
+      title={`${c.title} · ${telemetry?.facility_name ?? focus.facilityId} / ${focus.chamberId}`}
+      actions={<Badge tone={alarm ? "red" : "emerald"}>{alarm ? c.alarm : c.nominal}</Badge>}
       bodyClassName="flex flex-col p-0"
     >
       <div className="well relative m-3 mb-0 h-[320px] min-h-[260px] flex-1 overflow-hidden">
-        <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" aria-label="Rotatable 3D cold storage racks" />
+        <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" aria-label={c.canvasLabel} />
         <div className={cn("pointer-events-none absolute inset-0 transition-colors", alarm && "bg-rose-600/10")} />
         <div className="pointer-events-none absolute top-2.5 left-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5">
-          <TelemetryChip icon={<Thermometer className="size-3" aria-hidden />} label="Chamber" alert={(telemetry?.temperature_c ?? 9.5) > 10}
-            value={telemetry ? `${telemetry.temperature_c.toFixed(1)} °C · set 9.5 °C` : "…"} />
+          <TelemetryChip icon={<Thermometer className="size-3" aria-hidden />} label={c.chips.chamber} alert={(telemetry?.temperature_c ?? 9.5) > 10}
+            value={telemetry ? `${telemetry.temperature_c.toFixed(1)} °C · ${c.chips.set} 9.5 °C` : "…"} />
           <TelemetryChip icon={<Droplets className="size-3" aria-hidden />} label="RH" alert={(telemetry?.relative_humidity_pct ?? 93) > 95}
             value={telemetry ? pct(telemetry.relative_humidity_pct) : "…"} />
           <TelemetryChip icon={<Wind className="size-3" aria-hidden />} label="CO₂" alert={(telemetry?.co2_ppm ?? 0) > 3000}
             value={telemetry ? `${telemetry.co2_ppm.toFixed(0)} ppm` : "…"} />
-          <TelemetryChip icon={<PlugZap className="size-3" aria-hidden />} label="Power" alert={power === "OUTAGE"}
-            value={power === "DIESEL_GENERATOR" ? "Diesel backup" : power === "OUTAGE" ? "Outage" : power === "GRID" ? "Grid" : "…"} />
-          <TelemetryChip icon={<Gauge className="size-3" aria-hidden />} label="Rot risk" alert={(telemetry?.rot_risk_pct ?? 0) > 5}
-            value={telemetry ? `${pct(telemetry.rot_risk_pct)} vs ${NATIONAL_ROT_BASELINE}%` : "…"} />
+          <TelemetryChip icon={<PlugZap className="size-3" aria-hidden />} label={c.chips.power} alert={power === "OUTAGE"}
+            value={power === "DIESEL_GENERATOR" ? c.chips.diesel : power === "OUTAGE" ? c.chips.outage : power === "GRID" ? c.chips.grid : "…"} />
+          <TelemetryChip icon={<Gauge className="size-3" aria-hidden />} label={c.chips.rot} alert={(telemetry?.rot_risk_pct ?? 0) > 5}
+            value={telemetry ? `${pct(telemetry.rot_risk_pct)} ${c.chips.vs} ${NATIONAL_ROT_BASELINE}%` : "…"} />
         </div>
         <div className="pointer-events-none absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5">
-          <Legend color="bg-slate-500" label="Traders 45%" />
-          <Legend color="bg-sky-600" label="Owners 32.3%" />
-          <Legend color="bg-amber-500" label={`Farmers 22.7%${facility ? ` · ${facility.open_smallholder_quota_mt.toFixed(0)} t open` : ""}`} />
+          <Legend color="bg-slate-500" label={c.legend.traders} />
+          <Legend color="bg-sky-600" label={c.legend.owners} />
+          <Legend color="bg-amber-500" label={`${c.legend.farmers}${facility ? ` · ${facility.open_smallholder_quota_mt.toFixed(0)} ${c.legend.open}` : ""}`} />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 px-3 py-3">
         <Button variant="danger" onClick={() => void simulatePowerCut()} disabled={busy !== null}>
-          {busy === "power" ? <Spinner /> : <Zap className="size-4" aria-hidden />} Simulate power outage
+          {busy === "power" ? <Spinner /> : <Zap className="size-4" aria-hidden />} {c.buttons.power}
         </Button>
         <Button variant="amber" onClick={() => void simulateFlood()} disabled={busy !== null}>
-          {busy === "flood" ? <Spinner /> : <CloudRain className="size-4" aria-hidden />} Simulate haor flood
+          {busy === "flood" ? <Spinner /> : <CloudRain className="size-4" aria-hidden />} {c.buttons.flood}
         </Button>
         <Button onClick={() => void reset()} disabled={busy !== null}>
-          {busy === "reset" ? <Spinner /> : <RotateCcw className="size-4" aria-hidden />} Reset
+          {busy === "reset" ? <Spinner /> : <RotateCcw className="size-4" aria-hidden />} {c.buttons.reset}
         </Button>
         {flood && (
           <span className="text-[12.5px] text-amber-800">
-            Haor: {flood.rows.filter((r) => r.alert_level === "RED").length} red · {flood.early_harvest_dispatches.length} harvest dispatches
+            {fmt(c.floodLine, { red: flood.rows.filter((r) => r.alert_level === "RED").length, trucks: flood.early_harvest_dispatches.length })}
           </span>
         )}
       </div>

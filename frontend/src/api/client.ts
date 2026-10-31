@@ -384,7 +384,29 @@ export interface LocalModelsReport {
     lora_adapter: string | null;
     telemetry: { vram_mb: number; decode_tokens_per_s: number; fits_on_accelerator: boolean };
   }[];
-  lora_adapter: { name: string; status: string; rank: number; dataset: { total_examples: number; by_category: Record<string, number> } };
+  lora_adapter: {
+    name: string;
+    status: string;
+    rank: number;
+    dataset: {
+      total_examples: number;
+      by_category: Record<string, number>;
+      train_examples?: number;
+      val_examples?: number;
+      test_examples?: number;
+    };
+  };
+}
+
+export interface HoldoutReport {
+  generated_at: string;
+  duration_ms: number;
+  probes: number;
+  top1_gold: number;
+  top3_gold: number;
+  by_kind: Record<string, { n: number; top1: number; top3: number }>;
+  by_dialect: Record<string, { n: number; top1: number }>;
+  misses: { kind: string; gold: string; got: string; question: string }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -536,6 +558,7 @@ export const api = {
   ragQuery: (query: string, district?: string, crop?: Crop) => post<RagQueryReport>("/rag/query", { query, district, crop }),
   promptsRegistry: () => request<PromptRegistryListing>("/prompts/registry?include_xml=false"),
   evalMetrics: (refresh = false) => request<RagasReport>(`/evals/metrics${refresh ? "?refresh=true" : ""}`),
+  holdoutProbe: () => request<HoldoutReport>("/evals/holdout?refresh=true"),
   runRegression: (sampleSize: number) => post<RegressionReport>("/evals/run-regression", { sample_size: sampleSize }),
 };
 
