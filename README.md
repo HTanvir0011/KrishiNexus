@@ -43,6 +43,22 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Datasets, honest evaluation and a leaner OS (Phase 9, 29 October 2026)
+
+- **A frozen blind retrieval test.** `backend/evals/holdout_probe.py` holds 66 farmer questions written blind to the
+  retrieval rules — six dialects and surface forms, plus paraphrase, negation and cross-document traps. It is served live
+  at `GET /evals/holdout` (cached 10 minutes) and runnable from the whitepaper. Measured 29 October 2026: top-1 **0.500**,
+  top-3 **0.848**, against **1.00** on the curated 19-question set — the honest generalisation number. The set is frozen:
+  the rules are never tuned against it.
+- **A family-aware SFT split.** The generated fine-tuning dataset now has a deterministic train/val/test split (2,301 /
+  239 / 660) in which negotiation cells, dialect, timing and region holdouts never straddle splits, with leakage
+  assertions on every export. Served through `GET /edge/lora-dataset` and `GET /edge/local-models`.
+- **Training plan, not training.** `TRAINING_PLAN.md` documents the 4 GB-GPU QLoRA recipe, the merge-to-GGUF deployment
+  route and the adapter eval design. No model is trained yet; the adapter stays labelled `dataset_ready_not_trained`.
+- **Leaner OS chunk.** The Three.js cold-storage twin is lazy-loaded, cutting the `/os` entry chunk from 627 kB to 72 kB.
+- **Full Bangla OS panels.** The trace, command centre, bank desk, truck map and twin chrome all follow the বাং/EN
+  toggle; identifiers, units and technical tokens stay in English.
+
 ### Institutional interface (Phase 8, 24 October 2026)
 
 The site is now a daylight, high-trust product interface. It replaces the earlier 3D scroll story, which hijacked the
@@ -199,7 +215,7 @@ The full contracts are in [`AGENTS.md`](AGENTS.md).
 | Agents | `POST /agents/orchestrate`, `WS /ws/agent-trace`, `GET /agents/trace-history`, `GET /prompts/registry` |
 | Automation | `GET /automation/truck-pools`, `POST /automation/truck-pools/join`, n8n-style `daily-dam-sync` and `hourly-sar-flood-check` |
 | Edge | `POST /edge/voice-interact`, `POST /edge/grade-crop`, `POST /edge/verify-certificate`, `GET /edge/local-models`, `POST /edge/local-inference`, `GET /edge/lora-dataset` |
-| Evals | `GET /evals/metrics`, `POST /evals/run-regression` |
+| Evals | `GET /evals/metrics`, `POST /evals/run-regression`, `GET /evals/holdout` |
 
 ---
 
@@ -239,7 +255,9 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   ├── prompts/                XML prompt registry + optimiser
 │   ├── automation/             durable truck pools, n8n-style jobs
 │   ├── edge_node/              voice, optical grader, local LLM manager
-│   └── evals/                  metrics engine + 100-case regression suite
+│   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
+├── training/                   SFT data export (prepare_data.py); recipe in TRAINING_PLAN.md
+├── TRAINING_PLAN.md            QLoRA recipe, split rules, deployment and eval design
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
