@@ -30,14 +30,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from config import now_bdt
 from mcp_servers import bd_geo
 from mcp_servers.base import ToolExecutionError, stable_unit
+from mcp_servers.coldchain_iot_mcp import calculate_dynamic_shelf_life
 from mcp_servers.dam_market_mcp import TRUCK_CAPACITY_KG, find_optimal_selling_hub
-from schemas.mcp_models import Crop, CropField, FindOptimalSellingHubInput, Grade
+from schemas.mcp_models import CalculateDynamicShelfLifeInput, Crop, CropField, FindOptimalSellingHubInput, Grade
 
 STATE_DIR = Path(__file__).resolve().parent.parent / ".state"
 POOL_STATE_FILE = STATE_DIR / "truck_pools.json"
 UNION_RADIUS_KM = 5.0
 DISPATCH_DEADLINE_HOURS = 8
 AUTO_DISPATCH_MIN_FILL = 0.80
+# A lot must reach its buyer with at least this share of its shelf life left; a transit reading that breaks this
+# reroutes the truck (transit_check).
+ARRIVAL_SHELF_RESERVE = 0.25
 
 _GRADE_ALIASES = {"A": Grade.A, "GRADE-A": Grade.A, "GRADE A": Grade.A, "B": Grade.B, "GRADE-B": Grade.B,
                   "GRADE B": Grade.B, "C": Grade.C, "GRADE-C": Grade.C, "GRADE C": Grade.C}
@@ -85,6 +89,7 @@ class Dispatch(BaseModel):
     escrow_status: Literal["LOCKED"]
     dispatched_at: datetime
     trigger: Literal["CAPACITY_REACHED", "DEADLINE_TIMER"]
+    rerouted_from: str | None = Field(default=None, description="The buyer the truck left for, if a transit check moved it.")
 
 
 class TruckPool(BaseModel):
@@ -245,11 +250,14 @@ class TemporalTruckPoolManager:
 
     # -- workflow transitions ---------------------------------------------
 
-    async def _dispatch(self, pool: TruckPool, trigger: Literal["CAPACITY_REACHED", "DEADLINE_TIMER"]) -> None:
+    @staticmethod
+    def _pool_grade(pool: TruckPool) -> Grade:
         grades = [lot.grade for lot in pool.lots]
-        pool_grade = max(set(grades), key=grades.count)
+        return max(set(grades), key=grades.count)
+
+    async def _dispatch(self, pool: TruckPool, trigger: Literal["CAPACITY_REACHED", "DEADLINE_TIMER"]) -> None:
         offer = await find_optimal_selling_hub(FindOptimalSellingHubInput(
-            crop=pool.crop, weight_kg=pool.loaded_kg, origin_district=pool.district, grade=pool_grade))
+            crop=pool.crop, weight_kg=pool.loaded_kg, origin_district=pool.district, grade=self._pool_grade(pool)))
         best = offer.best_option
         if best is None:
             pool.record("DispatchFailed", reason="no buyer accepts this crop/grade")
@@ -269,6 +277,45 @@ class TemporalTruckPoolManager:
                     loaded_kg=pool.loaded_kg, trigger=trigger)
         pool.record("EscrowLocked", escrow_id=pool.dispatch.escrow_id, amount_tk=contract_value,
                     per_farmer={lot.farmer_id: round(lot.weight_kg * best.net_payout_tk_per_kg, 2) for lot in pool.lots})
+
+    async def transit_check(self, pool_id: str, transit_temp_c: float, rh_pct: float) -> PoolView:
+        """A temperature reading from a dispatched truck. If the lot would reach its buyer with less than
+        ARRIVAL_SHELF_RESERVE of its shelf life left at this temperature, the truck is sent to the best-paying buyer it
+        can still reach in time, and the pool's escrow is locked again at that buyer's price."""
+        async with self._async_lock:
+            pool = self.pools.get(pool_id.upper())
+            if pool is None or pool.dispatch is None:
+                raise ToolExecutionError(f"{pool_id} has no truck on the road; transit checks apply to dispatched pools.")
+            grade, current = self._pool_grade(pool), pool.dispatch
+            shelf = await calculate_dynamic_shelf_life(CalculateDynamicShelfLifeInput(
+                crop=pool.crop, grade=grade, transit_temp_c=transit_temp_c, rh_pct=rh_pct))
+            reach_h = round(shelf.remaining_shelf_life_hours * (1 - ARRIVAL_SHELF_RESERVE), 1)
+            reading = {"transit_temp_c": transit_temp_c, "rh_pct": rh_pct, "shelf_life_hours": round(shelf.remaining_shelf_life_hours, 1),
+                       "reachable_hours": reach_h, "eta_hours": current.eta_hours}
+            if current.eta_hours <= reach_h:
+                pool.record("TransitChecked", **reading, action="route kept")
+            else:
+                # shortcut: distances run from the pool's district, not the truck's live position; use GPS when trucks report it.
+                offer = await find_optimal_selling_hub(FindOptimalSellingHubInput(
+                    crop=pool.crop, weight_kg=pool.loaded_kg, origin_district=pool.district, grade=grade,
+                    max_transit_hours=reach_h))
+                best = offer.best_option
+                if best is None or best.hub_id == current.buyer_hub_id:
+                    pool.record("TransitAtRisk", **reading, action="no buyer reachable in time; unload at the nearest cold store")
+                else:
+                    digest = hashlib.sha256(f"{pool.workflow_id}|{now_bdt().isoformat()}|{best.hub_id}".encode()).hexdigest()
+                    value = round(best.net_payout_tk_per_kg * pool.loaded_kg, 2)
+                    pool.dispatch = current.model_copy(update=dict(
+                        buyer_hub_id=best.hub_id, buyer_name=best.hub_name, buyer_type=best.hub_type.value,
+                        road_distance_km=best.road_distance_km, eta_hours=best.transit_hours,
+                        contract_price_tk_per_kg=best.net_payout_tk_per_kg, contract_value_tk=value,
+                        escrow_id=f"ESC-{digest[8:20].upper()}", escrow_amount_tk=value, rerouted_from=current.buyer_name))
+                    pool.record("TruckRerouted", **reading, from_buyer=current.buyer_name, to_buyer=best.hub_name,
+                                new_eta_hours=best.transit_hours)
+                    pool.record("EscrowLocked", escrow_id=pool.dispatch.escrow_id, amount_tk=value,
+                                per_farmer={lot.farmer_id: round(lot.weight_kg * best.net_payout_tk_per_kg, 2) for lot in pool.lots})
+            self._persist()
+            return self.view(pool)
 
     async def fire_timers(self) -> None:
         async with self._async_lock:

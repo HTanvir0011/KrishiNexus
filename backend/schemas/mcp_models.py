@@ -138,6 +138,7 @@ class HubType(StrEnum):
     URBAN_RETAIL_CHAIN = "URBAN_RETAIL_CHAIN"
     WHOLESALE_ARAT = "WHOLESALE_ARAT"
     WFP_AGGREGATION_CENTRE = "WFP_AGGREGATION_CENTRE"
+    AGRO_PROCESSOR = "AGRO_PROCESSOR"
 
 
 class SeasonPhase(StrEnum):
@@ -246,6 +247,9 @@ class FindOptimalSellingHubInput(ToolInput):
     weight_kg: float = Field(gt=0, le=100_000, description="Lot weight to sell, in kg.")
     origin_district: PlaceName = Field(description="District where the lot is loaded.")
     grade: GradeField
+    max_transit_hours: float | None = Field(
+        default=None, gt=0, le=72,
+        description="Rank only hubs the truck reaches within this many hours (a reroute for heat-sensitive produce).")
 
 
 class SellingHubOption(BaseModel):
@@ -282,6 +286,7 @@ class FindOptimalSellingHubOutput(ToolOutput):
     farmgate_baseline_total_tk: float
     hubs_evaluated: int
     hubs_rejected: int = Field(description="Hubs that do not buy this crop/grade.")
+    hubs_out_of_reach: int = Field(default=0, description="Hubs beyond max_transit_hours, when it is set.")
     best_option: SellingHubOption | None
     ranked_options: list[SellingHubOption]
 

@@ -304,8 +304,66 @@ export interface PoolView {
     escrow_id: string;
     escrow_amount_tk: number;
     eta_hours: number;
+    rerouted_from?: string | null;
   } | null;
   lots: PoolLot[];
+  recent_events?: { seq: number; event_type: string; at: string; data: Record<string, unknown> }[];
+}
+
+export type HubType = "URBAN_RETAIL_CHAIN" | "WHOLESALE_ARAT" | "WFP_AGGREGATION_CENTRE" | "AGRO_PROCESSOR";
+export type LotGrade = "A" | "B" | "C";
+export type Wallet = "bKash" | "Nagad";
+
+export interface Bid {
+  rank: number;
+  bid_id: string;
+  hub_id: string;
+  hub_name: string;
+  hub_type: HubType;
+  district: string;
+  road_distance_km: number;
+  transit_hours: number;
+  hub_price_tk_per_kg: number;
+  transport_cost_tk_per_kg: number;
+  fees_tk_per_kg: number;
+  transit_loss_pct: number;
+  net_payout_tk_per_kg: number;
+  net_payout_total_tk: number;
+  below_cost_floor: boolean;
+}
+
+export interface BidBoard {
+  crop: Crop;
+  origin_district: string;
+  grade: LotGrade;
+  weight_kg: number;
+  market_date: string;
+  valid_until: string;
+  farmgate_baseline_tk_per_kg: number;
+  production_cost_floor_tk_per_kg: number;
+  bids: Bid[];
+  data_source: "MODELLED_BIDS";
+  note: string;
+}
+
+export interface EscrowReceipt {
+  escrow_id: string;
+  bid_id: string;
+  status: "HELD";
+  simulated: true;
+  hub_id: string;
+  buyer_name: string;
+  buyer_type: HubType;
+  weight_kg: number;
+  net_payout_tk_per_kg: number;
+  amount_tk: number;
+  below_cost_floor: boolean;
+  wallet: Wallet;
+  wallet_masked: string;
+  release_condition: string;
+  locked_at: string;
+  note: string;
+  signature: string;
 }
 
 export interface JoinPoolResult {
@@ -568,6 +626,8 @@ export const api = {
     post<JoinPoolResult>("/automation/truck-pools/join", body),
 
   resetPools: () => post<PoolView[]>("/automation/truck-pools/reset", {}),
+  transitCheck: (poolId: string, transitTempC: number) =>
+    post<PoolView>(`/automation/truck-pools/${encodeURIComponent(poolId)}/transit-check`, { transit_temp_c: transitTempC }),
 
   chamberTelemetry: (facilityId: string, chamberId: string) =>
     withFallback(
@@ -609,6 +669,10 @@ export const api = {
   localModels: () => withFallback(() => request<LocalModelsReport>("/edge/local-models"), fallbackLocalModels),
   localInference: (prompt: string, model_name: string) => post<LocalInferenceResult>("/edge/local-inference", { prompt, model_name }),
   priceMonitor: (division: string) => request<PriceMonitorReport>(`/market/price-monitor?division=${encodeURIComponent(division)}`),
+  marketBids: (crop: Crop, district: string, weightKg: number, grade: LotGrade) =>
+    request<BidBoard>(`/market/bids?crop=${encodeURIComponent(crop)}&district=${encodeURIComponent(district)}&weight_kg=${weightKg}&grade=${grade}`),
+  lockBid: (body: { crop: Crop; origin_district: string; weight_kg: number; grade: LotGrade; hub_id: string; wallet: Wallet;
+                    wallet_number: string; farmer_id: string }) => post<EscrowReceipt>("/market/bids/lock", body),
 
   mcpServers: () => request<McpServerInfo[]>("/mcp/servers"),
   compress: (raw_context: string) => post<CompressReport>("/optimization/compress", { raw_context }),

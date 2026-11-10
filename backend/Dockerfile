@@ -16,9 +16,10 @@ RUN pip install -r requirements.lock
 COPY . .
 
 # Truck pools persist in /app/.state; the compose file mounts a named volume there.
+# /app/.seed receives the data-profile seed files (python -m data_seed); it is owned by knx so its volume is writable.
 RUN useradd --create-home --uid 10001 knx \
-    && mkdir -p /app/.state \
-    && chown -R knx:knx /app/.state
+    && mkdir -p /app/.state /app/.seed \
+    && chown -R knx:knx /app/.state /app/.seed
 USER knx
 
 EXPOSE 8000

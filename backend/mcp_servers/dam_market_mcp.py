@@ -237,6 +237,12 @@ _FIXED_HUBS: tuple[SellingHub, ...] = (
     SellingHub("URC-TEJ", "Tejgaon Urban Retail Chain DC", HubType.URBAN_RETAIL_CHAIN, "Dhaka Karwan Bazar", 23.7600, 90.3950, None),
     SellingHub("URC-MRP", "Mirpur Supermarket Consolidation DC", HubType.URBAN_RETAIL_CHAIN, "Dhaka Mirpur", 23.8223, 90.3654, None),
     SellingHub("URC-SYL", "Sylhet Urban Retail Chain DC", HubType.URBAN_RETAIL_CHAIN, "Sylhet", 24.9000, 91.8600, None),
+    # Agro-processors buy what fresh markets refuse: chips and flakes plants take grade-C potatoes, paste and powder
+    # makers take B/C chili, and rice mills buy Boro paddy (modelled contract prices, like every hub here).
+    SellingHub("PRC-MUN", "Munshiganj Potato Flakes and Starch Plant", HubType.AGRO_PROCESSOR, "Munshiganj", 23.5300, 90.5300, None),
+    SellingHub("PRC-BOG", "Bogura Potato Chips Processor", HubType.AGRO_PROCESSOR, "Bogura", 24.8700, 89.3500, None),
+    SellingHub("PRC-TEJ", "Tejgaon Chili Paste and Powder Processor", HubType.AGRO_PROCESSOR, "Dhaka Karwan Bazar", 23.7640, 90.4000, None),
+    SellingHub("PRC-KIS", "Kishoreganj Auto Rice Mill", HubType.AGRO_PROCESSOR, "Kishoreganj", 24.4300, 90.7800, None),
 )
 
 
@@ -357,6 +363,14 @@ def hub_buying_price(hub: SellingHub, crop: Crop, grade: Grade, on: date) -> flo
             if crop is Crop.BORO_RICE or grade is Grade.C:
                 return None
             return wholesale * 1.02 * GRADE_PRICE_MULTIPLIER[grade]
+        case HubType.AGRO_PROCESSOR:
+            if crop in (Crop.CARDINAL_POTATO, Crop.DIAMANT_POTATO) and hub.hub_id in ("PRC-MUN", "PRC-BOG"):
+                return wholesale * {Grade.A: 0.95, Grade.B: 0.92, Grade.C: 0.85}[grade]
+            if crop is Crop.GREEN_CHILI and hub.hub_id == "PRC-TEJ" and grade is not Grade.A:
+                return wholesale * 0.85
+            if crop is Crop.BORO_RICE and hub.hub_id == "PRC-KIS":
+                return wholesale * 0.98 * GRADE_PRICE_MULTIPLIER[grade]
+            return None
 
 
 def hub_fees(hub: SellingHub, hub_price: float) -> float:
@@ -367,6 +381,8 @@ def hub_fees(hub: SellingHub, hub_price: float) -> float:
             return 0.03 * hub_price + 0.60  # QC rejection allowance + plastic crating
         case HubType.WFP_AGGREGATION_CENTRE:
             return 0.25  # weighing and handling
+        case HubType.AGRO_PROCESSOR:
+            return 0.02 * hub_price + 0.30  # moisture and quality deduction + weighbridge
 
 
 # ---------------------------------------------------------------------------
@@ -562,7 +578,7 @@ MAX_OPTIONS_LISTED = 10
     output_model=FindOptimalSellingHubOutput,
 )
 async def find_optimal_selling_hub(params: FindOptimalSellingHubInput) -> FindOptimalSellingHubOutput:
-    """Rank urban retail chain DCs, wholesale arats and the 66 WFP aggregation centres (Cox's Bazar,
+    """Rank urban retail chain DCs, wholesale arats, agro-processors and the 66 WFP aggregation centres (Cox's Bazar,
     Kurigram) by net grower payout per kg after pooled 5-ton truck freight (Tk 68/km + loading +
     Jamuna/Padma bridge tolls), hub commissions and fees, perishable transit loss and hub intake caps.
     Any volume a capped hub cannot absorb is valued at today's farm-gate price."""
@@ -572,13 +588,16 @@ async def find_optimal_selling_hub(params: FindOptimalSellingHubInput) -> FindOp
     farmgate = round(market_prices(params.crop, origin, today).grower * GRADE_PRICE_MULTIPLIER[params.grade], 2)
 
     candidates: list[SellingHubOption] = []
-    rejected = 0
+    rejected = out_of_reach = 0
     for hub in SELLING_HUBS:
         hub_price = hub_buying_price(hub, params.crop, params.grade, today)
         if hub_price is None:
             rejected += 1
             continue
         leg = pooled_truck_leg(origin, bd_geo.district_by_name(hub.district), hub.lat, hub.lon)
+        if params.max_transit_hours is not None and leg.transit_hours > params.max_transit_hours:
+            out_of_reach += 1
+            continue
         accepted_kg = min(params.weight_kg, hub.intake_cap_kg) if hub.intake_cap_kg else params.weight_kg
         fees = hub_fees(hub, hub_price)
         loss_pct = min(40.0, leg.transit_hours * curve.transit_loss_pct_per_hour)
@@ -634,6 +653,7 @@ async def find_optimal_selling_hub(params: FindOptimalSellingHubInput) -> FindOp
         farmgate_baseline_total_tk=round(farmgate * params.weight_kg, 2),
         hubs_evaluated=len(candidates),
         hubs_rejected=rejected,
+        hubs_out_of_reach=out_of_reach,
         best_option=ranked[0] if ranked else None,
         ranked_options=ranked,
     )

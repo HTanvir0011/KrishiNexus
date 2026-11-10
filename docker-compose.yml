@@ -1,12 +1,29 @@
 # KrishiNexus OS: backend (FastAPI :8000) + frontend (nginx :5173 on the host) + optional local Ollama.
 #   docker compose up --build                          -> backend + frontend, no GPU or API keys needed
 #   docker compose --profile local-llm up --build      -> also Ollama on :11434 and a one-shot model pull
+#   docker compose --profile data up --build           -> also PostgreSQL+pgvector :5432, Neo4j :7474/:7687, Redis and
+#                                                         n8n :5678, seeded from the node's own chunks, graph and cron jobs
 # Backend settings come from backend/.env when present (see backend/.env.example).
+# The data-profile passwords below are local-demo defaults on 127.0.0.1 ports; set the KNX_* variables for anything else.
 name: krishinexus-os
+
+x-n8n-env: &n8n-env
+  DB_TYPE: postgresdb
+  DB_POSTGRESDB_HOST: postgres
+  DB_POSTGRESDB_DATABASE: n8n
+  DB_POSTGRESDB_USER: ${KNX_PG_USER:-krishinexus}
+  DB_POSTGRESDB_PASSWORD: ${KNX_PG_PASSWORD:-krishinexus-dev}
+  # Queue mode: the main instance fires the cron triggers, the worker runs the executions it pulls from Redis.
+  EXECUTIONS_MODE: queue
+  QUEUE_BULL_REDIS_HOST: redis
+  # Main and worker must share one key.
+  N8N_ENCRYPTION_KEY: ${KNX_N8N_ENCRYPTION_KEY:-krishinexus-dev-only-key}
+  GENERIC_TIMEZONE: Asia/Dhaka
+  TZ: Asia/Dhaka
 
 services:
   backend:
-    build:
+    build: &backend-build
       context: ./backend
       args:
         PYTHON_VERSION: "3.14"
@@ -68,6 +85,129 @@ services:
     command: ["ollama pull qwen2.5:7b-instruct-q4_K_M && ollama pull llama3.2:3b-instruct-q4_K_M && if [ -f /models/krishi-bangla-q8_0.gguf ]; then cd /models && ollama create krishi-bangla -f Modelfile; else echo 'no fine-tuned GGUF in backend/models/lora: skipped'; fi"]
     restart: "no"
 
+  # --- data profile ------------------------------------------------------------------------------------------------
+  # One-shot: writes the seed files (backend/data_seed.py) that the three seeders below load.
+  data-seed:
+    build: *backend-build
+    image: krishinexus-os/backend:0.1.0
+    profiles: ["data"]
+    volumes:
+      - data-seed:/app/.seed
+    command: ["python", "-m", "data_seed", "/app/.seed"]
+    restart: "no"
+
+  # rag_chunks (PGVECTOR_SCHEMA) and the n8n database. The .sql seeds run once, on the first start of pg-data.
+  postgres:
+    image: pgvector/pgvector:pg17
+    profiles: ["data"]
+    depends_on:
+      data-seed:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DB: krishinexus
+      POSTGRES_USER: ${KNX_PG_USER:-krishinexus}
+      POSTGRES_PASSWORD: ${KNX_PG_PASSWORD:-krishinexus-dev}
+    ports:
+      - "127.0.0.1:${KNX_PG_PORT:-5432}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - data-seed:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Over TCP, so it stays unhealthy while the init scripts run on the socket-only bootstrap server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d krishinexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5-community
+    profiles: ["data"]
+    environment:
+      NEO4J_AUTH: neo4j/${KNX_NEO4J_PASSWORD:-krishinexus-dev}
+    ports:
+      - "127.0.0.1:${KNX_NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${KNX_NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", 'cypher-shell -u neo4j -p "$${NEO4J_AUTH#neo4j/}" "RETURN 1" > /dev/null']
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 20
+    restart: unless-stopped
+
+  # One-shot: MERGEs the supply-chain graph, so re-running it on every start changes nothing.
+  neo4j-seed:
+    image: neo4j:5-community
+    profiles: ["data"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      data-seed:
+        condition: service_completed_successfully
+    environment:
+      NEO4J_ADDRESS: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${KNX_NEO4J_PASSWORD:-krishinexus-dev}
+    volumes:
+      - data-seed:/seed:ro
+    entrypoint: ["cypher-shell", "-f", "/seed/graph.cypher"]
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # One-shot: imports the two cron workflows on the first start only, so a later start keeps their on/off state.
+  n8n-import:
+    image: docker.n8n.io/n8nio/n8n:${N8N_IMAGE_TAG:-latest}
+    profiles: ["data"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      data-seed:
+        condition: service_completed_successfully
+    environment: *n8n-env
+    volumes:
+      - data-seed:/seed:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["n8n list:workflow | grep -q 'KrishiNexus - Daily DAM Price Sync' || (n8n import:workflow --input=/seed/n8n-workflows.json && (n8n update:workflow --all --active=true || echo 'Turn on the two KrishiNexus workflows in the n8n editor.'))"]
+    restart: "no"
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:${N8N_IMAGE_TAG:-latest}
+    profiles: ["data"]
+    depends_on:
+      n8n-import:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment: *n8n-env
+    ports:
+      - "127.0.0.1:${KNX_N8N_PORT:-5678}:5678"
+    restart: unless-stopped
+
+  n8n-worker:
+    image: docker.n8n.io/n8nio/n8n:${N8N_IMAGE_TAG:-latest}
+    profiles: ["data"]
+    depends_on:
+      n8n:
+        condition: service_started
+    environment: *n8n-env
+    command: ["worker"]
+    restart: unless-stopped
+
 volumes:
   backend-state:
   ollama-models:
+  data-seed:
+  pg-data:
+  neo4j-data:

@@ -55,13 +55,22 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
 | Full stack in Docker | `docker compose up --build` | same host ports: backend `8000`, frontend (nginx) `5173` |
 | + local Ollama | `docker compose --profile local-llm up --build` | `11434`; `ollama-pull` fetches `qwen2.5:7b-instruct-q4_K_M` + `llama3.2:3b-instruct-q4_K_M` (≈6.7 GB) |
+| + data services (**untested**: no Docker on the dev machine) | `docker compose --profile data up --build` | on `127.0.0.1` only: Postgres + pgvector `5432`, Neo4j `7474` / `7687`, n8n `5678`; Redis internal |
 
 Docker layout:
 - `backend/Dockerfile`: `python:3.14-slim`, installs the pinned `backend/requirements.lock`, runs as uid 10001, HEALTHCHECK on `GET /health`, named volume `backend-state` at `/app/.state`.
 - `frontend/Dockerfile`: `node:24-bookworm-slim` build stage, then `nginx:1.28-alpine`.
 - `frontend/nginx.conf` mirrors the Vite proxy (same prefix list plus `openapi.json`, the `/api/` rewrite and the `/ws/` upgrade) with an SPA fallback (`location /` → `index.html`) that serves `/`, `/os/*` and `/docs`.
-- Compose host ports and the Ollama tag can be overridden in a root `.env` (see `.env.example`); application settings come from `backend/.env` (optional `env_file`).
+- Compose host ports, the Ollama and n8n tags and the data-profile passwords can be overridden in a root `.env` (see `.env.example`); application settings come from `backend/.env` (optional `env_file`).
 - `KNX_OLLAMA_HOST` defaults to `http://ollama:11434` in compose; when the profile is off the edge node reports the runtime unreachable and falls back.
+- Profile `data` puts the node's own data into real servers. The node keeps its in-process stores and does not read these servers back.
+  - `data-seed` (backend image) runs `python -m data_seed /app/.seed` into volume `data-seed`. `backend/Dockerfile` creates `/app/.seed` owned by uid 10001, so the volume is writable.
+  - `postgres` (`pgvector/pgvector:pg17`) runs `00-n8n-database.sql` and `10-rag-chunks.sql` (`PGVECTOR_SCHEMA` plus the 19 chunks with the hashing-384 vectors the node indexes) on its first start only; delete volume `pg-data` to re-seed. Its healthcheck uses TCP, so it stays unhealthy while the init scripts run.
+  - `neo4j-seed` MERGEs `SupplyChainGraph` (`graph.cypher`: one `KnxNode` uniqueness constraint, nodes and relationships by type) into `neo4j:5-community`. It is idempotent and runs on every start.
+  - `n8n-import` imports the two cron workflows of `GET /automation/n8n/workflows` (stable ids, calling `http://backend:8000`) on the first start only, then tries `n8n update:workflow --all --active=true`; if that fails, switch them on in the editor.
+  - `n8n` (main: fires the cron triggers) and `n8n-worker` run in queue mode on `redis:7-alpine` and keep workflows and executions in the Postgres database `n8n`.
+  - The DAM sync the cron calls uses DAM-modelled prices, not a live scrape.
+  - Verified here: the seed files generate (`python -m data_seed <dir>`); the compose file validates against the official compose-spec schema (draft 2020-12, 0 errors, and a deliberately broken copy fails), with every reference resolved. Never run on a Docker host.
 
 Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SECONDS`, `KNX_FORCE_OFFLINE_WEATHER`,
 `KNX_RECEIPT_SIGNING_KEY` (HMAC for receipts and certificates), `KNX_CORS_ORIGINS`, `KNX_OLLAMA_HOST`,
@@ -88,10 +97,10 @@ krishinexus-os/
 ├── MEMORY.md                           # live state + handover log
 ├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
 ├── TRAINING_PLAN.md                    # Phase 9: SFT data (prompts v4, v5), training recipe, honest eval design + measured runs (§6)
-├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm
-├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG
+├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm; profile data: pgvector, Neo4j, Redis, n8n
+├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG, data-profile ports and passwords
 ├── training/
-│   ├── prepare_data.py                 # backend venv, --version 4|5 (default 5): exports train/val/test JSONL, re-asserts no leakage
+│   ├── prepare_data.py                 # backend venv, --version 4-7 (default 7): exports train/val/test JSONL, re-asserts no leakage
 │   ├── HOW_TO_TRAIN.md                 # per-model runbook (LoRA + YOLO): data, commands, eval targets
 │   ├── train_qlora.ipynb               # minimal QLoRA notebook (Colab / local GPU): train + merge
 │   ├── kaggle/krishinexus_lora_kaggle.ipynb  # full Kaggle run: train, frozen-test eval vs base + prompt-blind baseline, Q8_0 GGUF scored through Ollama
@@ -145,9 +154,11 @@ krishinexus-os/
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
 │   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
+│   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)
+│   ├── data_seed.py                    # seed files for the compose data profile: pgvector SQL, Neo4j Cypher, n8n workflows
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
 │   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner; a FROZEN test set
-│   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed)
+│   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed); escrows.json beside it
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
     ├── Dockerfile · .dockerignore · nginx.conf   # node build stage -> nginx serving dist + API/ws proxy
@@ -171,6 +182,7 @@ krishinexus-os/
         │   ├── Navbar.tsx · shell/Alerts.tsx   # sticky glass navbar (status, routes, বাং/EN, offline edge, CTA); toasts
         │   ├── ui.tsx · gauges.tsx             # Badge Panel Button Stat ProgressBar Spinner SourceChip Segmented LiveDot; dials
         │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
+        │   ├── BuyerBidsPanel.tsx              # market seat: ranked buyer bids for a lot and the 1-tap bKash/Nagad escrow lock
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx
         └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx
 ```
@@ -228,6 +240,7 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /automation/truck-pools` | → `list[PoolView]` (includes `lots`) | 3 |
 | `POST /automation/truck-pools/join` | `JoinPoolRequest` → `JoinPoolResult` | 3 |
 | `POST /automation/truck-pools/reset` | → `list[PoolView]` (re-seeds demo pools) | 3 |
+| `POST /automation/truck-pools/{pool_id}/transit-check` | `{transit_temp_c (−5–55), rh_pct?}` → `PoolView`; re-plans a dispatched truck whose produce would spoil before arrival (`TransitChecked` / `TruckRerouted` + `EscrowLocked` / `TransitAtRisk`); 422 for a pool with no truck on the road | 10 |
 | `POST /automation/n8n/daily-dam-sync` | → `DamSyncReport` | 3 |
 | `POST /automation/n8n/hourly-sar-flood-check` | `SarFloodCheckRequest?` → `SarFloodReport` | 3 |
 | `GET /automation/n8n/workflows` | → importable n8n workflow JSON | 3 |
@@ -236,6 +249,8 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `POST /edge/grade-crop` | `GradeCropRequest` → `GradeCropResult` | 4 |
 | `POST /edge/verify-certificate` | `VerifyCertificateRequest` → `CertificateVerification` | 4 |
 | `GET /market/price-monitor?division` | → `PriceMonitorReport` (WFP staple prices, `krishi-price-v1` forecasts beside their measured test score, Dhaka margin flags) | 9 |
+| `GET /market/bids?crop&district&weight_kg&grade` | → `BidBoard` (`data_source` `MODELLED_BIDS`): every hub buying this crop and grade today, best net payout first, each with `bid_id` and `below_cost_floor` | 10 |
+| `POST /market/bids/lock` | `LockBidRequest` (`hub_id`, `wallet` bKash or Nagad, `wallet_number` `01[3-9]` + 8 digits) → `EscrowReceipt` (`simulated: true`, HMAC-signed, number masked); the node recomputes the bid, a second tap returns the same escrow, 422 if the hub is not bidding | 10 |
 | `GET /edge/local-models?hardware_profile` | → `LocalModelsReport` | 4 |
 | `POST /edge/local-inference` | `LocalInferenceRequest` → `LocalInferenceResult` | 4 |
 | `GET /edge/lora-dataset?category&split&limit&format=json\|jsonl` | → `list[SftExample]` or JSONL | 4 |
@@ -276,12 +291,16 @@ voice_synthesizer → END`. `trace_events`, `errors`, `node_path` use `operator.
 | Bepari cost lines | share of Bepari marketing cost: Aratdar commission/khajna 62.35%, freight 18%, labour 6.5%, wastage 5.25%, bags 4.4%, tolls/chanda 3.5% | `dam_market_mcp.BEPARI_OWN_COST_LINES` |
 | Pooled truck | 5,000 kg; Tk 68/km + Tk 1,500/trip + tolls (Jamuna Tk 1,800, Padma Tk 2,800, Lalon Shah Tk 480); + Tk 0.10/kg pooling fee; 35 km/h + 1.5 h loading | `dam_market_mcp`, `bd_geo` |
 | Road distance | haversine × 1.32 circuity | `bd_geo.ROAD_CIRCUITY_FACTOR` |
-| Selling hubs | 7 arats, 3 urban retail DCs, 66 WFP centres (62 Cox's Bazar + 4 Kurigram) | `dam_market_mcp.SELLING_HUBS`, `WFP_CENTRES_BY_DISTRICT` |
+| Selling hubs | 7 arats, 3 urban retail DCs, 4 agro-processors, 66 WFP centres (62 Cox's Bazar + 4 Kurigram); processors buy what retail refuses: potato flakes/chips (Munshiganj, Bogura) at wholesale × A 0.95 / B 0.92 / C 0.85, chili paste (Tejgaon) grades B–C at × 0.85, rice mill (Kishoreganj) Boro at × 0.98 × grade; processor fee 2% + Tk 0.30/kg | `dam_market_mcp.SELLING_HUBS`, `WFP_CENTRES_BY_DISTRICT`, `hub_buying_price`, `hub_fees` |
+| Buyer bids and escrow | a bid is a hub's modelled price for the lot today, ranked by net payout after pooled freight, fees and transit loss, valid until 23:59 BDT; `below_cost_floor` = net < the crop's production-cost floor; locking holds `net_payout_total_tk` in a **simulated** escrow (no money moves, no wallet API), one per farmer and bid, released when the delivery is weighed at the buyer's door | `market_bids.bid_board`, `EscrowBook.lock` |
+| Transit-heat reroute | reroute iff ETA > remaining shelf life × (1 − 0.25) at the reported truck temperature; the new buyer is the best net payout among hubs within that reach (`max_transit_hours` on `find_optimal_selling_hub`), and the escrow is locked again there; distances still run from the pool's district, not the truck's live position | `workflows.ARRIVAL_SHELF_RESERVE`, `TemporalTruckPoolManager.transit_check` |
 | Distress price (regression) | non-control circuit-breaker cases sample P_spot uniformly in Tk 5–14/kg | `regression_suite.DISTRESS_SPOT_RANGE_TK` |
 | Knowledge seed | 18 passages (incl. `AGRI-FIN-01` for UCB/iFarmer); RAG eval set 19 curated questions + 66 frozen blind probes | `rag/knowledge_seed.KNOWLEDGE_DOCS`, `regression_suite.RAG_EVAL_SET`, `evals/holdout_probe.HOLDOUT_PROBES` |
 | Blind holdout probe | 66 frozen probes (never tune against them); live at `GET /evals/holdout?refresh`, cached 10 min, with a run-live card in the whitepaper's EvalsSection | `evals/holdout_probe.get_holdout_report`, route in `main.py` |
 | SFT dataset v4 | seed 20261109, split salt `split-v4`: train 2,434 / val 125 / test 641; OOD holdouts fully in test: Chittagonian dialect, holding_months 7, খালিয়াজুরী haor; families (response groups, negotiation cells) never straddle splits; tool-grounded prompts v4: each user turn carries the agent's `<tool_result>` (prices, ΔΠ, breach %, 3 retrieved passages) and the model decides from it; labels balanced by re-sampling to a drawn target | `ollama_local.SFT_SEED`, `_grounded`, `_draw`, `_family_split`; re-asserted by `training/prepare_data.py` |
 | SFT dataset v5 (deployed with `krishi-bangla-lora-v2`) | seed 20261110, salt `split-v5`, 4,800 rows: train 3,638 / val 274 / test 888; each question is drawn from a wording bank per task (colloquial Bangla, Rangpuri, Bogura, Sylheti, Banglish, English; v4's template included); the arbitrage tool result also carries the breaker's seven inputs; negotiation families are (crop, district, quarter) market cells; test subsets `iid`, `ood_wording` (32 wordings written separately, test only), and v4's three OOD families; `build_sft_dataset(4)` still reproduces v4 byte for byte | `ollama_local.SFT_V5_SEED`, `_v5_split`, `_v5_wording`, `subset_of`, `edge_node/sft_wordings.py`, `sft_heldout_wordings.json`; `training/prepare_data.py --version 5` |
+| SFT dataset v6 (trained `krishi-bangla-lora-v3`: storage fixed, verdicts 0.895, not shipped) | v5 with each storage question about its own sentence's subject (60 sentences, English and Bangla, unique per language), so exactly one retrieved passage answers it; storage test takes a fifth of the sentences (9 unseen); seed 20261111, salt `split-v6`, 4,800 rows: train 3,598 / val 318 / test 884; same tool-result formats as v5 | `sft_wordings.SENTENCE_TOPICS`, `ollama_local.SFT_V6_SEED`, `V6_TEST_FRACTIONS`, `_salt`; `training/prepare_data.py --version 6` |
+| SFT dataset v7 (training `krishi-bangla-lora-v4`) | v6 plus `spot_below_floor` (the breaker's own comparison of today's price with the floor) in the store-or-sell tool result, so the verdict follows from two stated values; one helper builds that result for the data and the router; seed 20261112, salt `split-v7`, 4,800 rows: train 3,454 / val 322 / test 1,024 (14 unseen storage sentences); the router adds the flag only for `PROMPT_VERSION >= 7` | `ollama_local._breaker_payload`, `SFT_V7_SEED`; `training/prepare_data.py --version 7` (the default) |
 | Fine-tuned local model | `krishi-bangla-1.5b` = Qwen2.5-1.5B + `krishi-bangla-lora-v2` (prompts v5; v1 is kept as Ollama `krishi-bangla:v4` and `krishi-bangla-v4-q8_0.gguf`) merged into the de-quantised NF4 base, Q8_0 GGUF (the bf16 merge at Q4_K_M failed flood alerts, TRAINING_PLAN §5), served as Ollama `krishi-bangla:latest`; each prompt is grounded first (a named haor → flood tool, store-or-sell → ΔΠ breaker, crop + offer → DAM spread, else top-3 retrieved passages) in the format of `PROMPT_VERSION` (5 since 2026-11-10; 4 serves v1) and decoded greedily, as it was scored; the router reads free-form phrasings too (store words, spot/expected price, months, rent, handling, rot as a fraction or %, readings in mm/dB, English months; offers in taka/tk); a simulated blackout cuts the internet only, so local runtimes still answer; offline voice requests use this model | `ollama_local.LOCAL_MODELS`, `ground_prompt`, `run_local_inference`; `supervisor.voice_interact` |
 | Bangla speech-to-text | `krishi-whisper-bn-v1` = Whisper Small fine-tuned on Common Voice 13 Bengali (Kaggle T4), int8 CTranslate2, run by faster-whisper on the CPU with beam 5, as its parity check was scored; audio is decoded by PyAV to 16 kHz mono in the app (faster-whisper 1.2.1's own decoder breaks on PyAV ≥ 14); the farmer app records with MediaRecorder and sends `audio_base64` when offline or without Web Speech; measured WER 0.435 / CER 0.229 with a 128-token cap that cut long transcripts, and 0.335 / 0.110 on 300 clips in the app's own setup (TRAINING_PLAN §8c) | `bangla_voice.WHISPER_DIR`, `_decode_16k_mono`, `_transcribe_audio`; `lib/speech.recordOnce`, `FarmerZeroUIApp.toggleMic` |
 | Potato vision cascade | `yolov11n-krishi-bd-v2.1` run 2 (Diamant dataset, CC BY 4.0), potato photos only (other crops use classical CV): `roi_best.pt` (YOLO11n-seg, 640 px) outlines each potato on the whole photo and on a 4 × 4 grid of overlapping tiles (`TILE_GRID`, overlap `TILE_OVERLAP` = 15% of the long side), so the small potatoes of a heap are seen 2.8× larger; a tile detection cut by an inner tile edge is dropped, and detections overlapping by more than half the smaller box keep the surest; the potato is cut out onto black, green-boosted (OpenCV HSV hue 35–85 with S, V ≥ 40: S ×1.5, V ×1.3) and segmented by `defect_best.pt` (YOLO11n-seg, 1024 px, conf 0.25); per potato, bruising % = scab + greening + mechanical-damage area and rot % = rot area; label: undersized (< 35 mm), else rot > the active grade-A rot limit (`a_rot`, 2%) → fungal_blight, else blemish > 0 → minor_bruise, else uniform_A; a box's confidence is that of the detection deciding its label; masks are rasterised from `masks.xy` outlines (bounded memory on 12 MP photos); sizes use `frame_width_mm`, which the farmer app's photo-width picker sends (close-up 150, handful 300, crate 600 = the default, heap 1,500 mm); each photo grade's reasons quote the measured scores from the installed `eval_report.json` (defect mask mAP50) and `grade_check.json` (grade accuracy), and the farmer app lists them; a photo whose potatoes are narrower than the size sweep's `min_potato_px` (read from the installed `size_sweep.json`; chosen on the 477 ROI validation photos by a rule set before the run) gets a `warnings` entry quoting the sweep's measured share of grades kept at that width, shown as an amber note under the certificate's grade and signed into the certificate payload, so `/edge/verify-certificate` returns them for a certificate that verifies (none if it doesn't), the buyer portal shows them under its verification line, and a certificate stripped of them reads tampered; a photo grade still on the farmer's screen (same crop) is sent as `edge_certificate_id` by the farmer app's voice request and by the portal's underwrite (Cardinal potato), so the loan is graded by that photo and the portal verifies its certificate; `/edge/grade-crop` runs in a worker thread (`asyncio.to_thread`) behind `_YOLO_LOCK` | `optical_grader.yolo_detect`, `find_potatoes`, `tile_starts`, `_cascade`, `fill_outlines`, `green_boost`, `yolo_reason`, `size_warning`, `issue_certificate`, `verify_certificate` |

@@ -1,0 +1,10 @@
+# How much of the v6 test the deployed v2 (krishi-bangla-lora-v2, trained on the v5 train split) saw in training.
+# Exact match of each v6 test row's response / prompt against v5 train; storage also by gold sentence (response before its citation).
+arbitrage_math       n= 247  same response 0.000  same prompt 0.000
+flood_harvest        n= 122  same response 0.254  same prompt 0.008
+market_negotiation   n= 335  same response 0.122  same prompt 0.000
+storage_qa           n= 180  same response 0.778  same prompt 0.000  gold sentence seen 0.778
+
+# v2's storage citation on the v6 test (predictions from this folder's run), split by whether v2 trained on the gold sentence.
+seen by v2    rows 140 (7 sentences)  citation 0.921
+unseen by v2  rows  40 (2 sentences)  citation 0.925

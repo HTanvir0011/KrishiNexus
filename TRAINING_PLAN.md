@@ -595,6 +595,156 @@ runs now.
   - Installed as `gguf_eval_report.json`, so the `/docs` "Deployed" column is this machine's measurement. Recorded
     in `training/runs/local-ollama-2026-11-10-v5/`.
 
+**Prompts v6 (2026-11-10): storage questions about each sentence's own subject.** The user asked to fix storage citation
+("Fix storage citation").
+
+Cause, found in the v4 run and again in v5:
+- A storage question asked about its document's first topic, but the answer was one sentence of that document, which
+  could be about something else.
+- All four `BARI-CHILI-01` sentences were asked as "pre-cooling", though three are about storage temperature, chilling
+  injury and anthracnose. 18 of v5's 35 deployed-model misses were that document.
+
+What changes (`build_sft_dataset(6)`, `prepare_data.py --version 6`):
+- `sft_wordings.SENTENCE_TOPICS` gives each of the knowledge base's 60 sentences its own subject, in English and in
+  Bangla, for example "chilling injury in green chili" / "ঠান্ডায় কাঁচা মরিচের ক্ষতি". The subjects are unique in each
+  language, so exactly one of the three passages answers a question.
+- The storage test split takes a fifth of the sentences rather than a tenth. That came out as 9 unseen sentences and
+  180 rows, against v5's 6 sentences.
+- A test sentence's subject never appears in training: the model has to match an unseen subject to the right passage,
+  as it must with real retrieval.
+- Everything else is v5: the same wording banks, held-out wordings, arbitrage inputs and router. The seed (20261111)
+  and salt (`split-v6`) are new, so the test batch is fresh.
+- The tool-result formats are unchanged, so `PROMPT_VERSION` 5 grounding already fits a v6 model.
+- `build_sft_dataset(4)` and `(5)` still reproduce their data byte for byte.
+
+Data, checked before training (`check_v5.py heldout 6`):
+- 4,800 rows: train 3,598, validation 318, test 884. Test subsets: `iid` 238, `ood_wording` 231, `ood_dialect` 200,
+  `ood_months` 165, `ood_upazila` 50.
+- jsonl sha256 `c4f21eb9…20ee`. Leakage check passed: 1,655 response families and 88 negotiation cells.
+- Every row replays through the engines, and every storage question names its own gold sentence's subject.
+- Routing: 100% on every training and validation row and every `iid` and v4-OOD test row. On held-out wordings it is
+  0.883, with the router unchanged since target 5 was measured.
+
+Pre-registered targets for `krishi-bangla-lora-v3`, set before any v6 result:
+
+| # | Measure | Target |
+|---|---|---|
+| 1 | The eight §6 metrics on the full v6 test split | each meets its §6 target; storage citation ≥ 0.90 is the one v5 missed |
+| 2 | The same metrics on `ood_wording` | each meets its §6 target |
+| 3 | The same metrics on `iid` | each meets its §6 target |
+| 4 | The exported Q8_0 GGUF through Ollama on Kaggle, full v6 test split | each meets its §6 target |
+
+Rules:
+- v3 replaces v2 in the app only if targets 1–4 are met, and only after the user approves the ~1.6 GB download.
+- Before training, the deployed v2 model is scored on the v6 test split through the local Ollama as the baseline. Its
+  storage questions use the new subjects; nothing else changes format.
+- Recipe, notebook and export are as for v2. The adapter name is `krishi-bangla-lora-v3`.
+
+**Training started:** kernel `krishinexus-bangla-lora-training` version 4, on the private dataset
+`taksimulhasandip/krishinexus-bangla-agri-sft-v6`, at 12:28 on 2026-11-10.
+
+**Measured run (prompts v6, kernel version 4, Kaggle T4): storage citation fixed; store-or-sell verdicts now miss.**
+
+Run setup:
+- 675 steps in 64.5 min. Validation loss was flat after about step 500; the evaluated checkpoint is step 550
+  (0.00108).
+- The Q8_0 GGUF exported and was scored through Ollama 0.40.16 on the T4: 24.3 min, 84.2 tok/s, 832 of 884 answers
+  identical to the 4-bit model's.
+- Reports are in `training/runs/kaggle-t4-2026-11-10-lora-v6/`; the model files are not downloaded.
+
+| Metric | Target | 1: all | 2: `ood_wording` | 3: `iid` | 4: GGUF, all |
+|---|---|---|---|---|---|
+| negotiation decision accuracy | 0.90 | 0.985 | 0.985 | 0.971 | 0.985 |
+| negotiation price fidelity | 0.85 | 1.000 | 1.000 | 1.000 | 1.000 |
+| **arbitrage verdict exact match** | 0.90 | **0.891** | **0.857** | 0.900 | **0.895** |
+| arbitrage trace fidelity | 0.80 | 1.000 | 1.000 | 1.000 | 1.000 |
+| flood alert accuracy | 0.90 | 0.934 | 1.000 | 1.000 | 1.000 |
+| flood probability within ±2 pts | 0.85 | 0.934 | 1.000 | 1.000 | 1.000 |
+| storage citation accuracy | 0.90 | 0.928 | 0.919 | 0.936 | 0.911 |
+| storage chrF | 60 | 92.88 | 91.34 | 94.37 | 91.40 |
+
+The base model scores 0.000 on storage citation. The prompt-blind baseline also scores 0.000.
+
+What it shows:
+- **Storage citation is fixed:** it meets 0.90 in all four checks, against v5's 0.789 / 0.717 / 0.864 / 0.806. Asking
+  about each sentence's own subject worked, and the test's 9 sentences were never trained on.
+- **Store-or-sell verdicts regressed:** from 1.000 everywhere in v5 to 0.891, so targets 1, 2 and 4 miss.
+  - All 27 misses (of 247) confuse BLOCK_SPOT_SALE with ALLOW_STORAGE. Both hold when storing gains (ΔΠ > 0); the
+    difference is only whether today's price is below the Tk 15 floor.
+  - The working (trace) is right in every row, so the model reads the numbers but misjudges that one comparison,
+    even at Tk 5.3 against 15.
+  - 17 of the 27 misses are the 7-month holding period, which never occurs in training.
+  - Every gold verdict in train and test follows the stated rule (checked), so this is the model, not label noise.
+- **By the pre-registered rule, v3 does not ship.** v2 stays deployed.
+- Likely cause: the model compares two decimals in its weights. That is the same weakness v1 had in negotiation before
+  prices moved into the tool result. A next version would have the breaker state the comparison (today's price below
+  the floor, yes or no), as it already states ΔΠ.
+
+**Baseline, measured after v3 (the pre-registered step above): the deployed v2 GGUF on the v6 test.** It ran through the local Ollama 0.40.16 in 33.8 min. Reports are in
+`training/runs/local-ollama-2026-11-10-v2-on-v6-test/`.
+
+| Metric | Target | v2 GGUF, all 884 | v3 GGUF, all 884 (above) |
+|---|---|---|---|
+| negotiation decision accuracy | 0.90 | 0.988 | 0.985 |
+| negotiation price fidelity | 0.85 | 1.000 | 1.000 |
+| arbitrage verdict exact match | 0.90 | **1.000** | 0.895 |
+| arbitrage trace fidelity | 0.80 | 1.000 | 1.000 |
+| flood alert accuracy | 0.90 | 0.943 | 1.000 |
+| flood probability within ±2 pts | 0.85 | 0.943 | 1.000 |
+| storage citation accuracy | 0.90 | 0.922 (contaminated, below) | 0.911 |
+| storage chrF | 60 | 93.85 | 91.40 |
+
+The v6 test is not held out for v2, because v2 trained on v5's split (`contamination.txt`):
+- 7 of the 9 storage test sentences (140 of 180 rows) were in v2's training data.
+- On the 2 sentences v2 never saw (40 rows), its citation is 0.925. That is the same as on the seen ones (0.921), but
+  2 sentences are too few to conclude from.
+- No store-or-sell test prompt or answer occurs in v5's training data, so the 1.000 there is clean.
+
+What it shows:
+- The v6 store-or-sell rows themselves are not the problem: v2 reads all 247 of them right. v3's regression came from
+  training on v6's data (a new draw, with the new storage questions), not from the test rows.
+- v7's stated flag removes the comparison either way.
+- v2's storage miss on v5 (0.806) came at least partly from v5's questions, which asked about the document's first
+  topic instead of the sentence's own subject.
+- This changes no pre-registered rule: v2 stays deployed and v7 is judged on its own targets.
+
+**Prompts v7 (2026-11-10): the breaker states the floor comparison.** The user said "Yes, train v7".
+
+What changes from v6 (`build_sft_dataset(7)`, `prepare_data.py --version 7`):
+- The store-or-sell tool result gains `spot_below_floor`, the circuit breaker's own comparison
+  (`ArbitrageCheckResult.spot_below_floor`).
+- The verdict then follows from two values the tool states: the flag and the sign of ΔΠ. The model no longer compares
+  decimals in its weights.
+- One helper, `_breaker_payload`, builds this result for both the data generator and the app's router, so the two
+  cannot drift apart.
+- Everything else is as in v6: per-sentence storage subjects, wordings, held-out wordings, router and recipe.
+- The seed (20261112) and salt (`split-v7`) are new. `build_sft_dataset(4/5/6)` still reproduce their data byte for
+  byte.
+- The app's router adds the flag only for `PROMPT_VERSION >= 7`, so the deployed v2 sees no change.
+
+Data, checked before training (`check_v5.py heldout 7`):
+- 4,800 rows: train 3,454, validation 322, test 1,024. Test subsets: `iid` 287, `ood_wording` 311, `ood_dialect` 200,
+  `ood_months` 176, `ood_upazila` 50.
+- Storage test: 14 unseen sentences, 280 rows.
+- jsonl sha256 `394c20da…c593`. Leakage check passed: 1,634 response families and 88 cells.
+- Every row replays. Every flag equals the breaker's, and every verdict follows from flag and ΔΠ.
+- Routing: 100% on every training, validation, `iid` and v4-OOD row. On held-out wordings it is 0.913 (284/311), with
+  the router unchanged.
+
+Pre-registered targets for `krishi-bangla-lora-v4`, set before any v7 result:
+
+| # | Measure | Target |
+|---|---|---|
+| 1 | The eight §6 metrics on the full v7 test split | each meets its §6 target |
+| 2 | The same metrics on `ood_wording` | each meets its §6 target |
+| 3 | The same metrics on `iid` | each meets its §6 target |
+| 4 | The exported Q8_0 GGUF through Ollama on Kaggle, full v7 test split | each meets its §6 target |
+
+Rule: v4 replaces v2 in the app only if targets 1–4 are all met, and only after the user approves the ~1.6 GB download.
+
+**Training started:** kernel `krishinexus-bangla-lora-training` version 5, on the private dataset
+`taksimulhasandip/krishinexus-bangla-agri-sft-v7`; queued at 22:19 on 2026-11-10.
+
 ## 7. Retrieval: the blind holdout probe — measured today
 
 66 new farmer questions in `evals/holdout_probe.py`, written by six independent agents that each read only a third of

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { api, ApiError, type PoolView } from "../api/client";
 import { ScoreDial } from "../components/gauges";
 import { WarningNote } from "../components/OpticalGraderCanvas";
+import { BuyerBidsPanel } from "../components/BuyerBidsPanel";
 import { PriceMonitorPanel } from "../components/PriceMonitorPanel";
 import { Badge, Button, Panel, ProgressBar, Spinner } from "../components/ui";
 import { cn, kg, shortHash, tk } from "../lib/format";
@@ -13,7 +14,7 @@ import { pushAlert, refreshPools, setState, useAppState } from "../state/store";
 const COPY = {
   en: {
     loadsTitle: "Pre-graded 5-ton truckloads for buyers",
-    network: "7 arats · 3 retail DCs · 66 WFP centres (62 Cox's Bazar · 4 Kurigram)",
+    network: "7 arats · 3 retail DCs · 4 agro-processors · 66 WFP centres (62 Cox's Bazar · 4 Kurigram)",
     th: { load: "Load", crop: "Crop and quality", fill: "Fill", buyer: "Buyer", contract: "Contract", escrow: "Escrow" },
     gradeA: "Grade-A",
     farmers: "farmers",
@@ -51,7 +52,7 @@ const COPY = {
   },
   bn: {
     loadsTitle: "ক্রেতাদের জন্য প্রি-গ্রেডেড 5-টন ট্রাকলোড",
-    network: "7 আড়ত · 3 রিটেইল ডিসি · 66 WFP কেন্দ্র (কক্সবাজার 62 · কুড়িগ্রাম 4)",
+    network: "7 আড়ত · 3 রিটেইল ডিসি · 4 প্রক্রিয়াজাতকারী · 66 WFP কেন্দ্র (কক্সবাজার 62 · কুড়িগ্রাম 4)",
     th: { load: "লোড", crop: "ফসল ও মান", fill: "ভরাট", buyer: "ক্রেতা", contract: "চুক্তি", escrow: "এসক্রো" },
     gradeA: "গ্রেড-A",
     farmers: "জন কৃষক",
@@ -254,6 +255,8 @@ export function BuyerBankPortal({ className }: { className?: string }) {
           </>
         )}
       </Panel>
+
+      <BuyerBidsPanel className="xl:col-span-5" />
 
       <PriceMonitorPanel className="xl:col-span-5" />
     </div>

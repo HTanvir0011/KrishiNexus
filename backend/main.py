@@ -23,6 +23,7 @@ GET    /prompts/registry             Versioned XML prompts, DSPy-style optimisat
 GET    /automation/truck-pools       Durable 5-ton union truck pools
 POST   /automation/truck-pools/join  Add a micro-lot to a pool (auto-dispatch + escrow at 5,000 kg)
 POST   /automation/truck-pools/reset Re-seed the demo pools
+POST   /automation/truck-pools/{pool_id}/transit-check  A truck's temperature reading; reroutes when shelf life is at risk
 POST   /automation/n8n/daily-dam-sync          6:00 AM DAM price sync job
 POST   /automation/n8n/hourly-sar-flood-check  Hourly Sentinel-1 haor flood job
 GET    /automation/n8n/workflows     Importable n8n workflow JSON
@@ -33,6 +34,8 @@ POST   /edge/verify-certificate      Re-verify a Digital Quality Certificate
 GET    /edge/local-models            Ollama / llama.cpp / vLLM runtimes, Q4_K_M telemetry, LoRA registry
 POST   /edge/local-inference         On-device generation (live runtime or offline-blackout fallback)
 GET    /edge/lora-dataset            SFT examples of the deployed krishi-bangla model (json or jsonl)
+GET    /market/bids                  Buyer bids for a lot, best net payout first (modelled)
+POST   /market/bids/lock             Lock a bid in one tap: simulated bKash/Nagad escrow
 GET    /evals/metrics                Measured RAGAS-style metrics, MCP schema validity, PII recall
 GET    /evals/holdout               Frozen 66-probe blind retrieval test (cached 10 min)
 POST   /evals/run-regression         Seeded 5-category regression suite (20 per category = 100 cases)
@@ -101,6 +104,7 @@ from mcp_servers import registry
 from mcp_servers.anomaly_state import ANOMALIES
 from mcp_servers.base import JsonRpcDispatcher, ToolExecutionError, parse_error_response
 from optimization.token_compressor import TOKEN_OPTIMIZER
+from market_bids import ESCROWS, BidBoard, EscrowReceipt, LockBidRequest, bid_board
 from price_monitor import PriceMonitorReport, price_monitor
 from rag.crag_pipeline import CRAG_PIPELINE, RagQueryResult
 from rag.graph_rag import GraphTraversalResult, get_graph
@@ -115,6 +119,8 @@ from schemas.api_models import (
 )
 from schemas.mcp_models import (
     ActiveAnomalyView,
+    Crop,
+    Grade,
     JsonRpcRequest,
     JsonRpcResponse,
     McpServerDescriptor,
@@ -488,6 +494,20 @@ async def automation_truck_pools_join(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.post("/automation/truck-pools/{pool_id}/transit-check", response_model=PoolView, tags=["automation"])
+async def automation_truck_pools_transit_check(
+    pool_id: str,
+    transit_temp_c: Annotated[float, Body(ge=-5, le=55, description="Produce temperature reported from the truck.")],
+    rh_pct: Annotated[float, Body(ge=5, le=100)] = 60.0,
+) -> PoolView:
+    """Check a dispatched truck against its lot's shelf life at this temperature; reroute it if the lot would arrive
+    with under a quarter of its shelf life left."""
+    try:
+        return await TRUCK_POOLS.transit_check(pool_id, transit_temp_c, rh_pct)
+    except ToolExecutionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/automation/truck-pools/reset", response_model=list[PoolView], tags=["automation"])
 async def automation_truck_pools_reset() -> list[PoolView]:
     return TRUCK_POOLS.reset()
@@ -551,6 +571,25 @@ async def edge_verify_certificate(body: VerifyCertificateRequest) -> Certificate
     if certificate is None:
         raise HTTPException(status_code=404, detail=f"No certificate '{body.cert_id}' was issued by this node.")
     return OPTICAL_GRADER.verify(certificate)
+
+
+@app.get("/market/bids", response_model=BidBoard, tags=["market"])
+async def market_bids(crop: Crop, district: str, weight_kg: Annotated[float, Query(gt=0, le=100_000)],
+                      grade: Grade = Grade.A) -> BidBoard:
+    """Buyer bids for a lot (supermarket DCs, arats, agro-processors, WFP centres), best net payout after transport first."""
+    try:
+        return await bid_board(crop, district, weight_kg, grade)
+    except ToolExecutionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/market/bids/lock", response_model=EscrowReceipt, tags=["market"])
+async def market_bids_lock(body: LockBidRequest) -> EscrowReceipt:
+    """Lock a bid in one tap: the node recomputes it and opens a simulated bKash/Nagad escrow for its net payout."""
+    try:
+        return await ESCROWS.lock(body)
+    except ToolExecutionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/market/price-monitor", response_model=PriceMonitorReport, tags=["market"])

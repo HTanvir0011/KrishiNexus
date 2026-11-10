@@ -1,11 +1,11 @@
-import { Lock, MapPin, Truck } from "lucide-react";
-import { useMemo } from "react";
+import { Lock, MapPin, Thermometer, Truck } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import type { PoolLot, PoolView } from "../api/client";
+import { api, ApiError, type PoolLot, type PoolView } from "../api/client";
 import { cn, kg, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
-import { setState, useAppState } from "../state/store";
-import { Badge, Panel, ProgressBar } from "./ui";
+import { refreshPools, setState, useAppState } from "../state/store";
+import { Badge, Button, Panel, ProgressBar, Spinner } from "./ui";
 
 const R = 128;
 const C = 150;
@@ -30,6 +30,12 @@ const COPY = {
     destinationPending: "chosen when a farmer's decision matches this pool",
     truck: "Truck",
     dispatchLine: "{price}/kg · escrow {escrow} locked {amount} · ETA {eta} h",
+    heat: "Truck temperature",
+    heatCheck: "Check route",
+    heatFailed: "Transit check failed",
+    TransitChecked: "{temp} °C leaves {shelf} h of shelf life; {eta} h to the buyer is safe. Route kept.",
+    TruckRerouted: "{temp} °C leaves {shelf} h of shelf life, too little for {eta} h to {from}. Rerouted to {to} ({neweta} h).",
+    TransitAtRisk: "{temp} °C leaves {shelf} h of shelf life and no buyer is reachable in time. Unload at the nearest cold store.",
   },
   bn: {
     title: "৫ টনের ইউনিয়ন ট্রাক পুল",
@@ -49,11 +55,24 @@ const COPY = {
     destinationPending: "কৃষকের সিদ্ধান্ত এই পুলের সাথে মিললে ঠিক হবে",
     truck: "ট্রাক",
     dispatchLine: "{price}/কেজি · এসক্রো {escrow} লক {amount} · ETA {eta} ঘণ্টা",
+    heat: "ট্রাকের তাপমাত্রা",
+    heatCheck: "রুট যাচাই",
+    heatFailed: "পরিবহন যাচাই ব্যর্থ",
+    TransitChecked: "{temp} °C-এ ফসল আর {shelf} ঘণ্টা ভালো থাকবে; ক্রেতা পর্যন্ত {eta} ঘণ্টা নিরাপদ। রুট বহাল।",
+    TruckRerouted: "{temp} °C-এ ফসল আর {shelf} ঘণ্টা ভালো থাকবে, {from} পর্যন্ত {eta} ঘণ্টার জন্য যথেষ্ট নয়। ট্রাক {to}-এ ঘোরানো হলো ({neweta} ঘণ্টা)।",
+    TransitAtRisk: "{temp} °C-এ ফসল আর {shelf} ঘণ্টা ভালো থাকবে; সময়মতো কোনো ক্রেতার কাছে পৌঁছানো যাবে না। নিকটতম হিমাগারে নামান।",
   },
 };
 
 function fmt(s: string, vars: Record<string, string | number>): string {
   return s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
+}
+
+const TRANSIT_EVENTS = { TransitChecked: 1, TruckRerouted: 1, TransitAtRisk: 1 };
+
+function transitLine(template: string, d: Record<string, unknown>): string {
+  return fmt(template, { temp: String(d.transit_temp_c), shelf: Number(d.shelf_life_hours).toFixed(1), eta: Number(d.eta_hours).toFixed(1),
+                        from: String(d.from_buyer ?? ""), to: String(d.to_buyer ?? ""), neweta: Number(d.new_eta_hours ?? 0).toFixed(1) });
 }
 
 function angleOf(farmerId: string): number {
@@ -90,6 +109,23 @@ export function TruckPoolMap({ className }: { className?: string }) {
   const plan = voice?.orchestration?.state.syndicate_bypass_plan;
   const leg = plan?.pool && pool && plan.pool.pool_id === pool.pool_id ? plan : null;
   const destination = pool?.dispatch?.buyer_name ?? leg?.best_hub_name ?? null;
+  const [heatC, setHeatC] = useState(38);
+  const [checking, setChecking] = useState(false);
+  const [heatError, setHeatError] = useState<string | null>(null);
+  const check = [...(pool?.recent_events ?? [])].reverse().find((e) => e.event_type in TRANSIT_EVENTS);
+  const checkHeat = async () => {
+    if (!pool) return;
+    setChecking(true);
+    setHeatError(null);
+    try {
+      await api.transitCheck(pool.pool_id, heatC);
+      await refreshPools();
+    } catch (error) {
+      setHeatError(`${c.heatFailed}: ${error instanceof ApiError ? error.message : String(error)}`);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <Panel className={className} icon={<Truck className="size-4 text-amber-600" aria-hidden />}
@@ -171,6 +207,15 @@ export function TruckPoolMap({ className }: { className?: string }) {
               <div className="num font-medium text-amber-800">
                 {fmt(c.dispatchLine, { price: tk(pool.dispatch.contract_price_tk_per_kg), escrow: pool.dispatch.escrow_id, amount: tk(pool.dispatch.escrow_amount_tk, 0), eta: pool.dispatch.eta_hours.toFixed(1) })}
               </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1.5"><Thermometer className="size-3.5" aria-hidden /> {c.heat}
+                  <input type="number" min={-5} max={55} value={heatC} onChange={(e) => setHeatC(Number(e.target.value))}
+                    className="num w-16 rounded-md bg-white px-1.5 py-0.5 text-slate-900 ring-1 ring-inset ring-amber-600/30" /> °C
+                </label>
+                <Button onClick={() => void checkHeat()} disabled={checking}>{checking ? <Spinner /> : null} {c.heatCheck}</Button>
+              </div>
+              {check && <p role="status" className="m-0 mt-1.5">{transitLine(c[check.event_type as keyof typeof TRANSIT_EVENTS], check.data)}</p>}
+              {heatError && <p role="alert" className="m-0 mt-1.5 text-rose-700">{heatError}</p>}
             </div>
           )}
         </>

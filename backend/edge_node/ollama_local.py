@@ -38,7 +38,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from config import MODEL_CATALOG, now_bdt, settings
 from edge_node.sft_wordings import (ARBITRAGE_WORDINGS, CROP_NAMES, FLOOD_WORDINGS, MONTH_NAMES, NEGOTIATION_GROUPS,
-                                    NEGOTIATION_WORDINGS, STORAGE_WORDINGS, TOPIC_BN, Wording, heldout_wordings)
+                                    NEGOTIATION_WORDINGS, SENTENCE_TOPIC_BN, SENTENCE_TOPICS, STORAGE_WORDINGS, TOPIC_BN,
+                                    Wording, heldout_wordings)
 from mcp_servers.agri_weather_sar_mcp import NETWORK_BLACKOUT
 from mcp_servers.base import stable_unit
 from optimization.token_compressor import estimate_tokens
@@ -385,6 +386,12 @@ STORAGE_PASSAGES = 3
 SFT_V5_SEED, SPLIT_V5_SALT = 20_261_110, "split-v5"
 DATASET_PLAN_V5 = {category: n * 3 // 2 for category, n in DATASET_PLAN.items()}
 V5_TEST_FRACTION, V5_VAL_FRACTION, V5_HELDOUT_SHARE = 0.10, 0.06, 0.5
+# Prompts v6 = v5 with storage questions about each sentence's own subject (sft_wordings.SENTENCE_TOPICS). Storage puts a
+# fifth of its 60 sentences in test (v5: a tenth), so its score rests on about a dozen unseen sentences, not six.
+SFT_V6_SEED, SPLIT_V6_SALT = 20_261_111, "split-v6"
+# Prompts v7 = v6 with the breaker's floor comparison (`spot_below_floor`) in its tool result; a fresh test batch.
+SFT_V7_SEED, SPLIT_V7_SALT = 20_261_112, "split-v7"
+V6_TEST_FRACTIONS = {"storage_qa": 0.20}
 # The prompt format the deployed krishi-bangla model was trained on; ground_prompt builds this one. 5 since
 # krishi-bangla-lora-v2 shipped (2026-11-10); set 4 to serve the v1 model (Ollama tag krishi-bangla:v4).
 PROMPT_VERSION = 5
@@ -396,22 +403,27 @@ def _num(value: float, bangla: bool = False) -> str:
     return text.translate(_TO_BANGLA) if bangla else text
 
 
-def _v5_split(category: str, ood: bool, *family: Any) -> Literal["train", "val", "test"]:
+def _v5_split(category: str, ood: bool, *family: Any, version: int = 5) -> Literal["train", "val", "test"]:
     """Whole families move together, as in v4; an out-of-distribution family goes to test in full."""
     if ood:
         return "test"
-    unit = stable_unit(SPLIT_V5_SALT, category, *family)
-    return "test" if unit < V5_TEST_FRACTION else "val" if unit < V5_TEST_FRACTION + V5_VAL_FRACTION else "train"
+    unit = stable_unit(_salt(version), category, *family)
+    test = V6_TEST_FRACTIONS.get(category, V5_TEST_FRACTION) if version >= 6 else V5_TEST_FRACTION
+    return "test" if unit < test else "val" if unit < test + V5_VAL_FRACTION else "train"
+
+
+def _salt(version: int) -> str:
+    return {5: SPLIT_V5_SALT, 6: SPLIT_V6_SALT}.get(version, SPLIT_V7_SALT)
 
 
 def _v5_wording(category: str, i: int, split: str, ood_subset: str | None,
-                bank: tuple[Wording, ...]) -> tuple[Wording, bool, str]:
+                bank: tuple[Wording, ...], version: int = 5) -> tuple[Wording, bool, str]:
     """(wording, Bangla digits?, provenance). Held-out wordings fill half the in-distribution test rows (ood_wording)."""
-    heldout = split == "test" and ood_subset is None and stable_unit(SPLIT_V5_SALT, "heldout", category, i) < V5_HELDOUT_SHARE
+    heldout = split == "test" and ood_subset is None and stable_unit(_salt(version), "heldout", category, i) < V5_HELDOUT_SHARE
     pool = heldout_wordings()[category] if heldout else bank
-    k = int(stable_unit(SPLIT_V5_SALT, "wording", category, i) * len(pool))
+    k = int(stable_unit(_salt(version), "wording", category, i) * len(pool))
     subset = ood_subset or ("ood_wording" if heldout else "iid")
-    bangla = pool[k][0] == "bn" and stable_unit(SPLIT_V5_SALT, "digits", category, i) < 0.5
+    bangla = pool[k][0] == "bn" and stable_unit(_salt(version), "digits", category, i) < 0.5
     return pool[k], bangla, f" | wording {'heldout' if heldout else 'train'}-{k} | subset {subset}"
 
 
@@ -511,9 +523,9 @@ def _negotiation(i: int, rng: np.random.Generator, version: int = 4) -> SftExamp
         group = NEGOTIATION_GROUPS[i % len(NEGOTIATION_GROUPS)]
         ood = group == NEGOTIATION_HOLDOUT_DIALECT
         # Families are (crop, district, quarter) market cells, whatever the wording.
-        split = _v5_split("market_negotiation", ood, crop.value, district.name, (on.month - 1) // 3)
+        split = _v5_split("market_negotiation", ood, crop.value, district.name, (on.month - 1) // 3, version=version)
         (lang, dialect, template), bangla, provenance = _v5_wording(
-            "market_negotiation", i, split, "ood_dialect" if ood else None, NEGOTIATION_WORDINGS[group])
+            "market_negotiation", i, split, "ood_dialect" if ood else None, NEGOTIATION_WORDINGS[group], version)
         question = template.format(qty=_num(qty, bangla), crop=CROP_NAMES[lang][crop.value], offer=_num(offer, bangla))
         source += provenance
     return SftExample(example_id="", split=split, category="market_negotiation", dialect=dialect,
@@ -531,10 +543,11 @@ def _storage_qa(i: int, sentences: list[tuple[str, str, str, str, str]], rng: np
     response, dialect, source = f"{sentence} [{doc_id}]", "Standard Bangla", doc_id
     split: Literal["train", "val", "test"] = "train"
     if version >= 5:
-        split = _v5_split("storage_qa", False, response)
-        (lang, dialect, template), _, provenance = _v5_wording("storage_qa", i, split, None, STORAGE_WORDINGS)
+        split = _v5_split("storage_qa", False, response, version=version)
+        (lang, dialect, template), _, provenance = _v5_wording("storage_qa", i, split, None, STORAGE_WORDINGS, version)
         crop_en = crop if crop in CROP_NAMES["bn"] else "ফসল" if lang == "bn" else "crop"
-        question = template.format(topic=topic, topic_bn=TOPIC_BN[topic], crop=crop_en, crop_bn=CROP_NAMES["bn"].get(crop, "ফসল"))
+        question = template.format(topic=topic, topic_bn=(SENTENCE_TOPIC_BN if version >= 6 else TOPIC_BN)[topic], crop=crop_en,
+                                   crop_bn=CROP_NAMES["bn"].get(crop, "ফসল"))
         source += provenance
     return SftExample(example_id="", split=split, category="storage_qa", dialect=dialect,
                       instruction=_grounded(question, "crag_retrieval", retrieved), response=response, source=source)
@@ -567,24 +580,32 @@ def _arbitrage(i: int, rng: np.random.Generator, version: int = 4) -> SftExample
                    "WARN_NO_STORAGE_CAPACITY": "হিমাগারে জায়গা নেই; যৌথ ট্রাকে সরাসরি বিক্রি করুন।"}[r.verdict.value]
     response = (f"<arbitrage_math_trace>storage = {q}*(1-{lam})*{future} - {q}*({tariff}+{handling}) = {storage}; "
                 f"spot = {q}*{spot} = {spot_value}; dPi = {delta_pi}</arbitrage_math_trace> {r.verdict.value}: {decision_bn}")
-    payload: dict[str, Any] = {"production_cost_floor_bdt": r.production_cost_floor_bdt, "storage_branch_value_bdt": storage,
-                               "spot_branch_value_bdt": spot_value, "delta_pi_bdt": delta_pi}
+    payload = _breaker_payload(r, _breaker_inputs(q, spot, future, tariff, handling, lam, months), version)
     question = (f"{q} কেজি আলু আছে। আজ দাম {spot} টাকা, {months} মাস পর {future} টাকা আশা করছি। হিমাগার ভাড়া {tariff} টাকা, "
                 f"হ্যান্ডলিং {handling} টাকা, পচনের হার {lam}। রাখব না বেচব?")
     dialect, source = "Standard Bangla", "guardrails.financial_circuit.FinancialCircuitBreaker"
     split: Literal["train", "val", "test"] = "train"
     if version >= 5:
-        payload = {"inputs": _breaker_inputs(q, spot, future, tariff, handling, lam, months), **payload}
         ood = months == ARBITRAGE_HOLDOUT_MONTHS
-        split = _v5_split("arbitrage_math", ood, response)   # identical math traces never straddle splits
+        split = _v5_split("arbitrage_math", ood, response, version=version)   # identical math traces never straddle splits
         (lang, dialect, template), bangla, provenance = _v5_wording(
-            "arbitrage_math", i, split, "ood_months" if ood else None, ARBITRAGE_WORDINGS)
+            "arbitrage_math", i, split, "ood_months" if ood else None, ARBITRAGE_WORDINGS, version)
         question = template.format(**{k: _num(v, bangla) for k, v in {
             "qty_kg": q, "qty_mon": q // 40, "qty_bosta": q // 50, "spot": spot, "months": months, "future": future,
             "tariff": tariff, "handling": handling, "rot": lam, "rot_pct": round(lam * 100, 1)}.items()})
         source += provenance
     return SftExample(example_id="", split=split, category="arbitrage_math", dialect=dialect,
                       instruction=_grounded(question, "financial_circuit_breaker", payload), response=response, source=source)
+
+
+def _breaker_payload(r: Any, inputs: dict[str, Any], version: int) -> dict[str, Any]:
+    """The circuit-breaker tool result in prompt format `version`: v5 adds its inputs, v7 its floor comparison."""
+    values: dict[str, Any] = {"production_cost_floor_bdt": r.production_cost_floor_bdt}
+    if version >= 7:   # v6 judged spot < floor in its weights and missed 11% of verdicts; the breaker states it, as it states dPi
+        values["spot_below_floor"] = r.spot_below_floor
+    values |= {"storage_branch_value_bdt": round(r.storage_branch_value_bdt), "spot_branch_value_bdt": round(r.spot_branch_value_bdt),
+               "delta_pi_bdt": round(r.delta_pi_bdt)}
+    return {"inputs": inputs, **values} if version >= 5 else values
 
 
 def _breaker_inputs(quantity: float, spot: float, future: float, tariff: float, handling: float, lam: float,
@@ -620,9 +641,9 @@ def _flood(i: int, rng: np.random.Generator, version: int = 4) -> SftExample:
     split: Literal["train", "val", "test"] = "train"
     if version >= 5:
         ood = profile.name_bn == flood_holdout_name_bn()
-        split = _v5_split("flood_harvest", ood, response)   # identical alerts never straddle splits
+        split = _v5_split("flood_harvest", ood, response, version=version)   # identical alerts never straddle splits
         (lang, dialect, template), bangla, provenance = _v5_wording(
-            "flood_harvest", i, split, "ood_upazila" if ood else None, FLOOD_WORDINGS)
+            "flood_harvest", i, split, "ood_upazila" if ood else None, FLOOD_WORDINGS, version)
         # Without stated readings the question still gets the breach percent the tool computes for this haor.
         question = template.format(haor=profile.name_bn, haor_en=name, rain=_num(rain, bangla), sar=_num(sar, bangla),
                                    month=MONTH_NAMES[lang][month])
@@ -715,11 +736,8 @@ async def _tool_result(prompt: str, version: int = PROMPT_VERSION) -> tuple[str,
         r = CIRCUIT_BREAKER.validate_arbitrage_recommendation(ArbitrageCheckInput(
             crop=crop, quantity_kg=quantity, spot_price_bdt=spot, expected_future_price_bdt=future,
             storage_tariff_bdt=tariff, handling_cost_bdt=handling, lambda_rot=lam, holding_months=months))
-        values = {"production_cost_floor_bdt": r.production_cost_floor_bdt, "storage_branch_value_bdt": round(r.storage_branch_value_bdt),
-                  "spot_branch_value_bdt": round(r.spot_branch_value_bdt), "delta_pi_bdt": round(r.delta_pi_bdt)}
-        if version >= 5:
-            values = {"inputs": _breaker_inputs(quantity, spot, future, tariff, handling, lam, months), **values}
-        return "financial_circuit_breaker", values
+        return "financial_circuit_breaker", _breaker_payload(
+            r, _breaker_inputs(quantity, spot, future, tariff, handling, lam, months), version)
 
     if entities.crop is not None and entities.offered_faria_price_bdt is not None:
         district = bd_geo.resolve_district(entities.district or "Munshiganj")
@@ -778,15 +796,20 @@ def _family_split(category: str, dialect: str, instruction: str, response: str, 
     return "train"
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=4)
 def build_sft_dataset(version: int = PROMPT_VERSION) -> tuple[SftExample, ...]:
-    """Prompts v4 (the deployed model's data, byte-identical to its Kaggle dataset) or v5 (freely worded questions)."""
+    """Prompts v4, v5 or v6 (each byte-identical to the data its model trained on), or v7: v6 with storage questions
+    about each sentence's own subject and the breaker's floor comparison in its tool result."""
     from rag.hybrid_retriever import SemanticChunker
     from rag.knowledge_seed import KNOWLEDGE_DOCS
 
-    rng = np.random.default_rng(SFT_SEED if version < 5 else SFT_V5_SEED)
+    rng = np.random.default_rng(SFT_SEED if version < 5 else {5: SFT_V5_SEED, 6: SFT_V6_SEED}.get(version, SFT_V7_SEED))
+    if version >= 6:
+        assert {d.doc_id: len(SemanticChunker.sentences(d.text)) for d in KNOWLEDGE_DOCS} == {
+            doc: len(topics) for doc, topics in SENTENCE_TOPICS.items()}, "SENTENCE_TOPICS must match the knowledge base"
     sentences = [(d.doc_id, d.title, topic, d.crops[0] if d.crops else "ফসল", s)
-                 for d in KNOWLEDGE_DOCS for s in SemanticChunker.sentences(d.text) for topic in d.topics[:1]]
+                 for d in KNOWLEDGE_DOCS for k, s in enumerate(SemanticChunker.sentences(d.text))
+                 for topic in ((SENTENCE_TOPICS[d.doc_id][k][0],) if version >= 6 else d.topics[:1])]
     examples: list[SftExample] = []
     for category, count in (DATASET_PLAN if version < 5 else DATASET_PLAN_V5).items():
         for i in range(count):
@@ -799,8 +822,8 @@ def build_sft_dataset(version: int = PROMPT_VERSION) -> tuple[SftExample, ...]:
             else:
                 example = _flood(i, rng, version)
             examples.append(example)
-    if version >= 5:   # the builders already split v5 (its wordings depend on the split)
-        return tuple(e.model_copy(update={"example_id": f"KB5-{n:05d}"}) for n, e in enumerate(examples, start=1))
+    if version >= 5:   # the builders already split v5 and v6 (their wordings depend on the split)
+        return tuple(e.model_copy(update={"example_id": f"KB{version}-{n:05d}"}) for n, e in enumerate(examples, start=1))
     return tuple(e.model_copy(update={
         "example_id": f"KBL-{n:05d}",
         "split": _family_split(e.category, e.dialect, e.instruction, e.response, e.source),
@@ -843,7 +866,9 @@ def dataset_stats(examples: tuple[SftExample, ...], version: int = PROMPT_VERSIO
                                                                "(crop, district, quarter)") + " cells",
             "arbitrage_math": f"OOD: holding_months == {ARBITRAGE_HOLDOUT_MONTHS} is fully held out in test",
             "flood_harvest": f"OOD: the {flood_holdout_name_bn()} haor is fully held out in test",
-            "storage_qa": "split by response sentence; one sentence never straddles splits",
+            "storage_qa": "split by response sentence; one sentence never straddles splits" + (
+                f"; {V6_TEST_FRACTIONS['storage_qa']:.0%} of the sentences in test; each question asks about its own "
+                "sentence's subject" if version >= 6 else ""),
             **({} if version < 5 else {"wording": "OOD: wordings written separately (sft_heldout_wordings.json) fill "
                                                   f"{V5_HELDOUT_SHARE:.0%} of the in-distribution test rows and no other split"}),
         },
@@ -853,7 +878,12 @@ def dataset_stats(examples: tuple[SftExample, ...], version: int = PROMPT_VERSIO
         generator=(f"edge_node.ollama_local.build_sft_dataset (deterministic, seed {SFT_SEED}, family-aware split salted "
                    f"{SPLIT_SALT}, tool-grounded prompts v4)" if version < 5 else
                    f"edge_node.ollama_local.build_sft_dataset(5) (deterministic, seed {SFT_V5_SEED}, family-aware split salted "
-                   f"{SPLIT_V5_SALT}, tool-grounded prompts v5: freely worded questions)"),
+                   f"{SPLIT_V5_SALT}, tool-grounded prompts v5: freely worded questions)" if version == 5 else
+                   f"edge_node.ollama_local.build_sft_dataset(6) (deterministic, seed {SFT_V6_SEED}, family-aware split salted "
+                   f"{SPLIT_V6_SALT}, tool-grounded prompts v6: freely worded questions, storage questions about each "
+                   "sentence's own subject)" if version == 6 else
+                   f"edge_node.ollama_local.build_sft_dataset(7) (deterministic, seed {SFT_V7_SEED}, family-aware split salted "
+                   f"{SPLIT_V7_SALT}, tool-grounded prompts v7: v6 plus the breaker's floor comparison)"),
     )
 
 

@@ -28,13 +28,13 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 
 | Layer | What it does |
 |---|---|
-| **FastAPI backend** (`backend/`, port `8000`) | 36 routes; Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
+| **FastAPI backend** (`backend/`, port `8000`) | 41 routes; Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
 | **3 MCP servers, 13 tools** | DAM market & syndicate anomaly (4), Open-Meteo weather + Sentinel-1 SAR flood (5), BCSA cold-storage quota & IoT telemetry (4); HTTP, SSE and stdio transports |
 | **CRAG pipeline with intent routing** | PII scrub → HyDE dialect rewrite → intent detection → hybrid BM25 + vector retrieval with RRF and reranking → GraphRAG multi-hop facts → Corrective-RAG grading → live MCP augmentation |
 | **LangGraph supervisor + 4 agents** | Vision grading, syndicate bypass (5-ton pooled trucks), cold-chain arbitrage (ΔΠ circuit-breaker), climate credit (SAR flood shield + 300–850 score) |
 | **Offline edge node** | Bangla voice pipeline, optical grader with signed certificates, local LLM manager for **Ollama** / llama.cpp / vLLM with automatic fallback when no runtime is reachable |
 | **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | A product overview at `/` with one-click live farmer decisions and live MCP cards; the live OS at `/os` (farmer zero-UI app, co-op command center with a Three.js cold-storage twin, market and bank desk); the `/docs` whitepaper with a 13-tool MCP inspector |
-| **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models |
+| **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models; optional `data` profile adds PostgreSQL + pgvector, Neo4j, Redis and n8n, loaded with the app's own data |
 
 The system runs end to end with **no paid API keys and no GPU**: every agent has deterministic logic seeded with
 Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage protocols, haor flood history).
@@ -42,6 +42,37 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 ---
 
 ## Recent changes
+
+### Buyer bids, 1-tap escrow, truck reroute and data services (Phase 10, 10 November 2026)
+
+- **Buyer bids** (market seat, `/os/market`).
+  - Every buyer for the lot is listed, best net payout first: supermarket DCs, wholesale arats, the 66 WFP centres
+    and four new agro-processors. The processors (potato flakes and chips, chili paste, a rice mill) buy grades that
+    retail refuses.
+  - Net payout is after pooled freight, fees and transit loss. Bids under the crop's production cost are flagged.
+  - Bids are modelled from DAM hub prices, not live offers from named buyers.
+- **1-tap escrow.**
+  - One tap locks the best bid. The amount is held for the farmer's bKash or Nagad wallet and released when the
+    delivery is weighed at the buyer's door.
+  - The node recomputes the bid itself, a second tap returns the same escrow, and the receipt is HMAC-signed with the
+    wallet number masked.
+  - **The escrow is simulated:** no money moves and no wallet API is called. A live escrow needs a merchant agreement
+    and API credentials.
+- **Truck reroute on transit heat** (co-op seat, `/os/coop`).
+  - The co-op enters the truck's temperature. If the produce would spoil before arrival (ETA over 75% of its
+    remaining shelf life), the truck is sent to the best buyer it still reaches in time, and the escrow is locked
+    again there.
+  - At 38 °C a potato truck keeps its route; a green-chili truck moves from a 7.2 h buyer to a 2.0 h one.
+- **Data services in Compose** (`docker compose --profile data up --build`).
+  - PostgreSQL + pgvector receives the 19 knowledge chunks with the vectors the app indexes.
+  - Neo4j receives the supply-chain graph.
+  - n8n runs the two cron jobs in queue mode on Redis.
+  - The app itself still answers from its in-process stores. This profile has not yet run on a Docker host.
+- **Training update.**
+  - Prompts v6 fixed storage citation (0.911 on the exported model) but store-or-sell verdicts fell to 0.895, so that
+    model was not shipped.
+  - Prompts v7, where the circuit breaker states whether today's price is below the floor, is training.
+  - The deployed model is unchanged. All results are in `TRAINING_PLAN.md` §6.
 
 ### Trained models (Phase 9 training, 8–10 November 2026)
 
@@ -163,12 +194,23 @@ With a local LLM (CPU works; the first start downloads about 6.7 GB of models):
 docker compose --profile local-llm up --build
 ```
 
+With the data services (PostgreSQL + pgvector on `5432`, Neo4j on `7474`/`7687`, n8n on `5678`, all on `127.0.0.1`;
+Redis stays internal):
+
+```bash
+docker compose --profile data up --build
+```
+
+On the first start, n8n imports the two KrishiNexus cron workflows and tries to switch them on. If it cannot, switch
+them on in the n8n editor.
+
 Optional settings:
-- `.env` next to `docker-compose.yml` (see `.env.example`): host ports and the Ollama image tag.
+- `.env` next to `docker-compose.yml` (see `.env.example`): host ports, the Ollama and n8n image tags, and the data-profile passwords (local-demo defaults; set your own for anything else).
 - `backend/.env` (see `backend/.env.example`): application settings. Set `KNX_RECEIPT_SIGNING_KEY` before any shared deployment.
 
 > The compose file is validated against the official compose-spec schema, and the backend is tested with the
-> container's start command. A full `docker compose up` on a Docker host is the next verification step.
+> container's start command. The `data` profile's seed files are generated and checked locally. A full
+> `docker compose up` on a Docker host, including the `data` profile, is the next verification step.
 
 ### Local development
 
@@ -234,7 +276,8 @@ The full contracts are in [`AGENTS.md`](AGENTS.md).
 | RAG | `POST /rag/query`, `POST /rag/graph-traverse`, `GET /rag/stats` |
 | Guardrails & optimisation | `POST /guardrails/verify`, `POST /optimization/compress`, `GET /optimization/route` |
 | Agents | `POST /agents/orchestrate`, `WS /ws/agent-trace`, `GET /agents/trace-history`, `GET /prompts/registry` |
-| Automation | `GET /automation/truck-pools`, `POST /automation/truck-pools/join`, n8n-style `daily-dam-sync` and `hourly-sar-flood-check` |
+| Automation | `GET /automation/truck-pools`, `POST /automation/truck-pools/join`, `POST /automation/truck-pools/{pool_id}/transit-check`, n8n `daily-dam-sync` and `hourly-sar-flood-check` |
+| Market | `GET /market/bids`, `POST /market/bids/lock` (simulated escrow), `GET /market/price-monitor` |
 | Edge | `POST /edge/voice-interact`, `POST /edge/grade-crop`, `POST /edge/verify-certificate`, `GET /edge/local-models`, `POST /edge/local-inference`, `GET /edge/lora-dataset` |
 | Evals | `GET /evals/metrics`, `POST /evals/run-regression`, `GET /evals/holdout` |
 
@@ -262,12 +305,14 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 ## Repository layout
 
 ```text
-├── docker-compose.yml          backend + frontend; ollama under profile local-llm
+├── docker-compose.yml          backend + frontend; ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
 ├── AGENTS.md / CLAUDE.md       architecture contract (identical copies)
 ├── MEMORY.md                   live build state and handover log
 ├── assets/team_animation.svg   animated team roster
 ├── backend/
 │   ├── main.py  config.py      FastAPI app, settings, multi-LLM router
+│   ├── market_bids.py          buyer bids and the simulated 1-tap escrow
+│   ├── data_seed.py            seed files for the compose data profile (pgvector SQL, Neo4j Cypher, n8n workflows)
 │   ├── mcp_servers/            3 MCP servers + JSON-RPC hub
 │   ├── rag/                    lexicon, knowledge seed, hybrid retriever, GraphRAG, CRAG pipeline
 │   ├── agents/                 LangGraph supervisor + 4 agents
@@ -295,12 +340,14 @@ Real:
 - hybrid retrieval, GraphRAG and CRAG;
 - PII scrubbing;
 - HMAC-signed certificates and receipts;
-- the durable truck pools;
+- the durable truck pools and their transit-heat reroute rule;
 - the measured metrics;
 - the four trained models and their test scores (above).
 
 Simulated or modelled, and labelled as such in the UI and API:
 - DAM, BCSA and IoT figures are seeded data, not live feeds;
+- buyer bids are modelled from DAM hub prices, not offers from named buyers;
+- the bKash / Nagad escrow is simulated: no money moves and no wallet API is called;
 - potato grading without the trained YOLO weights (they are not in the repo) falls back to classical CV, labelled `classical-cv`;
 - local-LLM telemetry when no runtime is running;
 - the fine-tuned Bangla model needs Ollama and its GGUF; without them the kiosk answers from a labelled deterministic fallback;

@@ -3,8 +3,9 @@
 **Last updated:** 2026-11-10 (BDT)
 
 **Status:**
-- Phases 0–9 are built and published: GitHub `HTanvir0011/KrishiNexus` `main` is `cc65d8e` (2026-11-10), pushed from
-  the mirror `Claude to push`. The local `Claude` repo keeps its changes uncommitted, as before.
+- Phases 0–10 are built and published to GitHub `HTanvir0011/KrishiNexus` `main`, pushed from the mirror
+  `Claude to push` (each push's commit is in the handover log). The local `Claude` repo keeps its changes uncommitted,
+  as before.
 - Models trained on Kaggle and measured (TRAINING_PLAN §6, §8, §8b, §8c):
   - **Bangla advisor `krishi-bangla-lora-v2`** (prompts v5, freely worded questions) is **deployed**: Ollama
     `krishi-bangla:latest`, Q8_0, `PROMPT_VERSION = 5`.
@@ -16,14 +17,20 @@
   - **Bangla Whisper** `krishi-whisper-bn-v1` is **installed**, and the offline farmer app transcribes speech with it.
     Pre-registered WER 0.435 meets and CER 0.229 misses, but both were measured with a 128-token cap that cut long
     transcripts. The app's path scores WER 0.335 and CER 0.110 on 300 clips.
-- The Docker files have never run on a Docker host.
+  - **v3** (prompts v6) fixed storage citation but regressed store-or-sell verdicts, so it was not shipped. **v4**
+    (prompts v7, `spot_below_floor` stated) is queued on Kaggle.
+- Phase 10 (the developer task list, 2026-11-10) is built:
+  - modelled buyer bids, including 4 agro-processors, with a simulated 1-tap bKash/Nagad escrow (`/os/market`);
+  - a transit-heat truck reroute (`/os/coop`);
+  - compose profile `data`: pgvector, Neo4j, Redis and n8n, seeded from the node's own data.
+- The Docker files, including profile `data`, have never run on a Docker host.
 
 **Next:**
-1. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix; the model
-   stays as it is).
-2. Optional: fix storage citation with SFT data that asks about each sentence's own topic. Build it on dev data and
-   measure it on a fresh test batch.
-3. A demo rehearsal with a real microphone, then the Docker check on a Docker host.
+1. When kernel v5 (v7 data, adapter `krishi-bangla-lora-v4`) finishes: download only the small reports, check the
+   pre-registered v7 targets, record them, and ask the user before the ~1.6 GB download.
+2. Run `docker compose up --build` and `docker compose --profile data up --build` on a Docker host.
+3. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
+4. A demo rehearsal with a real microphone.
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -1281,3 +1288,128 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   - In the browser, offline mode with a recorded clip as a stubbed microphone: the farmer app showed Whisper's exact
     transcript. No real microphone was used.
   - Regression 100/100; `tsc` passes. The staged clip was deleted, the stub reloaded away, and online mode restored.
+
+### 2026-11-10 · Whisper install pushed (the user said "Yes, push")
+- Mirror sync as before: a `/L` dry run showed 12 files, nothing to delete, plus the mirror README's Whisper row.
+- 13 files, +189/−35. The secret scan was clean, and no audio, weights or test clips were staged.
+- Commit `39c3dad` "Install Bangla Whisper: offline speech-to-text on the kiosk": author and committer HTanvir0011, no
+  AI trailer. Pushed `cc65d8e..39c3dad` to `main`; the GitHub API shows it with 13 files.
+
+### 2026-11-10 · SFT prompts v6 for storage citation, training started (the user said "Fix storage citation")
+- **Cause** (seen in v4 and v5): each storage question asked about its document's first topic, while the answer was one
+  sentence of it. For example, `BARI-CHILI-01`'s chilling-injury sentence was asked as "pre-cooling"; 18 of v5's 35
+  misses were that document.
+- **Fix:**
+  - `sft_wordings.SENTENCE_TOPICS` gives all 60 knowledge sentences their own subject, in English and in Bangla, unique
+    in each language (asserted at import).
+  - `build_sft_dataset(6)` asks each storage question about its sentence's subject.
+  - Storage puts 20% of its sentences in test (9 unseen sentences, 180 rows).
+  - The seed (20261111) and salt (`split-v6`) are fresh. Everything else is as in v5; v4 and v5 still regenerate byte
+    for byte.
+- **Data:** 4,800 rows (3,598 / 318 / 884); sha `c4f21eb9…20ee`.
+- **Checks** (`check_v5.py heldout 6`): every row replays and every storage question names its gold sentence's subject.
+  Routing is 100% on train, val, iid and the OOD subsets, and 0.883 on held-out wordings (router unchanged). The
+  prompt-blind baseline's storage citation is 0.000.
+- **Pre-registered** (TRAINING_PLAN §6, "Prompts v6"): the eight targets on the full v6 test, `ood_wording`, `iid` and
+  the GGUF. v3 ships only if all are met and the user approves the download.
+- **Kaggle:** private dataset `krishinexus-bangla-agri-sft-v6`. Kernel `krishinexus-bangla-lora-training` v4 started
+  at 12:28 with adapter `krishi-bangla-lora-v3`; a watcher is on it.
+- **Running locally:** the deployed v2 model scored on the v6 test (baseline, `scratchpad/v6baseline/`).
+
+### 2026-11-10 · v6 (`krishi-bangla-lora-v3`) measured: storage fixed, store-or-sell verdict regressed, not shipped
+- **Run:** kernel v4 completed: 675 steps in 64.5 min, checkpoint 550; Q8_0 GGUF scored through Ollama on Kaggle.
+  Reports are in `training/runs/kaggle-t4-2026-11-10-lora-v6/`.
+- **Storage citation meets 0.90 everywhere:** 0.928 all, 0.919 held-out wordings, 0.936 iid, 0.911 GGUF (v5: 0.789 to
+  0.864).
+- **Arbitrage verdict misses:** 0.891 all, 0.857 held-out wordings, 0.900 iid, 0.895 GGUF (v5: 1.000).
+  - All 27 misses are BLOCK_SPOT_SALE versus ALLOW_STORAGE, which only differ in today's price against the Tk 15 floor.
+  - 17 of them are the unseen 7-month holding; the traces are all right.
+  - All 996 gold labels follow the rule, so these are model errors.
+- **Not shipped**, per the pre-registered rule; v2 stays in the app.
+- **Next (proposed to the user):** v7, where the breaker's tool result states whether today's price is below the
+  floor, so the model reads the comparison instead of computing it; retrain on a fresh batch.
+- **Running:** the deployed v2 scored on the v6 test (baseline), output to the new session scratchpad `v6baseline/`.
+
+### 2026-11-10 · SFT prompts v7, training started (the user said "Yes, train v7")
+- **Change:** the store-or-sell tool result gains `spot_below_floor`, the breaker's own `ArbitrageCheckResult` flag, so
+  the verdict follows from two stated values (the flag and ΔΠ's sign). v6 got that comparison wrong in 11% of rows.
+  - `_breaker_payload` builds the result for both the data and the router.
+  - The router adds the flag only for `PROMPT_VERSION >= 7`, so the deployed v2 is unchanged.
+  - Storage subjects, wordings and router are as in v6.
+- **Data:** 4,800 rows (3,454 / 322 / 1,024; 14 unseen storage sentences); sha `394c20da…c593`. v4, v5 and v6 still
+  regenerate byte for byte.
+- **Checks** (`check_v5.py heldout 7`): every row replays, every flag equals the breaker's, and every verdict follows
+  from flag and ΔΠ. Routing is 100% on train, val, iid and OOD; 0.913 on held-out wordings.
+- **Pre-registered:** the eight targets on all, `ood_wording`, `iid` and the GGUF (TRAINING_PLAN §6, "Prompts v7").
+- **Kaggle:** private dataset `krishinexus-bangla-agri-sft-v7`; kernel v5 (adapter `krishi-bangla-lora-v4`) queued at
+  22:19; a watcher is on it.
+- **Still running locally:** v2 scored on the v6 test (baseline for the v6 comparison).
+
+### 2026-11-10 · Phase 10: buyer bids with a 1-tap escrow, transit-heat reroute, compose data services (the user pasted a five-item developer task list: "analyze the scenario and take step to implement")
+- **Analysis**, item by item:
+
+  | # | Item | Before | Done |
+  |---|---|---|---|
+  | 1 | Farmer app UI | built: voice, photo grade, offline mic to Whisper | nothing to add |
+  | 2 | Truck pooling, dynamic reroute | pools and dispatch, no reroute | transit-heat reroute |
+  | 3 | MCP + pgvector, Neo4j, Redis, n8n in compose | 3 MCP servers; data in process only | compose profile `data` (untested) |
+  | 4 | AI stack | Whisper, YOLO11n, Ollama Qwen 2.5 7B (local-llm profile), LangGraph, GraphRAG/CRAG, LLMLingua-2-style compression, Presidio-compatible scrubber all present | nothing to add; the kiosk advisor stays the fine-tuned 1.5B |
+  | 5 | Buyer bids, best price, bKash/Nagad escrow | hub ranking by net payout; no processors, bids or escrow | all three |
+
+- **Buyer bids** (`market_bids.bid_board`, `GET /market/bids`):
+  - A bid is a hub's modelled price for the lot today. Bids are ranked by net payout after pooled freight, fees and
+    transit loss, valid until 23:59 BDT, with `below_cost_floor` against the production-cost floor.
+  - It reuses `find_optimal_selling_hub`; nothing is a live feed.
+  - Real buyer names such as Chaldal were not used. The hubs keep their generic names.
+- **Agro-processors:** 4 hubs in `_FIXED_HUBS` buy what retail refuses. Potato flakes and chips (Munshiganj, Bogura)
+  pay wholesale × 0.95 / 0.92 / 0.85 for A / B / C. Chili paste (Tejgaon) pays × 0.85 for grades B and C. The rice
+  mill (Kishoreganj) pays Boro at × 0.98 × grade. Fees are 2% + Tk 0.30/kg.
+- **Escrow** (`POST /market/bids/lock`):
+  - It is **simulated**: no money moves and no wallet API is called.
+  - The node recomputes the bid. There is one escrow per farmer and bid, so a second tap returns the same one.
+  - The receipt is HMAC-signed, the wallet number is stored masked, and receipts persist in `.state/escrows.json`.
+  - A live escrow needs a bKash or Nagad merchant agreement and API credentials.
+- **Transit-heat reroute** (`POST /automation/truck-pools/{pool_id}/transit-check`):
+  - Shelf life comes from `calculate_dynamic_shelf_life` at the reported truck temperature.
+  - The truck is rerouted iff the ETA exceeds 75% of the remaining shelf life. The new buyer is the best net payout
+    within that reach (new `max_transit_hours` on the hub tool), and the escrow is locked again there.
+  - Shortcut: distances run from the pool's district, not the truck's GPS position.
+- **UI:**
+  - `BuyerBidsPanel` on `/os/market`: lot controls, the top 6 bids, and a wallet picker with one lock button that
+    shows a receipt marked simulated. EN and BN.
+  - `TruckPoolMap` on `/os/coop`: a truck-temperature input, a "Check route" button and the latest transit event line.
+- **Compose profile `data`:**
+  - `data-seed` runs `python -m data_seed` from the backend image (the Dockerfile adds `/app/.seed` owned by uid 10001).
+  - `postgres` (pgvector pg17) gets `rag_chunks` plus the n8n database.
+  - `neo4j-seed` MERGEs `SupplyChainGraph`.
+  - `n8n-import`, `n8n` and `n8n-worker` run queue mode on `redis`.
+  - Ports bind to 127.0.0.1; the demo passwords are in `.env.example`.
+  - The node does not read these servers back.
+- **Verified:**
+  - API script (`scratchpad/test_bids_reroute.py`):
+    - 9 bids for Cardinal potato grade C from Bogura (400 kg); best is the Bogura chips processor at Tk 38.74/kg net.
+    - A lock gives Tk 15,496, number masked; a second tap returns the same escrow.
+    - An unknown hub, wallet or number is refused (422).
+    - Potato at 38 °C keeps its route (343 h of shelf life).
+    - Chili at 38 °C is rerouted from Mirpur DC (7.2 h) to Mahasthangarh Haat Arat (2.0 h).
+    - An open pool and 90 °C are refused (422).
+  - Browser: the lock shows "Held in escrow Tk 19,747 · bKash 017•••••344 · simulated". The reroute line shows on
+    POOL-BOGURA-02 and "Route kept" on POOL-BOGURA-01. No console errors.
+  - Regression 100/100. Holdout unchanged (top-1 0.500, top-3 0.848). `tsc` clean.
+  - The seed files generate: 19 chunk rows (no duplicate ids), 1 constraint + 19 UNWIND statements covering every
+    node and edge, and 2 workflows.
+  - The compose file validates against the official compose-spec schema (draft 2020-12): 0 errors, and a copy with 3
+    planted errors fails. Every reference resolves. Docker is not installed here, so it never ran.
+- **Demo state:** `.state/truck_pools.json` was restored from the pre-test backup, and the test escrows and the
+  overflow pool were removed.
+- **Docs:** AGENTS/CLAUDE (run table, Docker layout, tree, 3 REST rows, constants), `.env.example`, DepthMatrix notes.
+- **Next file:** `training/runs/kaggle-t4-2026-11-10-lora-v7/`, when kernel v5 completes.
+
+### 2026-11-10 · Baseline: the deployed v2 on the v6 test (pre-registered for v6)
+- **Run:** local Ollama 0.40.16, Q8_0, 33.8 min. Reports are in
+  `training/runs/local-ollama-2026-11-10-v2-on-v6-test/` (TRAINING_PLAN §6).
+- **Scores:** all 8 targets met on the full v6 test. Store-or-sell verdict 1.000 (v3: 0.895); storage citation 0.922.
+- **Caveat** (`contamination.txt`): 7 of the 9 storage test sentences were in v2's training data. On the 2 it never
+  saw, citation is 0.925 over 40 rows, too few sentences to conclude from. No store-or-sell prompt or answer overlaps.
+- **Reading:** v3's verdict regression came from training on v6's data, not from the test rows. v7's stated flag
+  removes the comparison either way. No rule changes: v2 stays deployed.

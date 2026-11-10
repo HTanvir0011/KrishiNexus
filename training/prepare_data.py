@@ -5,11 +5,11 @@ Run with the BACKEND venv (it imports the backend's deterministic generators):
     cd krishinexus-os
     backend/.venv/Scripts/python training/prepare_data.py [--version 5]
 
---version 4 rebuilds the data the deployed model was trained on; 5 (the default) is prompts v5, freely worded
-questions (TRAINING_PLAN.md section 6). Writes training/data/{train,val,test}.jsonl plus split_report.json. Each line
+--version 4 and 5 rebuild the data the v1 and v2 models trained on; 6 (the default) is prompts v6: freely worded
+questions, with each storage question about its own sentence's subject (TRAINING_PLAN.md section 6). Writes training/data/{train,val,test}.jsonl plus split_report.json. Each line
 is TRL-ready: {"messages": [{"role": "system"|"user"|"assistant", ...}], "example_id", "category", "dialect", "subset"}
 where subset marks the held-out generalisation families inside test:
-iid | ood_dialect | ood_months | ood_upazila, plus ood_wording in v5.
+iid | ood_dialect | ood_months | ood_upazila, plus ood_wording from v5.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def assert_no_leakage(examples: tuple[SftExample, ...], version: int) -> tuple[i
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--version", type=int, choices=(4, 5), default=5, help="SFT prompt version to export")
+    parser.add_argument("--version", type=int, choices=(4, 5, 6, 7), default=7, help="SFT prompt version to export")
     version = parser.parse_args().version
     examples = build_sft_dataset(version)
     families, cells = assert_no_leakage(examples, version)
