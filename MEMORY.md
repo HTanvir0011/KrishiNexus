@@ -3,7 +3,8 @@
 **Last updated:** 2026-11-10 (BDT)
 
 **Status:**
-- Phases 0–9 are built. GitHub (`HTanvir0011/KrishiNexus`) has only the initial commit; nothing since is committed.
+- Phases 0–9 are built and published: GitHub `HTanvir0011/KrishiNexus` `main` is `cc65d8e` (2026-11-10), pushed from
+  the mirror `Claude to push`. The local `Claude` repo keeps its changes uncommitted, as before.
 - Models trained on Kaggle and measured (TRAINING_PLAN §6, §8, §8b, §8c):
   - **Bangla advisor `krishi-bangla-lora-v2`** (prompts v5, freely worded questions) is **deployed**: Ollama
     `krishi-bangla:latest`, Q8_0, `PROMPT_VERSION = 5`.
@@ -12,14 +13,17 @@
   - **Potato cascade** run 2 is wired into the grader. Finder 0.99; defect model 0.34 (misses); grade accuracy 0.764.
     It has the size warning and the signed certificate.
   - **`krishi-price-v1`** is wired into the market seat. It misses 2 of 3 targets and is shown as indicative.
-  - **Bangla Whisper** `krishi-whisper-bn-v1`: WER 0.435 meets, CER 0.229 misses. Not installed.
+  - **Bangla Whisper** `krishi-whisper-bn-v1` is **installed**, and the offline farmer app transcribes speech with it.
+    Pre-registered WER 0.435 meets and CER 0.229 misses, but both were measured with a 128-token cap that cut long
+    transcripts. The app's path scores WER 0.335 and CER 0.110 on 300 clips.
 - The Docker files have never run on a Docker host.
 
 **Next:**
-1. The user decides whether to install Whisper (faster-whisper plus a ~250 MB int8 model).
+1. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix; the model
+   stays as it is).
 2. Optional: fix storage citation with SFT data that asks about each sentence's own topic. Build it on dev data and
    measure it on a fresh test batch.
-3. Commit and push when the user asks, then the Docker check.
+3. A demo rehearsal with a real microphone, then the Docker check on a Docker host.
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -1230,3 +1234,50 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   0.964), storage citation 0.800. 874 of 888 answers are identical to Kaggle's GGUF answers.
   - Installed as `backend/models/lora/gguf_eval_report.json`, so the API's deployed column now reads 0.955 / 0.8.
   - Recorded in `training/runs/local-ollama-2026-11-10-v5/`.
+
+### 2026-11-10 · Published to GitHub (the user said "Commit and push")
+- **Synced** `krishinexus-os` into the mirror `Claude to push`.
+  - Method: robocopy `/MIR` for `backend`, `frontend` and `training`, plus the root docs (AGENTS, CLAUDE, MEMORY,
+    TRAINING_PLAN, memory-graph, docker-compose, .env.example).
+  - Excluded: `backend/models/`, `training/data/`, `.venv`, `node_modules`, `__pycache__`, `.state`, caches, `*.pyc`
+    and `.env`.
+  - A `/L` dry run first: 13 backend, 10 frontend and 45 training files changed, nothing to delete.
+- **README** (mirror only): a "Trained models" section with each model's measured scores and misses; "What is real and
+  what is simulated" and the layout corrected. It had still said nothing was trained.
+- **Checked before committing:**
+  - 76 files, +50,081/−488; the largest is the 323 KB size-sweep report.
+  - Secret scan over the staged diff: no tokens. The only hit is a doc line naming where `Kaggle Token.txt` lives,
+    with no value. The user's email does not appear.
+  - The `backend/models/` ignore rule is committed.
+- **Commit** `cc65d8e` "Phase 9 training: four trained models, freely worded Bangla questions": author and committer
+  HTanvir0011 <hossin23105101466@diu.edu.bd>, no AI trailer.
+- **Pushed** `c2eabe2..cc65d8e` to `main` through `gh auth git-credential`. GitHub's API shows the commit with 76
+  files, and the public repo lists the v5 run reports.
+- **Note:** the published docs and notebooks now name the Kaggle account (`taksimulhasandip`). Its datasets and
+  kernels stay private.
+
+### 2026-11-10 · Bangla Whisper installed (the user said "Yes, install Whisper")
+- **Installed:**
+  - `faster-whisper` 1.2.1 in `backend/.venv`; all dependencies had Python 3.14 wheels.
+  - The int8 CT2 model from the Kaggle run, in `backend/models/whisper/krishi-whisper-bn-v1-ct2-int8/` (244.6 MB
+    `model.bin`, git-ignored).
+  - It stays optional: commented in `requirements.txt` and not in the lock, like ultralytics.
+- **Code:**
+  - `bangla_voice.WHISPER_DIR` is the default when `KNX_WHISPER_MODEL` is unset.
+  - `_decode_16k_mono` decodes audio with PyAV itself, because faster-whisper 1.2.1 passes `metadata_errors`, which
+    PyAV 19 rejects (it was a 500). Undecodable audio is now a 422.
+  - The STT label shows the folder name, not the full path.
+  - Frontend: `lib/speech.recordOnce` (MediaRecorder). `FarmerZeroUIApp.toggleMic` records and sends `audio_base64`
+    when offline or without Web Speech; `setHeard` shows Whisper's transcript. `VoiceInteractBody.audio_base64`.
+  - The `/docs` Multimodal row is **Live**, with the measured caveats. No row is Partial now.
+- **Found:** the Kaggle Whisper evaluation used `max_new_tokens=128` (about 70 Bangla characters).
+  - 304 of 2,000 greedy transcripts are cut short; the longest is 70 chars, while 146 references exceed 100.
+  - The recorded WER/CER understate the model. The earlier "errors spread through the text" reading was wrong.
+  - TRAINING_PLAN §8c is corrected; the pre-registered verdicts stand, and a capless re-score was not run.
+- **Verified:**
+  - Six Common Voice test clips through `/edge/voice-interact`: WER 0.200, CER 0.095 (the notebook's scorer, 70 words;
+    a smoke check), 7–12 s per request on the CPU.
+  - A WebM/Opus clip (MediaRecorder's format) transcribed exactly.
+  - In the browser, offline mode with a recorded clip as a stubbed microphone: the farmer app showed Whisper's exact
+    transcript. No real microphone was used.
+  - Regression 100/100; `tsc` passes. The staged clip was deleted, the stub reloaded away, and online mode restored.

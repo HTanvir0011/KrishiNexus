@@ -1,7 +1,8 @@
 """Bangla dialect voice pipeline: speech-to-text, dialect normalisation, entity extraction and SSML.
 
-Speech-to-text runs on-device with ``faster-whisper`` when ``KNX_WHISPER_MODEL`` names a Whisper
-checkpoint (for example a ``shhossain/whisper_bangla_models`` conversion) and the package is installed.
+Speech-to-text runs on-device with ``faster-whisper`` when the package is installed and a CTranslate2 Whisper model is
+found: ``KNX_WHISPER_MODEL``, else ``backend/models/whisper/krishi-whisper-bn-v1-ct2-int8`` (the fine-tuned
+``krishi-whisper-bn-v1``, TRAINING_PLAN.md section 8c).
 Without it the node accepts typed Bangla/Banglish text or one of five recorded-farmer presets.
 
 The normaliser maps Rangpuri, Bogura (Varendri), Sylheti, Chittagonian and Standard Bangla speech onto
@@ -19,6 +20,7 @@ import importlib.util
 import io
 import os
 import re
+from pathlib import Path
 from typing import Any, Literal
 from xml.sax.saxutils import escape, quoteattr
 
@@ -241,14 +243,36 @@ PHONETIC_GUIDE: dict[str, tuple[str, str]] = {
 # ---------------------------------------------------------------------------
 
 _WHISPER: Any = None
+# krishi-whisper-bn-v1 as the Kaggle run exported it: int8 CTranslate2, scored on CPU with beam 5 (TRAINING_PLAN.md 8c).
+WHISPER_DIR = Path(__file__).resolve().parent.parent / "models" / "whisper" / "krishi-whisper-bn-v1-ct2-int8"
+
+
+def _decode_16k_mono(raw: bytes) -> Any:
+    """faster-whisper's decode_audio (16 kHz mono float32), minus the `metadata_errors` argument PyAV >= 14 rejects."""
+    import av
+    import numpy as np
+
+    resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    chunks: list[Any] = []
+    try:
+        with av.open(io.BytesIO(raw), mode="r") as container:
+            for frame in container.decode(audio=0):
+                chunks += [f.to_ndarray() for f in resampler.resample(frame)]
+            chunks += [f.to_ndarray() for f in resampler.resample(None)]   # flush the resampler
+    except av.FFmpegError as exc:
+        raise ToolExecutionError(f"audio_base64 is not audio FFmpeg can decode ({type(exc).__name__}).") from exc
+    if not chunks:
+        raise ToolExecutionError("audio_base64 holds no audio.")
+    return np.concatenate(chunks, axis=None).astype(np.float32) / 32768.0
 
 
 def _transcribe_audio(audio_base64: str) -> tuple[str, str, float, float | None]:
-    model_name = os.getenv("KNX_WHISPER_MODEL")
+    model_name = os.getenv("KNX_WHISPER_MODEL") or (str(WHISPER_DIR) if WHISPER_DIR.is_dir() else None)
     if not model_name or importlib.util.find_spec("faster_whisper") is None:
         raise ToolExecutionError(
-            "Audio transcription needs an on-device Whisper model: pip install faster-whisper and set KNX_WHISPER_MODEL "
-            "(e.g. a CTranslate2 conversion of a whisper_bangla_models checkpoint). Send 'text' or 'preset_id' instead."
+            "Audio transcription needs an on-device Whisper model: pip install faster-whisper, and put the int8 CTranslate2 "
+            "model in backend/models/whisper/krishi-whisper-bn-v1-ct2-int8 or set KNX_WHISPER_MODEL. Send 'text' or "
+            "'preset_id' instead."
         )
     data = audio_base64.split(",", 1)[1] if audio_base64.startswith("data:") else audio_base64
     try:
@@ -260,9 +284,9 @@ def _transcribe_audio(audio_base64: str) -> tuple[str, str, float, float | None]
 
     if _WHISPER is None:
         _WHISPER = WhisperModel(model_name, device="cpu", compute_type="int8")
-    segments, info = _WHISPER.transcribe(io.BytesIO(raw), language="bn", beam_size=5)
+    segments, info = _WHISPER.transcribe(_decode_16k_mono(raw), language="bn", beam_size=5)
     text = " ".join(segment.text.strip() for segment in segments)
-    return text, f"faster-whisper:{model_name} (int8, CPU)", float(info.language_probability), float(info.duration)
+    return text, f"faster-whisper:{Path(model_name).name} (int8, CPU)", float(info.language_probability), float(info.duration)
 
 
 def _detect_dialect(text: str, hint: str | None) -> tuple[str, dict[str, int], bool]:

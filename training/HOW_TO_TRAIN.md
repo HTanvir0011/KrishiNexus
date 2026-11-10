@@ -33,7 +33,7 @@ evaluated. For *why* each choice was made (base-model survey, split rules, measu
 | 1 | `krishi-bangla-lora-v2` (v1 before it) | Bangla agri market/storage advisor (text) | Qwen2.5-1.5B-Instruct | generated SFT set: v4 3,200 pairs (v1), v5 4,800 freely worded pairs (v2; `prepare_data.py --version 5`) | three times (Kaggle); v2 (2026-11-10) is deployed, meets every target but storage citation (0.806 vs 0.90) |
 | 2 | `yolov11n-krishi-bd-v2.1` | potato finder + defect segmenter (two stages) | YOLO11n, YOLO11n-seg | Diamant Potato Dataset (DIU) | twice (Kaggle, 2026-11-09); stage 1 meets target and now outlines, stage 2 misses (0.342 vs 0.50) |
 | 3 | `krishi-price-v1` | staple-price forecasts (1–3 months) + wholesale-retail margin flags | LightGBM, GRU, TCN, ensemble | WFP Bangladesh food prices (HDX) | once (Kaggle CPU, 2026-11-09); misses 2 of 3 targets |
-| 4 | `krishi-whisper-bn-v1` | Bangla speech-to-text for the voice pipeline (faster-whisper int8) | Whisper Small | Common Voice 13 Bengali (CC0) | once (Kaggle T4, 2026-11-10): WER 0.435 meets, CER 0.229 misses; not installed; notebook `kaggle/krishinexus_whisper_kaggle.ipynb`, results in `../TRAINING_PLAN.md` §8c |
+| 4 | `krishi-whisper-bn-v1` | Bangla speech-to-text for the voice pipeline (faster-whisper int8) | Whisper Small | Common Voice 13 Bengali (CC0) | once (Kaggle T4, 2026-11-10): WER 0.435 meets, CER 0.229 misses (both measured with a 128-token cap, so understated); installed in the app; notebook `kaggle/krishinexus_whisper_kaggle.ipynb`, results in `../TRAINING_PLAN.md` §8c |
 
 ---
 

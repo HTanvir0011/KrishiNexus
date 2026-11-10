@@ -11,7 +11,7 @@ pillow>=11.3
 # Optional upgrades (auto-detected; the backend runs fully without them):
 #   sentence-transformers  -> BAAI/bge-m3 dense embeddings + bge-reranker-large cross-encoder
 #                             (set KNX_EMBEDDING_MODEL / KNX_RERANKER_MODEL)
-#   faster-whisper          -> on-device Bangla speech-to-text (set KNX_WHISPER_MODEL)
+#   faster-whisper          -> on-device Bangla speech-to-text (model in backend/models/whisper/krishi-whisper-bn-v1-ct2-int8, or KNX_WHISPER_MODEL)
 #   ultralytics             -> two-stage YOLO potato grader on uploaded photos (weights in backend/models/yolo/run2,
 #                             or set KNX_YOLO_WEIGHTS to a folder with roi_best.pt + defect_best.pt)
 #   A running Ollama server (http://localhost:11434) is used automatically when reachable.

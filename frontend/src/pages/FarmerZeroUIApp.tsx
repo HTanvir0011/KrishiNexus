@@ -5,7 +5,7 @@ import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type V
 import { CertificateCard, OpticalGraderCanvas, SCAN_DURATION_MS } from "../components/OpticalGraderCanvas";
 import { Badge, Button, Spinner } from "../components/ui";
 import { bnDigits, cn, kg, tk } from "../lib/format";
-import { hasBanglaVoice, listenOnce, speak, speechRecognitionSupported } from "../lib/speech";
+import { hasBanglaVoice, listenOnce, recordOnce, speak, speechRecognitionSupported } from "../lib/speech";
 import { englishSummary } from "../lib/summary";
 import { getState, pushAlert, refreshPools, refreshQuota, refreshTelemetry, setState, useAppState } from "../state/store";
 import { STORY_PRESETS } from "../story/presets";
@@ -73,7 +73,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     if (box && decision && result && busy === null) box.scrollTo({ top: decision.offsetTop - 12, behavior: "smooth" });
   }, [result, busy]);
 
-  const runVoice = async (preset: FarmerPreset, spoken?: string) => {
+  const runVoice = async (preset: FarmerPreset, spoken?: string, audio?: string) => {
     setSelected(preset);
     setHeard(spoken ?? null);
     setBusy("voice");
@@ -81,9 +81,11 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     setNotice(null);
     const sessionId = `KNX-UI-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     setState({ activeSessionId: sessionId });
-    const body: VoiceInteractBody = spoken
-      ? { text: spoken, district: preset.district, upazila: preset.upazila }
-      : { preset_id: preset.id };
+    const body: VoiceInteractBody = audio
+      ? { audio_base64: audio, district: preset.district, upazila: preset.upazila }
+      : spoken
+        ? { text: spoken, district: preset.district, upazila: preset.upazila }
+        : { preset_id: preset.id };
     Object.assign(body, { offline_mode: getState().offlineMode, session_id: sessionId });
     if (grade && grade.crop === preset.crop && scanDone) {
       if (grade.source === "uploaded_image") body.edge_certificate_id = grade.digital_certificate.cert_id;   // the photo's own grade
@@ -91,6 +93,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     }
     try {
       const response = await api.voiceInteract(body);
+      if (audio) setHeard(response.data.transcription.raw_transcript);   // what the kiosk's Whisper heard
       setState({ lastVoice: response.data, backendLive: response.live });
       const plan = response.data.orchestration?.state;
       if (plan?.syndicate_bypass_plan?.pool) setState({ focusPoolId: plan.syndicate_bypass_plan.pool.pool_id });
@@ -112,12 +115,11 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
       return;
     }
     setListening(true);
-    stopListening.current = listenOnce(
-      "bn-BD",
-      (text) => text && void runVoice(selected, text),
-      (message) => pushAlert("warn", "Microphone", message),
-      () => setListening(false),
-    );
+    const warn = (message: string) => pushAlert("warn", "Microphone", message);
+    // Offline, or without Web Speech (which streams audio to a cloud service), the kiosk transcribes with its own Whisper.
+    stopListening.current = offline || !speechRecognitionSupported()
+      ? recordOnce((audio) => void runVoice(selected, undefined, audio), warn, () => setListening(false))
+      : listenOnce("bn-BD", (text) => text && void runVoice(selected, text), warn, () => setListening(false));
   };
 
   const scan = async () => {
@@ -236,7 +238,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
               ))}
             </div>
             <button type="button" onClick={toggleMic} disabled={busy !== null && !listening}
-              title={speechRecognitionSupported() ? "Speak in Bangla" : "This browser has no speech recognition; use a preset"}
+              title={offline || !speechRecognitionSupported() ? "Speak in Bangla; the kiosk transcribes it with its own Whisper model" : "Speak in Bangla"}
               className={cn("mt-2 flex w-full min-h-14 items-center gap-3 rounded-xl px-3.5 text-left ring-1 ring-inset transition-colors",
                 listening ? "bg-rose-50 ring-rose-600/40" : "bg-slate-50 ring-slate-300 hover:bg-slate-100")}>
               <span className={cn("grid size-10 shrink-0 place-items-center rounded-full text-white shadow-sm", listening ? "bg-rose-600" : "bg-emerald-700")}>

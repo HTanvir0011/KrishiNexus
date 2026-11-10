@@ -531,6 +531,7 @@ export async function mcpCall<T>(name: string, args: Record<string, unknown>): P
 export interface VoiceInteractBody {
   preset_id?: string;
   text?: string;
+  audio_base64?: string;
   district?: string;
   upazila?: string;
   farmer_id?: string;

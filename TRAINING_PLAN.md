@@ -1063,8 +1063,39 @@ Reading the parity check:
 - On those 300 clips the deployed setup is under both the WER and CER limits. That isn't the pre-registered CER
   measure, which is greedy decoding on 2,000 clips and stays a miss.
 - It took 10.3 s per clip on Kaggle's CPU.
-- None of the 2,000 greedy transcripts is empty or runs over 1.5 times the reference length. The CER miss comes from
-  errors spread through the text, not from repetition loops.
+- None of the 2,000 greedy transcripts is empty or runs over 1.5 times the reference length.
+
+**Correction (2026-11-10): the 2,000-clip scores were measured with a length cap that cut long transcripts.**
+- The notebook generated with `max_new_tokens=128`, and validation used `generation_max_length=128`. Whisper spends
+  about two tokens per Bangla character, so 128 tokens is about 70 characters.
+- The longest of the 2,000 greedy transcripts is 70 characters, while 146 references are longer than 100.
+- 304 transcripts are under three quarters of their reference's length.
+- So WER 0.435 and CER 0.229 understate the model. The earlier reading here, that the CER miss came from errors spread
+  through the text, was wrong; much of it is truncation.
+- The parity check, in faster-whisper with no such cap, gives the app's real numbers: WER 0.335, CER 0.110 on 300 of
+  those clips.
+- The recorded result stays as pre-registered: WER met, CER missed. A corrected re-score of the same 2,000 clips with
+  a long enough cap would not touch the model or the checkpoint choice; it has not been run.
+
+**Installed in the app (2026-11-10, by the user's decision).**
+- `faster-whisper` 1.2.1 is installed in the backend venv. Every dependency had a Python 3.14 wheel: ctranslate2 4.8.5,
+  av 19.0.2, onnxruntime 1.31.1.
+- The int8 model (`model.bin` 244.6 MB plus tokenizer and configs) is in
+  `backend/models/whisper/krishi-whisper-bn-v1-ct2-int8/`. `bangla_voice` uses that folder unless `KNX_WHISPER_MODEL`
+  names another.
+- faster-whisper 1.2.1 decodes audio with an argument PyAV 19 no longer accepts (`metadata_errors`), the same break
+  the Kaggle notebook hit. `_decode_16k_mono` decodes with PyAV to 16 kHz mono itself. Undecodable audio is a 422,
+  not a 500.
+- The farmer app records with the browser's MediaRecorder and sends the clip as `audio_base64`. This happens in
+  offline mode, or when the browser has no Web Speech recognition, which streams audio to a cloud service. Otherwise it
+  keeps using Web Speech.
+- Checked:
+  - Six Common Voice test clips through `POST /edge/voice-interact`, scored with the notebook's scorer: WER 0.200 and
+    CER 0.095 over 70 words. The capped Kaggle transcripts score 0.343 and 0.279 on the same clips. Six clips is a
+    smoke check, not a result. Each request took 7–12 s on this PC's CPU, including the rest of the voice pipeline.
+  - A WebM/Opus clip, the format Chrome's MediaRecorder writes, transcribed exactly.
+  - In the browser, in offline mode, a recorded clip stood in for the microphone (a test-only `getUserMedia` stub). The
+    farmer app showed Whisper's transcript, an exact match, tagged Standard Bangla. No real microphone was used.
 
 ## 9. Timeline to the showcase (26 Dec, ~8 weeks)
 
