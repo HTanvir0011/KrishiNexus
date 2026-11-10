@@ -1,0 +1,68 @@
+{
+  "roi": {
+    "images": {
+      "test": 239,
+      "train": 1670,
+      "val": 477
+    },
+    "instances": {
+      "test": [
+        363
+      ],
+      "train": [
+        2581
+      ],
+      "val": [
+        645
+      ]
+    },
+    "unknown_class_ids": [],
+    "shapes": {
+      "polygon": 3589
+    },
+    "missing_label_files": 0,
+    "exif_rotated_images": 0,
+    "coord_range": [
+      0.0,
+      1.0
+    ]
+  },
+  "defect": {
+    "images": {
+      "test": 267,
+      "train": 1281,
+      "val": 176
+    },
+    "instances": {
+      "test": [
+        654,
+        190,
+        29,
+        123
+      ],
+      "train": [
+        3188,
+        903,
+        79,
+        562
+      ],
+      "val": [
+        548,
+        175,
+        17,
+        108
+      ]
+    },
+    "unknown_class_ids": [],
+    "shapes": {
+      "polygon": 6576
+    },
+    "missing_label_files": 0,
+    "exif_rotated_images": 0,
+    "coord_range": [
+      0.0,
+      1.0
+    ]
+  },
+  "problems": []
+}

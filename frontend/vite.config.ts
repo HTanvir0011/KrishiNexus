@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const BACKEND = process.env.KNX_BACKEND_URL ?? "http://localhost:8000";
-const BACKEND_PREFIXES = ["/mcp", "/rag", "/edge", "/agents", "/automation", "/guardrails", "/optimization", "/prompts", "/evals", "/health"];
+const BACKEND_PREFIXES = ["/mcp", "/rag", "/edge", "/agents", "/automation", "/guardrails", "/optimization", "/prompts", "/evals", "/market", "/health"];
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

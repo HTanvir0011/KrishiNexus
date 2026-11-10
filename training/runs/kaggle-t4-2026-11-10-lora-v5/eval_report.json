@@ -1,0 +1,691 @@
+{
+  "adapter": "krishi-bangla-lora-v2",
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "status": "trained",
+  "generated_at": "2026-11-09T22:08:26+00:00",
+  "split": "test",
+  "n_examples": 888,
+  "eval_limit": null,
+  "data_sha256": "e35ace55c2632f1d9aba65f8eb9a97a2351703f4f6593e51f948c71353596fe9",
+  "prompt_version": 5,
+  "decoding": {
+    "do_sample": false,
+    "max_new_tokens": 250,
+    "repetition_penalty": 1.0,
+    "weights": "4-bit NF4 base, as trained"
+  },
+  "gpu": "Tesla T4",
+  "precision": "fp16",
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.22.2",
+    "trl": "1.17.1",
+    "peft": "0.21.2",
+    "accelerate": "1.15.0",
+    "datasets": "5.1.0",
+    "bitsandbytes": "0.50.2"
+  },
+  "train_minutes": 72.5,
+  "best_val_loss": 0.0004574211488943547,
+  "max_len": 1024,
+  "truncated_train_examples": 0,
+  "targets": {
+    "negotiation_decision_accuracy": 0.9,
+    "negotiation_price_fidelity": 0.85,
+    "arbitrage_verdict_exact_match": 0.9,
+    "arbitrage_trace_fidelity": 0.8,
+    "flood_alert_accuracy": 0.9,
+    "flood_probability_within_2pts": 0.85,
+    "storage_citation_accuracy": 0.9,
+    "storage_chrf": 60.0
+  },
+  "summary": [
+    {
+      "metric": "arbitrage_trace_fidelity",
+      "target": 0.8,
+      "adapter": 1.0,
+      "base": 0.0,
+      "baseline": 0.0,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "arbitrage_verdict_exact_match",
+      "target": 0.9,
+      "adapter": 1.0,
+      "base": 0.0,
+      "baseline": 0.3027,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "flood_alert_accuracy",
+      "target": 0.9,
+      "adapter": 0.982,
+      "base": 0.0,
+      "baseline": 0.2523,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "flood_probability_mae_pts",
+      "target": null,
+      "adapter": 0.0,
+      "base": 0.0,
+      "baseline": null,
+      "improved_over_base": false,
+      "meets_target": null
+    },
+    {
+      "metric": "flood_probability_within_2pts",
+      "target": 0.85,
+      "adapter": 0.982,
+      "base": 0.4054,
+      "baseline": 0.0,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "negotiation_balanced_accuracy",
+      "target": null,
+      "adapter": 0.9916,
+      "base": 0.0219,
+      "baseline": 0.5,
+      "improved_over_base": true,
+      "meets_target": null
+    },
+    {
+      "metric": "negotiation_decision_accuracy",
+      "target": 0.9,
+      "adapter": 0.9911,
+      "base": 0.0208,
+      "baseline": 0.5327,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "negotiation_price_fidelity",
+      "target": 0.85,
+      "adapter": 1.0,
+      "base": 0.0387,
+      "baseline": 0.0,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "negotiation_unparsed_rate",
+      "target": null,
+      "adapter": 0.0,
+      "base": 0.9315,
+      "baseline": 0.0,
+      "improved_over_base": true,
+      "meets_target": null
+    },
+    {
+      "metric": "storage_chrf",
+      "target": 60.0,
+      "adapter": 83.56,
+      "base": 20.63,
+      "baseline": 9.52,
+      "improved_over_base": true,
+      "meets_target": true
+    },
+    {
+      "metric": "storage_citation_accuracy",
+      "target": 0.9,
+      "adapter": 0.7889,
+      "base": 0.0,
+      "baseline": 0.4667,
+      "improved_over_base": true,
+      "meets_target": false
+    }
+  ],
+  "results": {
+    "adapter": {
+      "all": {
+        "arbitrage_trace_fidelity": {
+          "value": 1.0,
+          "n": 261
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 1.0,
+          "n": 261
+        },
+        "flood_alert_accuracy": {
+          "value": 0.982,
+          "n": 111
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.982,
+          "n": 111
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.9911,
+          "n": 336
+        },
+        "negotiation_price_fidelity": {
+          "value": 1.0,
+          "n": 336
+        },
+        "storage_citation_accuracy": {
+          "value": 0.7889,
+          "n": 180
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.9916,
+          "n": 336
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 336
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 109
+        },
+        "storage_chrf": {
+          "value": 83.56,
+          "n": 180
+        }
+      },
+      "iid": {
+        "arbitrage_trace_fidelity": {
+          "value": 1.0,
+          "n": 35
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 1.0,
+          "n": 35
+        },
+        "flood_alert_accuracy": {
+          "value": 1.0,
+          "n": 28
+        },
+        "flood_probability_within_2pts": {
+          "value": 1.0,
+          "n": 28
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.9714,
+          "n": 70
+        },
+        "negotiation_price_fidelity": {
+          "value": 1.0,
+          "n": 70
+        },
+        "storage_citation_accuracy": {
+          "value": 0.8636,
+          "n": 88
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.9737,
+          "n": 70
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 70
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 28
+        },
+        "storage_chrf": {
+          "value": 88.9,
+          "n": 88
+        }
+      },
+      "ood_dialect": {
+        "negotiation_decision_accuracy": {
+          "value": 1.0,
+          "n": 200
+        },
+        "negotiation_price_fidelity": {
+          "value": 1.0,
+          "n": 200
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 1.0,
+          "n": 200
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 200
+        }
+      },
+      "ood_months": {
+        "arbitrage_trace_fidelity": {
+          "value": 1.0,
+          "n": 178
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 1.0,
+          "n": 178
+        }
+      },
+      "ood_upazila": {
+        "flood_alert_accuracy": {
+          "value": 0.96,
+          "n": 50
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.96,
+          "n": 50
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 48
+        }
+      },
+      "ood_wording": {
+        "arbitrage_trace_fidelity": {
+          "value": 1.0,
+          "n": 48
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 1.0,
+          "n": 48
+        },
+        "flood_alert_accuracy": {
+          "value": 1.0,
+          "n": 33
+        },
+        "flood_probability_within_2pts": {
+          "value": 1.0,
+          "n": 33
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.9848,
+          "n": 66
+        },
+        "negotiation_price_fidelity": {
+          "value": 1.0,
+          "n": 66
+        },
+        "storage_citation_accuracy": {
+          "value": 0.7174,
+          "n": 92
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.9853,
+          "n": 66
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 66
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 33
+        },
+        "storage_chrf": {
+          "value": 78.42,
+          "n": 92
+        }
+      }
+    },
+    "base": {
+      "all": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 261
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.0,
+          "n": 261
+        },
+        "flood_alert_accuracy": {
+          "value": 0.0,
+          "n": 111
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.4054,
+          "n": 111
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.0208,
+          "n": 336
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0387,
+          "n": 336
+        },
+        "storage_citation_accuracy": {
+          "value": 0.0,
+          "n": 180
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.0219,
+          "n": 336
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.9315,
+          "n": 336
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 45
+        },
+        "storage_chrf": {
+          "value": 20.63,
+          "n": 180
+        }
+      },
+      "iid": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 35
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.0,
+          "n": 35
+        },
+        "flood_alert_accuracy": {
+          "value": 0.0,
+          "n": 28
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.5,
+          "n": 28
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.0571,
+          "n": 70
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0857,
+          "n": 70
+        },
+        "storage_citation_accuracy": {
+          "value": 0.0,
+          "n": 88
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.0625,
+          "n": 70
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.8429,
+          "n": 70
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 14
+        },
+        "storage_chrf": {
+          "value": 22.12,
+          "n": 88
+        }
+      },
+      "ood_dialect": {
+        "negotiation_decision_accuracy": {
+          "value": 0.0,
+          "n": 200
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0,
+          "n": 200
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.0,
+          "n": 200
+        },
+        "negotiation_unparsed_rate": {
+          "value": 1.0,
+          "n": 200
+        }
+      },
+      "ood_months": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 178
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.0,
+          "n": 178
+        }
+      },
+      "ood_upazila": {
+        "flood_alert_accuracy": {
+          "value": 0.0,
+          "n": 50
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.48,
+          "n": 50
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 24
+        }
+      },
+      "ood_wording": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 48
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.0,
+          "n": 48
+        },
+        "flood_alert_accuracy": {
+          "value": 0.0,
+          "n": 33
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.2121,
+          "n": 33
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.0455,
+          "n": 66
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.1061,
+          "n": 66
+        },
+        "storage_citation_accuracy": {
+          "value": 0.0,
+          "n": 92
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.046,
+          "n": 66
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.8182,
+          "n": 66
+        },
+        "flood_probability_mae_pts": {
+          "value": 0.0,
+          "n": 7
+        },
+        "storage_chrf": {
+          "value": 19.01,
+          "n": 92
+        }
+      }
+    },
+    "baseline": {
+      "all": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 261
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.3027,
+          "n": 261
+        },
+        "flood_alert_accuracy": {
+          "value": 0.2523,
+          "n": 111
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.0,
+          "n": 111
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.5327,
+          "n": 336
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0,
+          "n": 336
+        },
+        "storage_citation_accuracy": {
+          "value": 0.4667,
+          "n": 180
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.5,
+          "n": 336
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 336
+        },
+        "flood_probability_mae_pts": {
+          "value": null,
+          "n": 0
+        },
+        "storage_chrf": {
+          "value": 9.52,
+          "n": 180
+        }
+      },
+      "iid": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 35
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.1429,
+          "n": 35
+        },
+        "flood_alert_accuracy": {
+          "value": 0.1786,
+          "n": 28
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.0,
+          "n": 28
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.5429,
+          "n": 70
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0,
+          "n": 70
+        },
+        "storage_citation_accuracy": {
+          "value": 0.9545,
+          "n": 88
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.5,
+          "n": 70
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 70
+        },
+        "flood_probability_mae_pts": {
+          "value": null,
+          "n": 0
+        },
+        "storage_chrf": {
+          "value": 17.53,
+          "n": 88
+        }
+      },
+      "ood_dialect": {
+        "negotiation_decision_accuracy": {
+          "value": 0.535,
+          "n": 200
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0,
+          "n": 200
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.5,
+          "n": 200
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 200
+        }
+      },
+      "ood_months": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 178
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.3146,
+          "n": 178
+        }
+      },
+      "ood_upazila": {
+        "flood_alert_accuracy": {
+          "value": 0.26,
+          "n": 50
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.0,
+          "n": 50
+        },
+        "flood_probability_mae_pts": {
+          "value": null,
+          "n": 0
+        }
+      },
+      "ood_wording": {
+        "arbitrage_trace_fidelity": {
+          "value": 0.0,
+          "n": 48
+        },
+        "arbitrage_verdict_exact_match": {
+          "value": 0.375,
+          "n": 48
+        },
+        "flood_alert_accuracy": {
+          "value": 0.303,
+          "n": 33
+        },
+        "flood_probability_within_2pts": {
+          "value": 0.0,
+          "n": 33
+        },
+        "negotiation_decision_accuracy": {
+          "value": 0.5152,
+          "n": 66
+        },
+        "negotiation_price_fidelity": {
+          "value": 0.0,
+          "n": 66
+        },
+        "storage_citation_accuracy": {
+          "value": 0.0,
+          "n": 92
+        },
+        "negotiation_balanced_accuracy": {
+          "value": 0.5,
+          "n": 66
+        },
+        "negotiation_unparsed_rate": {
+          "value": 0.0,
+          "n": 66
+        },
+        "flood_probability_mae_pts": {
+          "value": null,
+          "n": 0
+        },
+        "storage_chrf": {
+          "value": 0.0,
+          "n": 92
+        }
+      }
+    }
+  }
+}

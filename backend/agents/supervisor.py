@@ -31,7 +31,8 @@ from config import MODEL_ROUTER, RoutingDecision, TaskType
 from guardrails.pii_scrubber import PII_SCRUBBER
 from edge_node.bangla_voice import VOICE_PIPELINE, TranscriptionResult, VoiceScript, digitize_numbers
 from edge_node.ollama_local import EDGE_ENGINE, LocalInferenceRequest, LocalInferenceResult
-from edge_node.optical_grader import OPTICAL_GRADER, GradeableCrop, GradeCropRequest, GradeCropResult, SamplePreset
+from edge_node.optical_grader import (OPTICAL_GRADER, GradeableCrop, GradeCropRequest, GradeCropResult, GradingMetrics,
+                                      SamplePreset)
 from mcp_servers.agri_weather_sar_mcp import NETWORK_BLACKOUT, to_bangla_digits
 from mcp_servers.base import ToolExecutionError
 from mcp_servers.dam_market_mcp import get_daily_commodity_spread
@@ -323,6 +324,8 @@ class VoiceInteractRequest(BaseModel):
     district: str | None = Field(default=None, max_length=60)
     upazila: str | None = Field(default=None, max_length=60)
     grade_sample_preset: SamplePreset | None = Field(default=None, description="Run the optical grader on this sweep first.")
+    edge_certificate_id: str | None = Field(default=None, max_length=80,
+                                            description="Grade the lot by this certificate from POST /edge/grade-crop (a photo grade).")
     harvest_metrics: HarvestMetrics | None = None
     offline_mode: bool = False
     session_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9\-]{4,60}$")
@@ -339,6 +342,13 @@ class VoiceInteractResponse(BaseModel):
     follow_up_question_bn: str | None
 
 
+def lot_metrics(m: GradingMetrics, cert_id: str) -> HarvestMetrics:
+    """An optical grade as the agents read it, tied to the edge certificate it came from."""
+    return HarvestMetrics(size_uniformity_pct=m.size_uniformity_pct, bruising_pct=m.mechanical_bruising_pct,
+                          rot_blight_risk_pct=m.rot_blight_risk_pct, moisture_pct=m.estimated_moisture_pct,
+                          source="edge_optical_grader", edge_certificate_id=cert_id)
+
+
 async def voice_interact(request: VoiceInteractRequest) -> VoiceInteractResponse:
     transcription = VOICE_PIPELINE.transcribe_and_normalize(request.preset_id, request.text, request.audio_base64, request.dialect_hint)
     entities = transcription.entities
@@ -350,7 +360,7 @@ async def voice_interact(request: VoiceInteractRequest) -> VoiceInteractResponse
     local = None
     if request.offline_mode:
         local = await EDGE_ENGINE.run_local_inference(LocalInferenceRequest(
-            prompt=transcription.normalized_text, model_name="llama3.2-3b", simulate_offline_blackout=True))
+            prompt=digitize_numbers(transcription.raw_transcript), model_name="krishi-bangla-1.5b", simulate_offline_blackout=True))
 
     if missing:
         question = "আপনার কথা বুঝতে আরও তথ্য দরকার: " + ", ".join(missing) + " বলবেন?"
@@ -361,14 +371,18 @@ async def voice_interact(request: VoiceInteractRequest) -> VoiceInteractResponse
 
     grading = None
     metrics = request.harvest_metrics
-    if request.grade_sample_preset is not None and entities.crop.value in {c.value for c in GradeableCrop}:
+    if request.edge_certificate_id is not None:
+        linked = OPTICAL_GRADER.lookup(request.edge_certificate_id)
+        if linked is None or linked.crop.value != entities.crop.value:
+            raise ToolExecutionError(f"Certificate {request.edge_certificate_id} is not a {entities.crop.value} grade from this "
+                                     "edge node (it keeps certificates until it restarts); grade the photo again.")
+        # The lot's numbers come from the node's own signed record, never from the client.
+        metrics = lot_metrics(GradingMetrics(**linked.payload["metrics"]), linked.cert_id)
+    elif request.grade_sample_preset is not None and entities.crop.value in {c.value for c in GradeableCrop}:
         grading = OPTICAL_GRADER.grade(GradeCropRequest(crop=GradeableCrop(entities.crop.value), district=district,
                                                         farmer_id=request.farmer_id or transcription.farmer_id,
                                                         sample_preset=request.grade_sample_preset, lot_kg=entities.quantity_kg))
-        m = grading.metrics
-        metrics = HarvestMetrics(size_uniformity_pct=m.size_uniformity_pct, bruising_pct=m.mechanical_bruising_pct,
-                                 rot_blight_risk_pct=m.rot_blight_risk_pct, moisture_pct=m.estimated_moisture_pct,
-                                 source="edge_optical_grader", edge_certificate_id=grading.digital_certificate.cert_id)
+        metrics = lot_metrics(grading.metrics, grading.digital_certificate.cert_id)
 
     farmer_id = request.farmer_id or transcription.farmer_id or f"FARM-{district[:3].upper()}-VOICE"
     try:

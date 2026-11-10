@@ -1,0 +1,44 @@
+{
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "adapter_dir": "/kaggle/input/notebooks/taksimulhasandip/krishinexus-bangla-lora-training/krishi-bangla-lora-v1",
+  "ollama": "0.40.15",
+  "llama_cpp_commit": "7d7f0287530bc8981690f361d8c1627dbae1c99a",
+  "gpu": "Tesla T4",
+  "gguf": {
+    "A-Q8_0": {
+      "file": "krishi-bangla-a-q8_0.gguf",
+      "bytes": 1646572704,
+      "sha256": "0e0bb191387606a3b562cfe8719162e43842ca22c4a198a9b242b556abe57411"
+    },
+    "B-Q8_0": {
+      "file": "krishi-bangla-b-q8_0.gguf",
+      "bytes": 1646572704,
+      "sha256": "7c0e7e66bf9c11ade7b9c65dba7f1d112a5976be4fd34a43f72c7ed45d99ab75"
+    },
+    "B-Q4_K_M": {
+      "file": "krishi-bangla-b-q4_k_m.gguf",
+      "bytes": 986048160,
+      "sha256": "72e1a983b5278c52471d410ab676c21ce23b29b8883b03c626c4011f08ccd181"
+    }
+  },
+  "timing": {
+    "A-Q8_0": {
+      "minutes": 19.2,
+      "decode_tokens_per_s_median": 83.6
+    },
+    "B-Q8_0": {
+      "minutes": 19.2,
+      "decode_tokens_per_s_median": 83.7
+    },
+    "B-Q4_K_M": {
+      "minutes": 13.7,
+      "decode_tokens_per_s_median": 108.7
+    }
+  },
+  "errors": {},
+  "meets_every_target": {
+    "A-Q8_0": true,
+    "B-Q8_0": true,
+    "B-Q4_K_M": false
+  }
+}

@@ -1,4 +1,4 @@
-import { BadgeCheck, Fingerprint, ScanLine, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Fingerprint, ScanLine, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { BoundingBox, DetectionClass, GradeableCrop, GradeCropResult } from "../api/client";
@@ -100,14 +100,24 @@ function drawBox(ctx: CanvasRenderingContext2D, b: BoundingBox, sx: number, sy: 
   ctx.globalAlpha = 1;
 }
 
-export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
+export function OpticalGraderCanvas({ result, crop, scanStartedAt, photo }: {
   result: GradeCropResult | null;
   crop: GradeableCrop;
   scanStartedAt: number | null;
+  /** Object URL of the uploaded photo, drawn under its boxes in place of the simulated tray. */
+  photo?: string | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState(0);
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!photo) return;
+    const img = new Image();
+    img.onload = () => setImage(img);
+    img.src = photo;
+  }, [photo]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -118,23 +128,25 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
     let raf = 0;
 
     const render = () => {
+      const [fw, fh] = result?.frame_size ?? [1280, 720];
+      const shown = result?.source === "uploaded_image" && image?.src === photo ? image : null;   // never a stale photo
       const width = wrap.clientWidth;
-      const height = Math.round((width * 9) / 16);
+      const height = Math.round(shown ? (width * fh) / fw : (width * 9) / 16);
       const dpr = window.devicePixelRatio || 1;
-      if (canvas.width !== Math.round(width * dpr)) {
+      if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(height * dpr);
         canvas.style.height = `${height}px`;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTray(ctx, width, height);
-      const [fw, fh] = result?.frame_size ?? [1280, 720];
+      if (shown) ctx.drawImage(shown, 0, 0, width, height);
+      else drawTray(ctx, width, height);
       const sx = width / fw;
       const sy = height / fh;
       const elapsed = scanStartedAt ? performance.now() - scanStartedAt : SCAN_DURATION_MS;
       const progress = Math.min(1, elapsed / SCAN_DURATION_MS);
       if (result) {
-        result.bounding_boxes.forEach((b) => drawProduce(ctx, crop, b, sx, sy));
+        if (!shown) result.bounding_boxes.forEach((b) => drawProduce(ctx, crop, b, sx, sy));
         const lineX = progress * width;
         result.bounding_boxes.forEach((b) => {
           const centre = (b.box[0] + b.box[2] / 2) * sx;
@@ -161,7 +173,7 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [result, crop, scanStartedAt]);
+  }, [result, crop, scanStartedAt, image, photo]);
 
   const scanning = Boolean(result && scanStartedAt && frame < result.video_frames_analyzed);
   return (
@@ -186,6 +198,14 @@ export function OpticalGraderCanvas({ result, crop, scanStartedAt }: {
   );
 }
 
+export function WarningNote({ text }: { text: string }) {
+  return (
+    <p role="note" className="m-0 mt-2 flex gap-1.5 rounded-lg bg-amber-50 p-2 text-[11.5px] leading-snug text-amber-900 ring-1 ring-inset ring-amber-600/30">
+      <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden /> {text}
+    </p>
+  );
+}
+
 export function CertificateCard({ result }: { result: GradeCropResult }) {
   const m = result.metrics;
   const cert = result.digital_certificate;
@@ -201,16 +221,24 @@ export function CertificateCard({ result }: { result: GradeCropResult }) {
         </div>
         <Badge tone={gradeTone} className="text-[13px]">Grade-{result.grade_letter}</Badge>
       </div>
+      {result.warnings.map((warning) => <WarningNote key={warning} text={warning} />)}
       <dl className="m-0 mt-2 grid grid-cols-3 gap-2">
         <div><dt className="text-[11.5px] text-slate-500">Uniformity</dt><dd className="num m-0 text-[15px] text-emerald-700">{pct(m.size_uniformity_pct)}</dd></div>
         <div><dt className="text-[11.5px] text-slate-500">Bruising</dt><dd className="num m-0 text-[15px] text-amber-700">{pct(m.mechanical_bruising_pct, 2)}</dd></div>
         <div><dt className="text-[11.5px] text-slate-500">Rot risk</dt><dd className={`num m-0 text-[15px] ${m.rot_blight_risk_pct > 2 ? "text-rose-600" : "text-emerald-700"}`}>{pct(m.rot_blight_risk_pct, 2)}</dd></div>
       </dl>
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <Badge tone="emerald"><BadgeCheck className="size-3" aria-hidden /> +{result.price_premium_pct}% vs ungraded</Badge>
+        <Badge tone={result.price_premium_pct >= 0 ? "emerald" : "red"}>
+          <BadgeCheck className="size-3" aria-hidden /> {result.price_premium_pct >= 0 ? "+" : ""}{result.price_premium_pct}% vs ungraded
+        </Badge>
         <Badge tone="violet"><Fingerprint className="size-3" aria-hidden /> HMAC-SHA256 signed</Badge>
         <Badge tone="slate">{result.bounding_boxes.length} objects · {result.inference_backend}</Badge>
       </div>
+      {result.source === "uploaded_image" && (
+        <ul className="m-0 mt-2 list-disc space-y-0.5 pl-4 text-[11.5px] leading-snug text-slate-600">
+          {result.grading_reasons.map((reason) => <li key={reason}>{reason}</li>)}
+        </ul>
+      )}
       <div className="mt-2 space-y-0.5 rounded-lg bg-slate-50 p-2 font-mono text-[10.5px] text-slate-600 ring-1 ring-inset ring-slate-200">
         <div className="text-slate-800">{cert.cert_id}</div>
         <div>sha256 {shortHash(cert.sha256_payload_hash, 14)}</div>

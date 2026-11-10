@@ -297,7 +297,7 @@ def _offer(text: str) -> tuple[float | None, str | None]:
     match = re.search(rf"({roles})[^।?!\d]{{0,30}}?(\d+(?:\.\d+)?)\s*টাকা", ascii_text)
     if match:
         return float(match.group(2)), MIDDLEMAN_TERMS[match.group(1)]
-    any_price = re.search(r"(\d+(?:\.\d+)?)\s*টাকা\s*(?:কেজি|মণ)?", ascii_text)
+    any_price = re.search(r"(\d+(?:\.\d+)?)\s*(?:টাকা|taka\b|tk\b)\s*(?:কেজি|মণ)?", ascii_text, re.IGNORECASE)   # typed Banglish/English too
     return (float(any_price.group(1)), None) if any_price else (None, None)
 
 

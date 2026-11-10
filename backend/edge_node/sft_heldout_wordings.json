@@ -1,0 +1,42 @@
+{
+  "market_negotiation": [
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "আমার {qty} মণ {crop} আছে, পাইকার কেজিপ্রতি {offer} টাকা দিতে চাচ্ছে। এই দামে বিক্রি করে দেব, নাকি আরও কয়েক দিন অপেক্ষা করব?"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "দাম কি ঠিক আছে? ফড়িয়া {crop} কেজি {offer} টাকা বলতেছে।"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "স্যার, সামনের সপ্তাহে এনজিওর কিস্তি দিতে হবে। আড়তদার কেজিতে {offer} টাকা করে আমার {qty} মণ {crop} নিতে চায়। এই দামে দিলে কি ঠকব, নাকি দামটা ন্যায্য?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "foria {crop} {offer} tk/kg bolse, dibo?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "meyer biyer jonno taka lagbe. {qty} mon {crop} ache, bepari kg proti {offer} tk bolse. ei dame dile ki loss hobe?"},
+    {"lang": "en", "dialect": "English", "template": "A trader in our village market has offered {offer} taka per kg for my {qty} maunds of {crop}. Is that a fair price, or should I wait for a better rate?"},
+    {"lang": "bn", "dialect": "Voice transcript", "template": "আসসালামু আলাইকুম ভাই ইয়ে মানে আমার {crop} আছে {qty} মণের মতো ফড়িয়া আইসা কয় কেজি {offer} টাকা দিব এখন দিয়া দিমু নাকি দাম আরো উঠব"},
+    {"lang": "bn", "dialect": "Code-mixed", "template": "পাইকার বলতেছে market এ {crop} এর rate এখন down, তাই per kg {offer} টাকার বেশি দিবে না। আসলেই কি তাই, নাকি আমারে ঠকাইতেছে?"}
+  ],
+  "arbitrage_math": [
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "বাজারে এখন আলু কেজি {spot} টাকা যাচ্ছে। আমার {qty_mon} মণ আছে। শুনলাম হিমাগারে {months} মাস রাখলে কেজি {future} টাকা হতে পারে। রাখব, নাকি এখনই বেচে দেব?"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "ঘরে {qty_kg} কেজি আলু আছে, আজকে দর {spot} টাকা কেজি। বেচব, নাকি কোল্ড স্টোরেজে রাখব?"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "সার-বীজের দোকানে অনেক বাকি। {qty_bosta} বস্তা আলু, এখন কেজি {spot} টাকা। কেজিতে হিমাগার ভাড়া {tariff} টাকা আর লোড-আনলোড {handling} টাকা, পচবে {rot_pct} শতাংশ। {months} মাস পরে কেজি {future} টাকা হলে রাখব, না এখনই বেচব?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "bhai {qty_mon} mon alu ache. bazare ekhon {spot} tk kg. cold storage vara kg te {tariff} tk, loading unloading kg te {handling} tk. pore kg {future} tk pele rakhbo naki ekhoni bechbo?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "bechi na himagare rakhi? {qty_bosta} bosta alu ache, aj bazar {spot} tk kg."},
+    {"lang": "en", "dialect": "English", "template": "I have {qty_kg} kg of potatoes. Today's price is {spot} Tk/kg, cold storage rent is {tariff} Tk/kg, and I expect {future} Tk/kg after {months} months. Sell now or store?"},
+    {"lang": "bn", "dialect": "Voice transcript", "template": "আচ্ছা শোনেন আমার আলু আছে {qty_bosta} বস্তা মানে বাজারে তো এখন {spot} টাকা কেজি তো হিমাগারে যদি {months} মাস রাখি পচবে ধরেন {rot_pct} পার্সেন্ট তাইলে রাখমু নাকি বেইচা দিমু"},
+    {"lang": "bn", "dialect": "Rangpur", "template": "বাহে, হামার {qty_mon} মণ আলু ঘরত পড়ি আছে। হাটত এ্যালা কেজি {spot} টাকা দর। বেচিম, না হিমাগারত রাখিম?"}
+  ],
+  "flood_harvest": [
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "উজানে {rain} মিলিমিটার বৃষ্টি হয়েছে, স্যাটেলাইটে পানির রিডিং {sar} ডিবি, এখন {month} মাস। আমার জমি {haor} উপজেলার হাওরে, বোরো ধান এখনো পুরো পাকেনি। ঢলের ভয়ে আছি, কবে কাটা শুরু করব?"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "ধান কি এখনই কেটে ফেলব? {haor} এলাকায় হাওরের বাঁধ ভাঙার ভয় পাইতেছি।"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "স্যার, আমার বাড়ি {haor}। ধার-দেনা করে হাওরে বোরো লাগাইছি, এই ধানেই সারা বছরের খোরাক। পাশের বাড়ির চাচা বলতেছেন ঢল আসার আগেই কেটে ফেলতে, কিন্তু ধান তো এখনো কাঁচা। কী করব?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "vai ami {haor_en} theke bolchi. ujane {rain} mm brishti hoise, satellite e {sar} dB dekhacche, {month} mash cholche. pahari dhol er voy, dhan ki ekhon kete felbo?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "dhan kata kobe shuru korbo? {haor_en} haor er badh e fatol dekha dise."},
+    {"lang": "en", "dialect": "English", "template": "Boro farmer from {haor_en} here. Upstream rain {rain} mm over the past few days, SAR reading {sar} dB, month is {month}. Worried about a flash flood: harvest now or wait?"},
+    {"lang": "bn", "dialect": "Voice transcript", "template": "হ্যালো স্যার শুনতেছেন আমি {haor} থেকে বলতেছি মানে অ্যাপে দেখাইতেছে উজানে বৃষ্টি {rain} মিলিমিটার আর রাডারে {sar} ডিবি এখন তো {month} মাস বাঁধের অবস্থাও ভালো না ধান কাটমু নাকি আরো কয়দিন রাখমু"},
+    {"lang": "bn", "dialect": "Code-mixed", "template": "আমাদের {haor} এলাকায় harvester মেশিন পাওয়া যাইতেছে না, কামলাও নাই। ঢল আসার আগে ধান তুলতে পারব কিনা টেনশনে আছি। কবে থেকে কাটা শুরু করা উচিত?"}
+  ],
+  "storage_qa": [
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "স্যার, {topic_bn} বিষয়ে সঠিক নিয়মটা কী? আমার {crop_bn} নিয়ে এতদিন লোকের কথা শুনে চলছি।"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "ভাই, {topic_bn} নিয়ে কী করা উচিত, বলেন তো?"},
+    {"lang": "bn", "dialect": "Standard Bangla", "template": "গত বছর ঘরে রাখা {crop_bn} অনেক নষ্ট হইছিল, লোকসানে পড়ছি। এবার শুনতেছি বর্ষা আগে আসবে, তাই {topic_bn} নিয়ে নিয়মগুলা জানতে চাই। কী কী মাথায় রাখব?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "vai {topic} niye kichu bolen plz, ki ki korte hobe?"},
+    {"lang": "banglish", "dialect": "Banglish", "template": "ashol niyom ta ki ektu bolben? pasher barir chacha bolse {topic} niye sabdhan thakte, naile loss."},
+    {"lang": "en", "dialect": "English", "template": "What is the standard advice on {topic} for my {crop}? Our local agriculture officer is away and I need to decide this week."},
+    {"lang": "bn", "dialect": "Voice transcript", "template": "হ্যালো আপা আসসালামু আলাইকুম ইয়ে মানে {crop_bn} নিয়া জানার ছিল ওই যে {topic_bn} ওইটা কেমনে কী করা লাগে একটু কইবেন"},
+    {"lang": "bn", "dialect": "Code-mixed", "template": "আমার {crop_bn} নিয়ে {topic} related কোনো rule আছে? বাজারে বেচার আগে জানতে চাই।"}
+  ]
+}

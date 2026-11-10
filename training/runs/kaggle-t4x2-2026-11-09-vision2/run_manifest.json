@@ -1,0 +1,45 @@
+{
+  "seed": 20261109,
+  "max_side": 1024,
+  "roi": {
+    "weights": "yolo11n-seg.pt",
+    "imgsz": 640,
+    "epochs": 80,
+    "patience": 20,
+    "batch": 32
+  },
+  "defect_candidates": {
+    "n1024": {
+      "weights": "yolo11n-seg.pt",
+      "imgsz": 1024,
+      "epochs": 150,
+      "patience": 40,
+      "batch": 16
+    },
+    "s640": {
+      "weights": "yolo11s-seg.pt",
+      "imgsz": 640,
+      "epochs": 150,
+      "patience": 40,
+      "batch": 16
+    }
+  },
+  "chosen": "n1024",
+  "epochs_run": {
+    "roi": 80,
+    "defect_n1024": 122,
+    "defect_s640": 136
+  },
+  "timing": {
+    "train_wall_minutes": 106.7
+  },
+  "gpu": "2 x Tesla T4",
+  "python": "3.13.16",
+  "versions": {
+    "ultralytics": "8.4.208",
+    "torch": "2.11.0+cu130",
+    "numpy": "2.1.3",
+    "pillow": "13.0.0",
+    "opencv": "4.14.0"
+  }
+}

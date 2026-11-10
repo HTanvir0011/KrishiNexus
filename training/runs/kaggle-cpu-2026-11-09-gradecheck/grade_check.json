@@ -1,0 +1,105 @@
+{
+  "model": "yolov11n-krishi-bd-v2.1",
+  "stage": "defect, run 2's chosen n1024",
+  "weights_sha256": "84a079d7bbf331f42a6113c90e098fa9abe156b9693b4224acabf80aada6198d",
+  "why": "run 2's grading check crashed on CUDA out-of-memory; this is that pre-registered check, run once on CPU",
+  "split": "test",
+  "mask_source": "Results.masks.xy outlines rasterised at the crop's size (optical_grader.fill_outlines)",
+  "target": {
+    "grade_accuracy": 0.7
+  },
+  "meets_target": true,
+  "grading": {
+    "n_potatoes": 267,
+    "conf": 0.25,
+    "imgsz": 1024,
+    "grade_accuracy": 0.764,
+    "grade_balanced_accuracy": 0.6627,
+    "majority_grade_baseline": {
+      "grade": "C",
+      "accuracy": 0.6742,
+      "train_grade_counts": {
+        "C": 829,
+        "A": 362,
+        "B": 90
+      }
+    },
+    "confusion_label_to_predicted": {
+      "A": {
+        "C": 12,
+        "A": 51,
+        "B": 1
+      },
+      "B": {
+        "A": 10,
+        "C": 4,
+        "B": 9
+      },
+      "C": {
+        "C": 144,
+        "A": 31,
+        "B": 5
+      }
+    },
+    "bruising_pct_mae": 17.62,
+    "rot_pct_mae": 1.05,
+    "presence": {
+      "scab": {
+        "precision": 0.9444,
+        "recall": 0.9286,
+        "f1": 0.9364,
+        "support": 238
+      },
+      "rot": {
+        "precision": 0.7595,
+        "recall": 0.5556,
+        "f1": 0.6417,
+        "support": 108
+      },
+      "greening": {
+        "precision": 0.5714,
+        "recall": 0.32,
+        "f1": 0.4103,
+        "support": 25
+      },
+      "mechanical_damage": {
+        "precision": 0.5068,
+        "recall": 0.5139,
+        "f1": 0.5103,
+        "support": 72
+      }
+    },
+    "cpu_seconds_per_crop": 0.394
+  },
+  "samples": [
+    "0164.jpg",
+    "0164.txt",
+    "0409.jpg",
+    "0409.txt",
+    "0511.jpg",
+    "0511.txt",
+    "0762.jpg",
+    "0762.txt",
+    "1229.jpg",
+    "1229.txt",
+    "1514.jpg",
+    "1514.txt"
+  ],
+  "dataset": {
+    "name": "Diamant Potato Dataset",
+    "doi": "10.17632/4vty9rz7zw.1",
+    "licence": "CC BY 4.0",
+    "sha256": {
+      "defect": "89cbdfc1072415e35ec11fc4a22318a848fa90285b1a927112438af1c1bc3d48",
+      "roi": "27a32167f8c71b88c8ec88f80249b91a3a019ecc1992ed6e95f67fac262cea0d"
+    }
+  },
+  "versions": {
+    "python": "3.13.18",
+    "ultralytics": "8.4.208",
+    "torch": "2.11.0+cpu",
+    "numpy": "2.1.3",
+    "pillow": "13.0.0",
+    "opencv": "4.14.0"
+  }
+}

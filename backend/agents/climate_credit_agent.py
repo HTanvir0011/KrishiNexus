@@ -25,9 +25,9 @@ from mcp_servers.agri_weather_sar_mcp import (
     compute_crop_vpd_stress,
     get_current_weather,
     get_weather_by_datetime_range,
+    simulated_sar_db,
     trigger_early_harvest_window,
 )
-from mcp_servers.base import stable_unit
 from prompts.prompt_registry import PROMPT_REGISTRY, alert_rule
 from schemas.mcp_models import (
     CalculateHaorFlashFloodRiskInput,
@@ -95,7 +95,7 @@ async def run(state: KrishiAgentState, trace: TraceRecorder) -> dict[str, Any]:
         if state.sar_backscatter_override_db is not None:
             sar, sar_source = state.sar_backscatter_override_db, "farmer/operator supplied Sentinel-1 scene"
         else:
-            sar = round(-11.5 + 3.0 * (stable_unit("s1-pass", upazila.name, now_bdt().strftime("%Y%m%d%H")) - 0.5), 2)
+            sar = simulated_sar_db(upazila.name, now_bdt())
             sar_source = "simulated Sentinel-1 IW GRD pass (no live Copernicus feed)"
         flood = await trace.mcp(AGENT, "calculate_haor_flash_flood_risk", calculate_haor_flash_flood_risk,
                                 CalculateHaorFlashFloodRiskInput(upazila=upazila.name, sar_water_backscatter_db=sar),

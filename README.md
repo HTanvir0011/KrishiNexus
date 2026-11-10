@@ -43,6 +43,27 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Trained models (Phase 9 training, 8–10 November 2026)
+
+Four models are trained on Kaggle and measured against targets set before training. The notebooks are in
+`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `TRAINING_PLAN.md` §6, §8, §8b
+and §8c. The weights are not in this repository; without them, the app says so and uses its labelled fallback.
+
+| Model | What it does | Measured on held-out test data | In the app |
+|---|---|---|---|
+| `krishi-bangla-lora-v2`: Qwen2.5-1.5B + QLoRA, Q8_0 GGUF served by Ollama | Bangla advisor: fair offer, store or sell (with the ΔΠ working), flood alert, storage advice, read from the agents' tool results | 888 questions, deployed file: fair offer 0.988, store or sell 1.000, flood alert 0.955 (1.000 on wordings written separately), storage citation 0.800, **missing its 0.90 target** | yes: offline kiosk answers |
+| `yolov11n-krishi-bd-v2.1`: two-stage YOLO11, Diamant Potato Dataset (CC BY 4.0) | finds each potato, then segments scab, rot, greening and damage | finder mAP50 0.994 (target 0.90); defect mask mAP50 0.342, **missing 0.50**; grade accuracy 0.764 (target 0.70) | yes: potato photo grading, with a size warning signed into the certificate |
+| `krishi-price-v1`: LightGBM, GRU, TCN and an ensemble, on WFP prices | staple price forecasts 1–3 months ahead, plus margin flags | **misses 2 of 3 targets**; it doesn't beat "no change" overall | yes: shown as indicative only |
+| `krishi-whisper-bn-v1`: Whisper Small, Common Voice 13 Bengali | Bangla speech-to-text on the device | word error 0.435 (target 0.45); character error 0.229, **missing 0.15** | not installed yet |
+
+- **Freely worded questions (SFT prompts v5).** 4,800 generated training questions in colloquial Bangla, Rangpuri,
+  Bogura, Sylheti, Banglish and English. The test includes 32 wordings written separately, which no model trained on.
+  On the same test, the previous model scored 0.414 on flood alerts (1.000 on its own templates). That is the gap v5
+  closed.
+- **A question router for free-form text.** The router that attaches each question's tool result now reads prices,
+  months, rent, rot rates, rain and radar readings in many phrasings. It routes 212 of the 239 held-out-wording test
+  questions correctly.
+
 ### Datasets, honest evaluation and a leaner OS (Phase 9, 29 October 2026)
 
 - **A frozen blind retrieval test.** `backend/evals/holdout_probe.py` holds 66 farmer questions written blind to the
@@ -256,8 +277,8 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   ├── automation/             durable truck pools, n8n-style jobs
 │   ├── edge_node/              voice, optical grader, local LLM manager
 │   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
-├── training/                   SFT data export (prepare_data.py); recipe in TRAINING_PLAN.md
-├── TRAINING_PLAN.md            QLoRA recipe, split rules, deployment and eval design
+├── training/                   SFT data export (prepare_data.py), Kaggle notebooks (kaggle/), measured run reports (runs/)
+├── TRAINING_PLAN.md            recipes, split rules, pre-registered targets and measured results for every model
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
@@ -275,13 +296,14 @@ Real:
 - PII scrubbing;
 - HMAC-signed certificates and receipts;
 - the durable truck pools;
-- the measured metrics.
+- the measured metrics;
+- the four trained models and their test scores (above).
 
 Simulated or modelled, and labelled as such in the UI and API:
 - DAM, BCSA and IoT figures are seeded data, not live feeds;
-- YOLO detections (no trained weights ship);
+- potato grading without the trained YOLO weights (they are not in the repo) falls back to classical CV, labelled `classical-cv`;
 - local-LLM telemetry when no runtime is running;
-- the LoRA adapter, whose training dataset is generated but which has never been trained;
-- agent replies are deterministic; no live LLM calls are made.
+- the fine-tuned Bangla model needs Ollama and its GGUF; without them the kiosk answers from a labelled deterministic fallback;
+- agent replies are deterministic; no cloud LLM calls are made.
 
 Figures quoted from the project brief, such as the CPD July 2026 study and partner terms, are attributed as cited.

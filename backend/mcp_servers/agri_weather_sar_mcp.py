@@ -562,6 +562,11 @@ def breach_probability(rainfall_72h_mm: float, sar_db: float, district: HaorDist
     return 1.0 / (1.0 + math.exp(-z)), water_fraction, rain_ratio, exposure
 
 
+def simulated_sar_db(upazila_name: str, at: datetime) -> float:
+    """Stand-in Sentinel-1 VV backscatter (dB) when no live Copernicus scene exists: a deterministic hourly pass."""
+    return round(-11.5 + 3.0 * (stable_unit("s1-pass", upazila_name, at.strftime("%Y%m%d%H")) - 0.5), 2)
+
+
 def _alert_level(probability: float) -> FloodAlertLevel:
     if probability >= 0.70:
         return FloodAlertLevel.RED

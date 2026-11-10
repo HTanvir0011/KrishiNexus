@@ -52,7 +52,8 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Pulls the two quantised tags the edge node requests (edge_node/ollama_local.LOCAL_MODELS), about 6.7 GB in total.
+  # Pulls the two quantised tags the edge node requests (edge_node/ollama_local.LOCAL_MODELS), about 6.7 GB in total,
+  # and loads the fine-tuned krishi-bangla GGUF when it has been downloaded into backend/models/lora.
   ollama-pull:
     image: ollama/ollama:${OLLAMA_IMAGE_TAG:-latest}
     profiles: ["local-llm"]
@@ -61,8 +62,10 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - ./backend/models/lora:/models:ro
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull qwen2.5:7b-instruct-q4_K_M && ollama pull llama3.2:3b-instruct-q4_K_M"]
+    command: ["ollama pull qwen2.5:7b-instruct-q4_K_M && ollama pull llama3.2:3b-instruct-q4_K_M && if [ -f /models/krishi-bangla-q8_0.gguf ]; then cd /models && ollama create krishi-bangla -f Modelfile; else echo 'no fine-tuned GGUF in backend/models/lora: skipped'; fi"]
     restart: "no"
 
 volumes:

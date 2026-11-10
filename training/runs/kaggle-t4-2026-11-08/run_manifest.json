@@ -1,0 +1,31 @@
+{
+  "adapter": "krishi-bangla-lora-v1",
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seed": 20261022,
+  "epochs": 3,
+  "learning_rate": 0.0002,
+  "effective_batch": 16,
+  "max_len": 1024,
+  "precision": "fp16",
+  "gpu": "Tesla T4",
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.22.2",
+    "trl": "1.17.1",
+    "peft": "0.21.2",
+    "accelerate": "1.15.0",
+    "datasets": "5.1.0",
+    "bitsandbytes": "0.50.2"
+  },
+  "data_dir": "/kaggle/input/datasets/taksimulhasandip/krishinexus-bangla-agri-sft",
+  "data_sha256": "2ad09dcf31562a2a200f146d041b223ddf0389a701cb2cac62e3dd4aa3ac9825",
+  "splits": {
+    "train": 2301,
+    "val": 239,
+    "test": 660
+  },
+  "train_minutes": 35.6,
+  "eval_examples": 660,
+  "gguf_exported": true,
+  "gguf_error": null
+}

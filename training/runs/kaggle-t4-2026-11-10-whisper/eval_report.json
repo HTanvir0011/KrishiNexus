@@ -1,0 +1,102 @@
+{
+  "model": "krishi-whisper-bn-v1",
+  "base_model": "openai/whisper-small",
+  "status": "trained",
+  "data": {
+    "dataset": "umongsain/common-voice-13-bengali-normalized",
+    "licence": "CC0 (Mozilla Common Voice)",
+    "train_clips": 20729,
+    "val_clips": 500,
+    "test_clips": 2000,
+    "seed": 20261109
+  },
+  "training": {
+    "steps": 3000,
+    "batch": 16,
+    "learning_rate": 1e-05,
+    "minutes": 533.2,
+    "best_checkpoint": "/kaggle/working/checkpoints/checkpoint-3000",
+    "val_curve": [
+      {
+        "step": 500,
+        "wer": 0.5552,
+        "cer": 0.2722
+      },
+      {
+        "step": 1000,
+        "wer": 0.4709,
+        "cer": 0.2383
+      },
+      {
+        "step": 1500,
+        "wer": 0.439,
+        "cer": 0.2298
+      },
+      {
+        "step": 2000,
+        "wer": 0.426,
+        "cer": 0.2218
+      },
+      {
+        "step": 2500,
+        "wer": 0.42,
+        "cer": 0.2229
+      },
+      {
+        "step": 3000,
+        "wer": 0.4176,
+        "cer": 0.2231
+      }
+    ]
+  },
+  "targets": {
+    "wer": 0.45,
+    "cer": 0.15,
+    "ct2_wer_gap": 0.02
+  },
+  "summary": {
+    "wer": {
+      "value": 0.4354,
+      "base": 1.1644,
+      "target": 0.45,
+      "meets": true
+    },
+    "cer": {
+      "value": 0.229,
+      "base": 1.108,
+      "target": 0.15,
+      "meets": false
+    },
+    "ct2_wer_gap": {
+      "value": -0.0938,
+      "target": 0.02,
+      "meets": true
+    }
+  },
+  "results": {
+    "fine_tuned": {
+      "wer": 0.4354,
+      "cer": 0.229,
+      "words": 18561
+    },
+    "base_zero_shot": {
+      "wer": 1.1644,
+      "cer": 1.108,
+      "words": 18561
+    },
+    "parity": {
+      "clips": 300,
+      "ct2_int8_cpu_beam5": {
+        "wer": 0.3353,
+        "cer": 0.1101,
+        "words": 2771
+      },
+      "checkpoint_greedy": {
+        "wer": 0.4291,
+        "cer": 0.2259,
+        "words": 2771
+      },
+      "ct2_seconds_per_clip": 10.28
+    }
+  }
+}

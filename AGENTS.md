@@ -37,7 +37,9 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
     `ultralytics-yolo`), `telemetry_source` (`measured` / `modelled`), `data_source` (`OPEN_METEO_LIVE` /
     `CLIMATOLOGY_FALLBACK`), offline certificates prefixed `OFFLINE-PREVIEW`.
   - Brief figures with no primary source in the repo are shown as "cited in brief", never as computed results.
-  - Untrained artefacts stay labelled untrained (`krishi-bangla-lora-v1.status = dataset_ready_not_trained`).
+  - Untrained artefacts stay labelled untrained: the LoRA adapter's `status` (`lora_adapter_spec`) is
+    `dataset_ready_not_trained` until real weights sit in `backend/models/lora/<adapter>/`, and its scores appear only
+    from the installed `eval_report.json` and `gguf_eval_report.json`.
 - **Verify before advancing.** Each phase ends with live endpoint and browser checks, recorded in `MEMORY.md`.
 
 ---
@@ -64,7 +66,9 @@ Docker layout:
 Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SECONDS`, `KNX_FORCE_OFFLINE_WEATHER`,
 `KNX_RECEIPT_SIGNING_KEY` (HMAC for receipts and certificates), `KNX_CORS_ORIGINS`, `KNX_OLLAMA_HOST`,
 `KNX_LLAMACPP_URL`, `KNX_VLLM_URL`; optional model upgrades `KNX_EMBEDDING_MODEL`, `KNX_RERANKER_MODEL`,
-`KNX_WHISPER_MODEL`, `KNX_YOLO_WEIGHTS`; LLM keys `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`.
+`KNX_WHISPER_MODEL`, `KNX_YOLO_WEIGHTS` (a folder holding `roi_best.pt` + `defect_best.pt`; default
+`backend/models/yolo/run2`, used when `ultralytics` is installed); LLM keys `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`,
+`GEMINI_API_KEY`.
 All times are BDT (UTC+06:00, `config.BDT`, `now_bdt()`); no `zoneinfo`/`tzdata` dependency.
 
 Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /health` and `/ws`
@@ -82,11 +86,16 @@ krishinexus-os/
 ├── AGENTS.md / CLAUDE.md               # this contract (identical copies)
 ├── MEMORY.md                           # live state + handover log
 ├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
-├── TRAINING_PLAN.md                    # Phase 9: SFT split v2, 4 GB-GPU training recipe (not yet run), honest eval design
+├── TRAINING_PLAN.md                    # Phase 9: SFT data (prompts v4, v5), training recipe, honest eval design + measured runs (§6)
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG
 ├── training/
-│   ├── prepare_data.py                 # run with the backend venv: exports train/val/test JSONL, re-asserts no leakage
+│   ├── prepare_data.py                 # backend venv, --version 4|5 (default 5): exports train/val/test JSONL, re-asserts no leakage
+│   ├── HOW_TO_TRAIN.md                 # per-model runbook (LoRA + YOLO): data, commands, eval targets
+│   ├── train_qlora.ipynb               # minimal QLoRA notebook (Colab / local GPU): train + merge
+│   ├── kaggle/krishinexus_lora_kaggle.ipynb  # full Kaggle run: train, frozen-test eval vs base + prompt-blind baseline, Q8_0 GGUF scored through Ollama
+│   ├── kaggle/KAGGLE_DATASET.md        # Kaggle run guide + paste-ready dataset card with measured limitations
+│   ├── runs/kaggle-t4-<date>/          # measured run outputs: eval_report.json, run_manifest.json, training_log.json
 │   ├── .venv/                          # Python 3.12 venv reserved for GPU training (empty until the run)
 │   └── data/                           # generated JSONL + split_report.json (derived; regenerate any time)
 ├── backend/
@@ -129,8 +138,12 @@ krishinexus-os/
 │   ├── automation/workflows.py         # TemporalTruckPoolManager (TRUCK_POOLS), N8nWebhookHandlers (N8N_HANDLERS)
 │   ├── edge_node/
 │   │   ├── bangla_voice.py             # BanglaVoicePipeline (VOICE_PIPELINE), 5 VOICE_PRESETS, SSML
-│   │   ├── optical_grader.py           # OpticalCropGrader (OPTICAL_GRADER), certificates
-│   │   └── ollama_local.py             # LocalEdgeInferenceEngine (EDGE_ENGINE), LoRA spec, SFT dataset
+│   │   ├── optical_grader.py           # OpticalCropGrader (OPTICAL_GRADER): YOLO potato cascade, classical CV, sweep; certificates
+│   │   ├── ollama_local.py             # LocalEdgeInferenceEngine (EDGE_ENGINE), LoRA spec, SFT dataset (v4, v5), ground_prompt
+│   │   ├── sft_wordings.py             # prompts v5: freely worded question banks per task (Bangla, dialects, Banglish, English)
+│   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
+│   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/
+│   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
 │   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner; a FROZEN test set
 │   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed)
@@ -217,10 +230,11 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `POST /automation/n8n/daily-dam-sync` | → `DamSyncReport` | 3 |
 | `POST /automation/n8n/hourly-sar-flood-check` | `SarFloodCheckRequest?` → `SarFloodReport` | 3 |
 | `GET /automation/n8n/workflows` | → importable n8n workflow JSON | 3 |
-| `POST /edge/voice-interact` | `VoiceInteractRequest` → `VoiceInteractResponse` | 4 |
+| `POST /edge/voice-interact` | `VoiceInteractRequest` (`edge_certificate_id` grades the lot by a photo grade's certificate, using the node's own signed metrics; 422 if the node doesn't hold it or it is another crop) → `VoiceInteractResponse` | 4 |
 | `GET /edge/voice-presets` | → `list[VoicePreset]` | 4 |
 | `POST /edge/grade-crop` | `GradeCropRequest` → `GradeCropResult` | 4 |
 | `POST /edge/verify-certificate` | `VerifyCertificateRequest` → `CertificateVerification` | 4 |
+| `GET /market/price-monitor?division` | → `PriceMonitorReport` (WFP staple prices, `krishi-price-v1` forecasts beside their measured test score, Dhaka margin flags) | 9 |
 | `GET /edge/local-models?hardware_profile` | → `LocalModelsReport` | 4 |
 | `POST /edge/local-inference` | `LocalInferenceRequest` → `LocalInferenceResult` | 4 |
 | `GET /edge/lora-dataset?category&split&limit&format=json\|jsonl` | → `list[SftExample]` or JSONL | 4 |
@@ -265,7 +279,10 @@ voice_synthesizer → END`. `trace_events`, `errors`, `node_path` use `operator.
 | Distress price (regression) | non-control circuit-breaker cases sample P_spot uniformly in Tk 5–14/kg | `regression_suite.DISTRESS_SPOT_RANGE_TK` |
 | Knowledge seed | 18 passages (incl. `AGRI-FIN-01` for UCB/iFarmer); RAG eval set 19 curated questions + 66 frozen blind probes | `rag/knowledge_seed.KNOWLEDGE_DOCS`, `regression_suite.RAG_EVAL_SET`, `evals/holdout_probe.HOLDOUT_PROBES` |
 | Blind holdout probe | 66 frozen probes (never tune against them); live at `GET /evals/holdout?refresh`, cached 10 min, with a run-live card in the whitepaper's EvalsSection | `evals/holdout_probe.get_holdout_report`, route in `main.py` |
-| SFT split v2 | train 2,301 / val 239 / test 660; OOD holdouts fully in test: Chittagonian dialect, holding_months 7, খালিয়াজুরী haor; families (response groups, negotiation cells) never straddle splits | `ollama_local._family_split`, re-asserted by `training/prepare_data.py` |
+| SFT dataset v4 | seed 20261109, split salt `split-v4`: train 2,434 / val 125 / test 641; OOD holdouts fully in test: Chittagonian dialect, holding_months 7, খালিয়াজুরী haor; families (response groups, negotiation cells) never straddle splits; tool-grounded prompts v4: each user turn carries the agent's `<tool_result>` (prices, ΔΠ, breach %, 3 retrieved passages) and the model decides from it; labels balanced by re-sampling to a drawn target | `ollama_local.SFT_SEED`, `_grounded`, `_draw`, `_family_split`; re-asserted by `training/prepare_data.py` |
+| SFT dataset v5 (deployed with `krishi-bangla-lora-v2`) | seed 20261110, salt `split-v5`, 4,800 rows: train 3,638 / val 274 / test 888; each question is drawn from a wording bank per task (colloquial Bangla, Rangpuri, Bogura, Sylheti, Banglish, English; v4's template included); the arbitrage tool result also carries the breaker's seven inputs; negotiation families are (crop, district, quarter) market cells; test subsets `iid`, `ood_wording` (32 wordings written separately, test only), and v4's three OOD families; `build_sft_dataset(4)` still reproduces v4 byte for byte | `ollama_local.SFT_V5_SEED`, `_v5_split`, `_v5_wording`, `subset_of`, `edge_node/sft_wordings.py`, `sft_heldout_wordings.json`; `training/prepare_data.py --version 5` |
+| Fine-tuned local model | `krishi-bangla-1.5b` = Qwen2.5-1.5B + `krishi-bangla-lora-v2` (prompts v5; v1 is kept as Ollama `krishi-bangla:v4` and `krishi-bangla-v4-q8_0.gguf`) merged into the de-quantised NF4 base, Q8_0 GGUF (the bf16 merge at Q4_K_M failed flood alerts, TRAINING_PLAN §5), served as Ollama `krishi-bangla:latest`; each prompt is grounded first (a named haor → flood tool, store-or-sell → ΔΠ breaker, crop + offer → DAM spread, else top-3 retrieved passages) in the format of `PROMPT_VERSION` (5 since 2026-11-10; 4 serves v1) and decoded greedily, as it was scored; the router reads free-form phrasings too (store words, spot/expected price, months, rent, handling, rot as a fraction or %, readings in mm/dB, English months; offers in taka/tk); a simulated blackout cuts the internet only, so local runtimes still answer; offline voice requests use this model | `ollama_local.LOCAL_MODELS`, `ground_prompt`, `run_local_inference`; `supervisor.voice_interact` |
+| Potato vision cascade | `yolov11n-krishi-bd-v2.1` run 2 (Diamant dataset, CC BY 4.0), potato photos only (other crops use classical CV): `roi_best.pt` (YOLO11n-seg, 640 px) outlines each potato on the whole photo and on a 4 × 4 grid of overlapping tiles (`TILE_GRID`, overlap `TILE_OVERLAP` = 15% of the long side), so the small potatoes of a heap are seen 2.8× larger; a tile detection cut by an inner tile edge is dropped, and detections overlapping by more than half the smaller box keep the surest; the potato is cut out onto black, green-boosted (OpenCV HSV hue 35–85 with S, V ≥ 40: S ×1.5, V ×1.3) and segmented by `defect_best.pt` (YOLO11n-seg, 1024 px, conf 0.25); per potato, bruising % = scab + greening + mechanical-damage area and rot % = rot area; label: undersized (< 35 mm), else rot > the active grade-A rot limit (`a_rot`, 2%) → fungal_blight, else blemish > 0 → minor_bruise, else uniform_A; a box's confidence is that of the detection deciding its label; masks are rasterised from `masks.xy` outlines (bounded memory on 12 MP photos); sizes use `frame_width_mm`, which the farmer app's photo-width picker sends (close-up 150, handful 300, crate 600 = the default, heap 1,500 mm); each photo grade's reasons quote the measured scores from the installed `eval_report.json` (defect mask mAP50) and `grade_check.json` (grade accuracy), and the farmer app lists them; a photo whose potatoes are narrower than the size sweep's `min_potato_px` (read from the installed `size_sweep.json`; chosen on the 477 ROI validation photos by a rule set before the run) gets a `warnings` entry quoting the sweep's measured share of grades kept at that width, shown as an amber note under the certificate's grade and signed into the certificate payload, so `/edge/verify-certificate` returns them for a certificate that verifies (none if it doesn't), the buyer portal shows them under its verification line, and a certificate stripped of them reads tampered; a photo grade still on the farmer's screen (same crop) is sent as `edge_certificate_id` by the farmer app's voice request and by the portal's underwrite (Cardinal potato), so the loan is graded by that photo and the portal verifies its certificate; `/edge/grade-crop` runs in a worker thread (`asyncio.to_thread`) behind `_YOLO_LOCK` | `optical_grader.yolo_detect`, `find_potatoes`, `tile_starts`, `_cascade`, `fill_outlines`, `green_boost`, `yolo_reason`, `size_warning`, `issue_certificate`, `verify_certificate` |
 | BCSA facilities | 18 seeded (Munshiganj 5, Rangpur 4, Bogura 5, Thakurgaon 4); tariff Tk 8.00–9.50; chamber ≈1,800 MT | `coldchain_iot_mcp.FACILITIES` |
 | District storage gap | Munshiganj 540,760 / 1,000,738 MT; Rangpur 412,300 / 1,086,500; Bogura 368,900 / 1,245,200; Thakurgaon 214,700 / 612,400 | `coldchain_iot_mcp.DISTRICT_STORAGE_STATS` |
 | Chamber setpoint | 9.5°C; outage drift τ = 36 h toward ambient; CO₂ +380 ppm/h | `coldchain_iot_mcp` |

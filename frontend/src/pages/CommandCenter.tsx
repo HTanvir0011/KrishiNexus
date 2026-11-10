@@ -73,14 +73,14 @@ function CoreLine() {
     if (offline && !models) void api.localModels().then((r) => setModels(r.data));
   }, [offline, models]);
 
-  const qwen = models?.models.find((m) => m.key === "qwen2.5-7b");
+  const edge = models?.models.find((m) => m.key === "krishi-bangla-1.5b");
   const runtimeUp = models?.runtimes.some((r) => r.reachable);
   return (
     <div className={cn("flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-[13px] ring-1 ring-inset",
       offline ? "bg-amber-100/60 text-amber-900 ring-amber-600/25" : "bg-white text-slate-600 ring-slate-200")}>
       {offline ? <WifiOff className="size-4 text-amber-700" aria-hidden /> : <Server className="size-4 text-emerald-700" aria-hidden />}
       {offline
-        ? <span>{c.offlinePrefix} {qwen?.display_name ?? "Qwen-2.5-7B Q4_K_M"} {runtimeUp ? c.onRuntime : c.onDevice}{qwen ? ` · ${qwen.telemetry.vram_mb} MB ${c.modelled}` : ""}{c.weatherTail}</span>
+        ? <span>{c.offlinePrefix} {edge?.display_name ?? "KrishiNexus Bangla advisor (Qwen2.5-1.5B + LoRA)"} {runtimeUp ? c.onRuntime : c.onDevice}{edge ? ` · ${edge.telemetry.vram_mb} MB ${c.modelled}` : ""}{c.weatherTail}</span>
         : <span>{c.cloud}</span>}
       {state?.rag_crag_result && <Badge tone="violet">CRAG {state.rag_crag_result.verdict.toLowerCase()} {state.rag_crag_result.confidence.toFixed(2)}</Badge>}
       {state?.compression_report.reduction_factor && <Badge tone="violet"><Cpu className="size-3" aria-hidden /> {state.compression_report.reduction_factor}x {c.compression}</Badge>}

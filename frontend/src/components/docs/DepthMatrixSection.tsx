@@ -4,7 +4,9 @@ import { useState } from "react";
 import {
   api,
   ApiError,
+  type AdapterScoreRow,
   type CompressReport,
+  type LocalInferenceResult,
   type LocalModelsReport,
   type PoolView,
   type PromptRegistryListing,
@@ -25,9 +27,9 @@ const MATRIX: { category: string; implementation: string; evidence: string; stat
   { category: "Workflow automation", implementation: "n8n cron/webhook jobs, durable event-sourced 5-ton truck pools", evidence: "/automation/*", status: "Live", note: "n8n workflow JSON is importable; no n8n instance deployed" },
   { category: "Guardrails & privacy", implementation: "Presidio-compatible BD PII scrubber with vault, ΔΠ and DAE circuit-breakers", evidence: "POST /guardrails/verify", status: "Live" },
   { category: "Model routing", implementation: "Cheap-to-reasoning router over Ollama, Gemini Flash, DeepSeek-R1, Claude Sonnet 5.5", evidence: "GET /optimization/route", status: "Live" },
-  { category: "Local / on-device LLMs", implementation: "Ollama / llama.cpp / vLLM runtime manager, Q4_K_M telemetry, offline fallback", evidence: "GET /edge/local-models", status: "Partial", note: "Live generation needs a local runtime with the models pulled" },
-  { category: "Fine-tuning", implementation: "krishi-bangla-lora-v1 QLoRA spec + generated SFT dataset with a family-aware train/val/test split (dialect, timing and region holdouts)", evidence: "GET /edge/lora-dataset", status: "Partial", note: "Adapter not trained yet; recipe in TRAINING_PLAN.md" },
-  { category: "Multimodal", implementation: "Optical grader (classical CV on photos, sweep simulation), Bangla dialect voice + SSML", evidence: "POST /edge/grade-crop", status: "Partial", note: "No trained YOLO weights; audio STT needs a Whisper model" },
+  { category: "Local / on-device LLMs", implementation: "Ollama / llama.cpp / vLLM runtime manager serving the fine-tuned krishi-bangla Q8_0 GGUF, measured telemetry, offline fallback", evidence: "POST /edge/local-inference", status: "Live", note: "Needs Ollama with krishi-bangla loaded on the kiosk; without a runtime it answers from the deterministic fallback, labelled as such" },
+  { category: "Fine-tuning", implementation: "krishi-bangla-lora-v2: QLoRA on Qwen2.5-1.5B over a 4,800-pair tool-grounded SFT set of freely worded questions (Bangla, regional dialects, Banglish, English) with a family-aware train/val/test split (dialect, timing, region and held-out-wording holdouts); app prompts are grounded the same way", evidence: "GET /edge/local-models", status: "Live", note: "Trained on a Kaggle T4; the Ollama & LoRA tester shows the held-out scores of the training run beside those of the deployed GGUF" },
+  { category: "Multimodal", implementation: "Optical grader (two-stage YOLO11 cascade on potato photos, classical CV on other crops, sweep simulation), Bangla dialect voice + SSML", evidence: "POST /edge/grade-crop", status: "Partial", note: "The potato cascade is trained on DIU's Diamant dataset; its defect stage misses its mask target, and every photo grade lists the measured score among its reasons. Audio STT needs a Whisper model" },
   { category: "Real-time explainability", implementation: "WebSocket stream of every thought, MCP call, CRAG grade and guardrail", evidence: "WS /ws/agent-trace", status: "Live" },
   { category: "Evaluation", implementation: "Measured RAGAS-style metrics + seeded 100-case regression suite + frozen 66-probe blind retrieval holdout", evidence: "/evals/*", status: "Live", note: "Deterministic rubric judge; no LLM judge" },
   { category: "Frontend & visual", implementation: "React + Three.js digital twin, split-screen judge mode, live trace", evidence: "this app", status: "Live" },
@@ -229,9 +231,55 @@ function LocalTester() {
               ))}</tbody>
             </table>
           </div>
-          <div className="text-[12.5px] text-slate-700">LoRA {r.data.lora_adapter.name}: <Badge tone="amber">{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples
+          <div className="text-[12.5px] text-slate-700">LoRA {r.data.lora_adapter.name}: <Badge tone={r.data.lora_adapter.status === "adapter_present" ? "emerald" : "amber"}>{r.data.lora_adapter.status}</Badge> rank {r.data.lora_adapter.rank} · {r.data.lora_adapter.dataset.total_examples.toLocaleString()} SFT examples
             {r.data.lora_adapter.dataset.train_examples !== undefined &&
               <span className="tabular-nums"> · split {r.data.lora_adapter.dataset.train_examples.toLocaleString()}/{r.data.lora_adapter.dataset.val_examples}/{r.data.lora_adapter.dataset.test_examples}</span>}</div>
+          {r.data.lora_adapter.eval_summary && <AdapterScores rows={r.data.lora_adapter.eval_summary} deployed={r.data.lora_adapter.deployed_eval_summary} />}
+          {r.data.models.some((m) => m.key === FINE_TUNED) && <AskFineTuned />}
+        </>
+      )}
+    </div>
+  );
+}
+
+const FINE_TUNED = "krishi-bangla-1.5b";
+const SAMPLE_QUESTION = "বাহে, হামার 20 মণ ডায়মন্ড আলু আছে, ফড়িয়া 14 টাকা কেজি দিবার চায়। বেচমু?";
+
+/** Held-out test scores: the training run's (eval_report.json) and, when measured, the deployed GGUF's through Ollama. */
+function AdapterScores({ rows, deployed }: { rows: AdapterScoreRow[]; deployed?: AdapterScoreRow[] | null }) {
+  const scored = rows.filter((row) => row.target !== null);
+  const live = new Map(deployed?.map((row) => [row.metric, row]));
+  const score = (row?: AdapterScoreRow) => row ? <Badge tone={row.meets_target ? "emerald" : "amber"}>{row.adapter}</Badge> : "-";
+  return (
+    <div className="scroll-thin overflow-x-auto">
+      <table className="w-full min-w-[540px] text-[12.5px]">
+        <caption className="pb-1 text-left text-slate-600">Held-out test split: the training run's 4-bit model, and the GGUF the app runs</caption>
+        <thead><tr className="text-left text-slate-500"><th className="pr-3 font-medium">Metric</th><th className="pr-3 font-medium">Target</th><th className="pr-3 font-medium">Training run</th><th className="pr-3 font-medium">Deployed (Ollama)</th><th className="font-medium">Rule baseline</th></tr></thead>
+        <tbody className="divide-y divide-slate-100 tabular-nums">{scored.map((row) => (
+          <tr key={row.metric}><td className="py-1.5 pr-3 font-mono text-slate-800">{row.metric}</td><td className="pr-3 text-slate-600">{row.target}</td>
+            <td className="pr-3">{score(row)}</td><td className="pr-3">{score(live.get(row.metric))}</td><td className="text-slate-600">{row.baseline ?? "-"}</td></tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function AskFineTuned() {
+  const r = useRunner<LocalInferenceResult>();
+  const tool = r.data?.grounded_prompt?.split("\n<tool_result")[1];
+  return (
+    <div className="space-y-2 border-t border-slate-100 pt-3">
+      <div lang="bn" className="text-[14px] text-slate-800">{SAMPLE_QUESTION}</div>
+      <RunButton busy={r.busy} onClick={() => r.run(() => api.localInference(SAMPLE_QUESTION, FINE_TUNED))} label="Ask the fine-tuned model" />
+      {r.error && <div className="text-rose-600">{r.error}</div>}
+      {r.data && (
+        <>
+          {tool && <div className="break-all font-mono text-[11.5px] text-slate-600">{"<tool_result" + tool}</div>}
+          <div lang="bn" className="voice rounded-lg bg-emerald-50 p-3 text-[15px] text-emerald-900 ring-1 ring-emerald-700/20 ring-inset">{r.data.output_text}</div>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge tone={r.data.runtime === "edge-fallback" ? "amber" : "emerald"}>{r.data.generated_by}</Badge>
+            <Badge tone="slate">{r.data.telemetry_source}: {r.data.tokens_per_s} tok/s · {Math.round(r.data.latency_ms)} ms</Badge>
+          </div>
         </>
       )}
     </div>

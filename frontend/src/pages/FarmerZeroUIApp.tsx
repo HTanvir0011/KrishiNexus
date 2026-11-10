@@ -1,4 +1,4 @@
-import { Ban, Camera, Check, CloudRain, Landmark, Mic, Snowflake, Truck, Volume2, WifiOff } from "lucide-react";
+import { Ban, Camera, Check, CloudRain, ImageUp, Landmark, Mic, Snowflake, Truck, Volume2, WifiOff } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type VoiceInteractBody } from "../api/client";
@@ -29,12 +29,20 @@ const PRESETS: FarmerPreset[] = ([
   { id: "jessore_brinjal_pooling", title: "যশোরের বেগুন", subtitle: "Jessore brinjal pooling", crop: "Brinjal", district: "Jessore", upazila: "Jhikargacha" },
 ] satisfies Omit<FarmerPreset, "question">[]).map((p) => ({ ...p, question: STORY_PRESETS.find((s) => s.id === p.id)?.question ?? "" }));
 
-const SCAN_CROPS: GradeableCrop[] = ["Cardinal Potato", "Green Chili", "Brinjal"];
+const SCAN_CROPS: GradeableCrop[] = ["Cardinal Potato", "Diamant Potato", "Green Chili", "Brinjal"];
 const SCAN_QUALITIES: { id: SamplePreset; label: string }[] = [
   { id: "high_grade_harvest", label: "High-grade lot" },
   { id: "mixed_wholesale_lot", label: "Mixed lot" },
   { id: "blight_affected_lot", label: "Blight lot" },
 ];
+/** How wide the photographed scene is: a photo carries no scale, and sizes (undersized, grade-A minimum) need one. */
+const PHOTO_WIDTHS = [
+  { mm: 150, label: "Close-up, 15 cm" },
+  { mm: 300, label: "Handful, 30 cm" },
+  { mm: 600, label: "Crate, 60 cm" },
+  { mm: 1500, label: "Heap, 1.5 m" },
+];
+const SELECT_CLASS = "min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-[13.5px] text-slate-900";
 
 export function FarmerZeroUIApp({ className }: { className?: string }) {
   const offline = useAppState((s) => s.offlineMode);
@@ -43,7 +51,10 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const pools = useAppState((s) => s.pools);
   const [selected, setSelected] = useState<FarmerPreset>(PRESETS[0]);
   const [heard, setHeard] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"voice" | "scan" | "join" | null>(null);
+  const [busy, setBusy] = useState<"voice" | "scan" | "photo" | "join" | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoWidthMm, setPhotoWidthMm] = useState(600);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [listening, setListening] = useState(false);
   const [scanCrop, setScanCrop] = useState<GradeableCrop>("Cardinal Potato");
   const [scanQuality, setScanQuality] = useState<SamplePreset>("high_grade_harvest");
@@ -74,7 +85,10 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
       ? { text: spoken, district: preset.district, upazila: preset.upazila }
       : { preset_id: preset.id };
     Object.assign(body, { offline_mode: getState().offlineMode, session_id: sessionId });
-    if (grade && grade.crop === preset.crop && scanDone) body.grade_sample_preset = scanQuality;
+    if (grade && grade.crop === preset.crop && scanDone) {
+      if (grade.source === "uploaded_image") body.edge_certificate_id = grade.digital_certificate.cert_id;   // the photo's own grade
+      else body.grade_sample_preset = scanQuality;
+    }
     try {
       const response = await api.voiceInteract(body);
       setState({ lastVoice: response.data, backendLive: response.live });
@@ -116,6 +130,31 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
       window.setTimeout(() => setScanDone(true), SCAN_DURATION_MS);
     } catch (error) {
       pushAlert("danger", "Scan failed", error instanceof ApiError ? error.message : String(error));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const gradePhoto = async (file: File) => {
+    setBusy("photo");
+    setScanDone(false);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const result = await api.gradePhoto(scanCrop, dataUrl, selected.district, photoWidthMm);
+      setPhoto((old) => {
+        if (old) URL.revokeObjectURL(old);
+        return URL.createObjectURL(file);
+      });
+      setState({ lastGrade: result });
+      setScanStartedAt(null);
+      setScanDone(true);
+    } catch (error) {
+      pushAlert("danger", "Photo not graded", error instanceof ApiError ? error.message : String(error));
     } finally {
       setBusy(null);
     }
@@ -231,20 +270,35 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
 
           <section aria-labelledby="farmer-step-2">
             <StepTitle id="farmer-step-2" n={2} bn="ফসল স্ক্যান" en="Scan the harvest" />
-            <div className="mb-2 flex gap-2">
-              <select value={scanCrop} onChange={(e) => setScanCrop(e.target.value as GradeableCrop)} aria-label="Crop to scan"
-                className="min-h-10 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-[13.5px] text-slate-900">
-                {SCAN_CROPS.map((crop) => <option key={crop}>{crop}</option>)}
-              </select>
+            <select value={scanCrop} onChange={(e) => setScanCrop(e.target.value as GradeableCrop)} aria-label="Crop to scan"
+              className={cn(SELECT_CLASS, "mb-2 w-full")}>
+              {SCAN_CROPS.map((crop) => <option key={crop}>{crop}</option>)}
+            </select>
+            <OpticalGraderCanvas result={grade} crop={grade?.crop ?? scanCrop} scanStartedAt={scanStartedAt} photo={photo} />
+            {/* Each control sits above the button it feeds: lot quality for the sample scan, scene width for a photo */}
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <select value={scanQuality} onChange={(e) => setScanQuality(e.target.value as SamplePreset)} aria-label="Sample lot"
-                className="min-h-10 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-[13.5px] text-slate-900">
+                className={SELECT_CLASS}>
                 {SCAN_QUALITIES.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}
               </select>
+              <select value={photoWidthMm} onChange={(e) => setPhotoWidthMm(Number(e.target.value))} aria-label="How wide the photo is"
+                className={SELECT_CLASS}>
+                {PHOTO_WIDTHS.map((w) => <option key={w.mm} value={w.mm}>{w.label}</option>)}
+              </select>
+              <Button variant="ghost" className="min-h-11" onClick={() => void scan()} disabled={busy !== null}>
+                {busy === "scan" ? <Spinner /> : <Camera className="size-4" aria-hidden />} Scan sample lot
+              </Button>
+              <Button variant="ghost" className="min-h-11" onClick={() => photoInput.current?.click()} disabled={busy !== null}>
+                {busy === "photo" ? <Spinner /> : <ImageUp className="size-4" aria-hidden />} Grade a photo
+              </Button>
             </div>
-            <OpticalGraderCanvas result={grade} crop={grade?.crop ?? scanCrop} scanStartedAt={scanStartedAt} />
-            <Button variant="ghost" className="mt-2 w-full min-h-11" onClick={() => void scan()} disabled={busy !== null}>
-              {busy === "scan" ? <Spinner /> : <Camera className="size-4" aria-hidden />} Scan harvest (5 s sweep)
-            </Button>
+            {/* JPEG/PNG only, so iPhones convert HEIC before upload */}
+            <input ref={photoInput} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Photo of the harvest"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void gradePhoto(file);
+              }} />
             {grade && scanDone && <div className="mt-2"><CertificateCard result={grade} /></div>}
           </section>
 

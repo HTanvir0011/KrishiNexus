@@ -1,0 +1,9 @@
+{
+  "python": "3.13.16",
+  "gpu": "Tesla T4",
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.22.2",
+    "librosa": "1.0.0"
+  }
+}

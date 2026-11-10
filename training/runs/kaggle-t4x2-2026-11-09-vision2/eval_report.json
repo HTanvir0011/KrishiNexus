@@ -1,0 +1,205 @@
+{
+  "model": "yolov11n-krishi-bd-v2.1",
+  "status": "trained",
+  "stages": {
+    "roi": "yolo11n-seg.pt at 640 px, 1 class (potato), outlines",
+    "defect": "yolo11n-seg.pt at 1024 px, 4 classes scab, rot, greening, mechanical_damage"
+  },
+  "selection": {
+    "by": "validation mask mAP50",
+    "validation": {
+      "n1024": {
+        "mask": {
+          "precision": 0.567,
+          "recall": 0.3761,
+          "mAP50": 0.3956,
+          "mAP50-95": 0.2019
+        },
+        "box": {
+          "precision": 0.5604,
+          "recall": 0.3881,
+          "mAP50": 0.4186,
+          "mAP50-95": 0.2482
+        }
+      },
+      "s640": {
+        "mask": {
+          "precision": 0.5973,
+          "recall": 0.3524,
+          "mAP50": 0.3937,
+          "mAP50-95": 0.2037
+        },
+        "box": {
+          "precision": 0.5809,
+          "recall": 0.3815,
+          "mAP50": 0.409,
+          "mAP50-95": 0.2638
+        }
+      }
+    },
+    "chosen": "n1024"
+  },
+  "dataset": {
+    "name": "Diamant Potato Dataset",
+    "doi": "10.17632/4vty9rz7zw.1",
+    "licence": "CC BY 4.0",
+    "sha256": {
+      "defect": "89cbdfc1072415e35ec11fc4a22318a848fa90285b1a927112438af1c1bc3d48",
+      "roi": "27a32167f8c71b88c8ec88f80249b91a3a019ecc1992ed6e95f67fac262cea0d"
+    },
+    "checks": {
+      "roi": {
+        "images": {
+          "test": 239,
+          "train": 1670,
+          "val": 477
+        },
+        "instances": {
+          "test": [
+            363
+          ],
+          "train": [
+            2581
+          ],
+          "val": [
+            645
+          ]
+        },
+        "unknown_class_ids": [],
+        "shapes": {
+          "polygon": 3589
+        },
+        "missing_label_files": 0,
+        "exif_rotated_images": 0,
+        "coord_range": [
+          0.0,
+          1.0
+        ]
+      },
+      "defect": {
+        "images": {
+          "test": 267,
+          "train": 1281,
+          "val": 176
+        },
+        "instances": {
+          "test": [
+            654,
+            190,
+            29,
+            123
+          ],
+          "train": [
+            3188,
+            903,
+            79,
+            562
+          ],
+          "val": [
+            548,
+            175,
+            17,
+            108
+          ]
+        },
+        "unknown_class_ids": [],
+        "shapes": {
+          "polygon": 6576
+        },
+        "missing_label_files": 0,
+        "exif_rotated_images": 0,
+        "coord_range": [
+          0.0,
+          1.0
+        ]
+      },
+      "problems": []
+    }
+  },
+  "grade_inputs": {
+    "bruising_pct": [
+      "scab",
+      "greening",
+      "mechanical_damage"
+    ],
+    "rot_pct": [
+      "rot"
+    ],
+    "limits": {
+      "a_bruising": 3,
+      "a_rot": 2,
+      "b_bruising": 8,
+      "b_rot": 5
+    }
+  },
+  "targets": {
+    "roi_box_mAP50": 0.9,
+    "defect_mask_mAP50": 0.5,
+    "grade_accuracy": 0.7
+  },
+  "summary": [
+    {
+      "metric": "roi_box_mAP50",
+      "target": 0.9,
+      "value": 0.9945,
+      "meets_target": true
+    },
+    {
+      "metric": "defect_mask_mAP50",
+      "target": 0.5,
+      "value": 0.3419,
+      "meets_target": false
+    },
+    {
+      "metric": "grade_accuracy",
+      "target": 0.7,
+      "value": null,
+      "meets_target": null
+    }
+  ],
+  "results": {
+    "roi_test": {
+      "box": {
+        "precision": 0.9916,
+        "recall": 0.9798,
+        "mAP50": 0.9945,
+        "mAP50-95": 0.9792
+      },
+      "mask": {
+        "precision": 0.9916,
+        "recall": 0.9798,
+        "mAP50": 0.9946,
+        "mAP50-95": 0.9842
+      },
+      "n_images": 239
+    },
+    "defect_test": {
+      "box": {
+        "precision": 0.4088,
+        "recall": 0.3823,
+        "mAP50": 0.3505,
+        "mAP50-95": 0.1987
+      },
+      "mask": {
+        "precision": 0.4243,
+        "recall": 0.3651,
+        "mAP50": 0.3419,
+        "mAP50-95": 0.1721
+      },
+      "n_images": 267,
+      "mask_ap50_by_class": {
+        "scab": 0.4898,
+        "rot": 0.4487,
+        "greening": 0.1763,
+        "mechanical_damage": 0.2528
+      },
+      "box_ap50_by_class": {
+        "scab": 0.5192,
+        "rot": 0.4493,
+        "greening": 0.1291,
+        "mechanical_damage": 0.3044
+      }
+    },
+    "grading_error": "Traceback (most recent call last):\n  File \"/tmp/ipykernel_21/1733922319.py\", line 51, in <cell line: None>\n    for res in model.predict(test_imgs, imgsz=DEFECT_IMGSZ, conf=CONF, retina_masks=True, stream=True, device=DEVICE, verbose=False):\n               ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/_contextlib.py\", line 40, in generator_context\n    response = gen.send(None)\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/engine/predictor.py\", line 423, in stream_inference\n    self.model.warmup(im=im)\n    ~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/autobackend.py\", line 391, in warmup\n    self.forward(im)  # warmup model\n    ~~~~~~~~~~~~^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/autobackend.py\", line 346, in forward\n    y = self.backend.forward(im, **forward_kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/backends/pytorch.py\", line 97, in forward\n    return self.model(im, augment=augment, embed=embed, **kwargs)\n           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/tasks.py\", line 163, in forward\n    return self.predict(x, *args, **kwargs)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/tasks.py\", line 180, in predict\n    return self._predict_once(x, profile, embed)\n           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/tasks.py\", line 202, in _predict_once\n    x = m(x)  # run\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/modules/block.py\", line 315, in forward\n    return self.cv2(torch.cat(y, 1))\n           ~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/ultralytics/nn/modules/conv.py\", line 98, in forward_fuse\n    return self.act(self.conv(x))\n                    ~~~~~~~~~^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/conv.py\", line 553, in forward\n    return self._conv_forward(input, self.weight, self.bias)\n           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/conv.py\", line 548, in _conv_forward\n    return F.conv2d(\n           ~~~~~~~~^\n        input, weight, bias, self.stride, self.padding, self.dilation, self.groups\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\ntorch.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.17 GiB. GPU 0 has a total capacity of 14.56 GiB of which 1.75 GiB is free. Including non-PyTorch memory, this process has 12.81 GiB memory in use. Of the allocated memory 11.58 GiB is allocated by PyTorch, and 1.07 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\n"
+  }
+}

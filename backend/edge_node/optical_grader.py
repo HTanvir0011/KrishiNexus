@@ -2,8 +2,9 @@
 
 Three inference backends, chosen per request and always reported in ``inference_backend``:
 
-* ``ultralytics-yolo``      — a YOLO detector on an uploaded photo when ``KNX_YOLO_WEIGHTS`` points at
-                              trained weights and ``ultralytics`` is installed.
+* ``ultralytics-yolo``      — potato photos only: the two-stage Diamant cascade (potato outlines, then defect
+                              masks) when ``roi_best.pt`` + ``defect_best.pt`` sit in ``KNX_YOLO_WEIGHTS`` (default
+                              ``backend/models/yolo/run2``) and ``ultralytics`` is installed.
 * ``classical-cv``          — real image analysis on an uploaded photo with no trained weights: border-
                               referenced background subtraction, Otsu threshold, morphological clean-up,
                               connected components, per-object size and dark-lesion analysis.
@@ -23,10 +24,13 @@ import hmac
 import importlib.util
 import io
 import json
+import math
 import os
+import threading
 import time
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -184,6 +188,7 @@ class GradeCropResult(BaseModel):
     assigned_grade: EdgeGrade
     grade_letter: str
     grading_reasons: list[str]
+    warnings: list[str] = Field(default=[], description="Shown on the certificate when the grade may not hold.")
     price_premium_pct: float
     premium_basis: str
     digital_certificate: DigitalCertificate
@@ -209,6 +214,7 @@ class CertificateVerification(BaseModel):
     payload_hash_valid: bool
     signature_valid: bool
     tampered: bool
+    warnings: list[str] = Field(default=[], description="The signed grade's warnings; empty unless the certificate verifies.")
 
 
 # ---------------------------------------------------------------------------
@@ -271,12 +277,14 @@ def _sign(payload: dict[str, Any]) -> tuple[str, str]:
             hmac.new(settings.receipt_signing_key.encode(), canonical.encode(), hashlib.sha256).hexdigest())
 
 
-def issue_certificate(request: GradeCropRequest, letter: str, m: GradingMetrics, backend: str, boxes: int) -> DigitalCertificate:
+def issue_certificate(request: GradeCropRequest, letter: str, m: GradingMetrics, backend: str, boxes: int,
+                      warnings: list[str]) -> DigitalCertificate:
     issued = now_bdt().isoformat()
     payload = {
         "crop": request.crop.value, "district": request.district, "farmer_id": request.farmer_id, "lot_kg": request.lot_kg,
         "grade": letter, "metrics": m.model_dump(), "detections": boxes, "issued_at": issued,
         "inspector_model_version": INSPECTOR_MODEL_VERSION, "inference_backend": backend,
+        "warnings": warnings,   # signed, so a seller can't strip them without breaking the certificate
     }
     digest, signature = _sign(payload)
     cert = DigitalCertificate(
@@ -293,8 +301,10 @@ def verify_certificate(cert: DigitalCertificate) -> CertificateVerification:
     digest, signature = _sign(cert.payload)
     payload_ok = hmac.compare_digest(digest, cert.sha256_payload_hash)
     signature_ok = hmac.compare_digest(signature, cert.verification_hash)
+    valid = payload_ok and signature_ok
     return CertificateVerification(cert_id=cert.cert_id, known=cert.cert_id in _ISSUED, payload_hash_valid=payload_ok,
-                                   signature_valid=signature_ok, tampered=not (payload_ok and signature_ok))
+                                   signature_valid=signature_ok, tampered=not valid,
+                                   warnings=cert.payload.get("warnings", []) if valid else [])
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +352,7 @@ ANALYSIS_MAX_SIDE = 320
 
 
 def decode_image(image_base64: str) -> Any:
-    from PIL import Image, UnidentifiedImageError
+    from PIL import Image, ImageOps, UnidentifiedImageError
 
     data = image_base64.split(",", 1)[1] if image_base64.startswith("data:") else image_base64
     try:
@@ -352,7 +362,7 @@ def decode_image(image_base64: str) -> Any:
     if len(raw) > MAX_IMAGE_BYTES:
         raise ToolExecutionError(f"Image is {len(raw) / 1e6:.1f} MB; the edge node accepts up to {MAX_IMAGE_BYTES / 1e6:.0f} MB.")
     try:
-        return Image.open(io.BytesIO(raw)).convert("RGB")
+        return ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")   # phone photos: upright, as browsers show them
     except (UnidentifiedImageError, OSError) as exc:
         raise ToolExecutionError("image_base64 is not a readable JPEG/PNG image.") from exc
 
@@ -449,31 +459,169 @@ def classical_cv(request: GradeCropRequest, image: Any) -> list[BoundingBox]:
 # Backend 3: trained YOLO weights (optional)
 # ---------------------------------------------------------------------------
 
-_YOLO_MODEL: Any = None
+# Two stages trained on DIU's Diamant potato dataset (TRAINING_PLAN.md section 8): roi_best.pt outlines each potato,
+# defect_best.pt segments scab, rot, greening and mechanical damage on a background-removed, green-boosted crop.
+YOLO_DIR = Path(os.getenv("KNX_YOLO_WEIGHTS") or Path(__file__).resolve().parent.parent / "models" / "yolo" / "run2")
+YOLO_CROPS = {GradeableCrop.CARDINAL_POTATO, GradeableCrop.DIAMANT_POTATO}
+BLEMISH_CLASSES, ROT_CLASSES = {"scab", "greening", "mechanical_damage"}, {"rot"}
+_YOLO: dict[str, Any] = {}
+_YOLO_LOCK = threading.Lock()   # grading runs in worker threads, and an Ultralytics model isn't thread-safe
+TILE_GRID, TILE_OVERLAP = 4, 0.15   # chosen on heaps built from validation photos (TRAINING_PLAN.md section 8)
+
+
+def green_boost(rgb: np.ndarray) -> np.ndarray:
+    """The Diamant defect set's preprocessing: in OpenCV HSV, hue 35-85 with S and V >= 40 gets S x1.5 and V x1.3."""
+    import cv2
+
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV).astype(np.float32)
+    green = (hsv[..., 0] >= 35) & (hsv[..., 0] <= 85) & (hsv[..., 1] >= 40) & (hsv[..., 2] >= 40)
+    hsv[..., 1] = np.where(green, np.minimum(hsv[..., 1] * 1.5, 255), hsv[..., 1])
+    hsv[..., 2] = np.where(green, np.minimum(hsv[..., 2] * 1.3, 255), hsv[..., 2])
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+
+
+def fill_outlines(shape: tuple[int, int], outlines: list[np.ndarray], offset: tuple[int, int] = (0, 0)) -> np.ndarray:
+    """Rasterise pixel polygons (``Results.masks.xy``) into one mask; avoids full-size masks for 12 MP phone photos."""
+    import cv2
+
+    mask = np.zeros(shape, np.uint8)
+    polygons = [np.round(o - offset).astype(np.int32) for o in outlines if len(o) >= 3]
+    if polygons:
+        cv2.fillPoly(mask, polygons, 1)
+    return mask.astype(bool)
 
 
 def yolo_detect(request: GradeCropRequest, image: Any) -> list[BoundingBox] | None:
-    weights = os.getenv("KNX_YOLO_WEIGHTS")
-    if not weights or not os.path.exists(weights) or importlib.util.find_spec("ultralytics") is None:
+    """Potato photos: stage 1 outlines each potato, stage 2 segments defects on that potato cut out of the background."""
+    roi_weights, defect_weights = YOLO_DIR / "roi_best.pt", YOLO_DIR / "defect_best.pt"
+    if (request.crop not in YOLO_CROPS or not (roi_weights.exists() and defect_weights.exists())
+            or importlib.util.find_spec("ultralytics") is None):
         return None
-    global _YOLO_MODEL
+    with _YOLO_LOCK:
+        return _cascade(request, image, roi_weights, defect_weights)
+
+
+def tile_starts(length: int, tile: int, overlap: float) -> list[int]:
+    """Evenly spaced tile origins along one side of a photo; neighbours overlap by at least ``overlap`` pixels."""
+    if length <= tile:
+        return [0]
+    n = math.ceil((length - overlap) / (tile - overlap))
+    return [round(i * (length - tile) / (n - 1)) for i in range(n)]
+
+
+def overlap_of_smaller(a: list[float], b: list[float]) -> float:
+    """Intersection of two xyxy boxes as a share of the smaller one."""
+    ix, iy = max(0.0, min(a[2], b[2]) - max(a[0], b[0])), max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+    return ix * iy / max(1e-9, min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1])))
+
+
+def find_potatoes(image: Any) -> list[tuple[np.ndarray, list[float], float]]:
+    """Stage 1 on the whole photo and on a 4 x 4 grid of overlapping tiles: (outline, xyxy, confidence) per potato.
+
+    Trained on photos of one or two potatoes, the outliner at 640 px finds few potatoes under about a tenth of the
+    photo's long side; a tile shows them 2.8x larger. The overlap (15% of the long side) fits any such potato whole
+    inside some tile, so a detection cut by an inner tile edge is dropped, and where detections overlap the surest stays.
+    """
+    w, h = image.size
+    overlap = TILE_OVERLAP * max(w, h)
+    tile = round((max(w, h) + (TILE_GRID - 1) * overlap) / TILE_GRID)
+    margin = 0.01 * tile
+    views = [(0, 0, image)] + [(x0, y0, image.crop((x0, y0, min(x0 + tile, w), min(y0 + tile, h))))
+                                for y0 in tile_starts(h, tile, overlap) for x0 in tile_starts(w, tile, overlap)]
+    found = []
+    for x0, y0, view in views:
+        result = _YOLO["roi"](view, imgsz=640, conf=0.25, verbose=False)[0]
+        if result.masks is None:
+            continue
+        vw, vh = view.size
+        for outline, (x1, y1, x2, y2), conf in zip(result.masks.xy, result.boxes.xyxy.tolist(), result.boxes.conf.tolist()):
+            if ((x0 > 0 and x1 < margin) or (y0 > 0 and y1 < margin)
+                    or (x0 + vw < w and x2 > vw - margin) or (y0 + vh < h and y2 > vh - margin)):
+                continue
+            found.append((outline + (x0, y0), [x1 + x0, y1 + y0, x2 + x0, y2 + y0], conf))
+    kept: list[tuple[np.ndarray, list[float], float]] = []
+    # shortcut: box overlap, so piled potatoes sharing over half a box count once; compare outlines if piles matter
+    for candidate in sorted(found, key=lambda f: -f[2]):
+        if all(overlap_of_smaller(candidate[1], k[1]) <= 0.5 for k in kept):
+            kept.append(candidate)
+    return kept
+
+
+def _cascade(request: GradeCropRequest, image: Any, roi_weights: Path, defect_weights: Path) -> list[BoundingBox]:
+    from PIL import Image
     from ultralytics import YOLO
 
-    if _YOLO_MODEL is None:
-        _YOLO_MODEL = YOLO(weights)
-    result = _YOLO_MODEL(image, verbose=False)[0]
+    if not _YOLO:
+        _YOLO.update(roi=YOLO(str(roi_weights)), defect=YOLO(str(defect_weights)))
+    rgb = np.asarray(image)
+    profile = CROP_PROFILES[request.crop]
+    # As in the measured per-potato rule, rot within the grade-A limit doesn't by itself make a potato rotten.
+    rot_limit = float(PROMPT_REGISTRY.params("vision_grading")["a_rot"])
     mm_per_px = request.frame_width_mm / image.size[0]
-    typical_defect = {DetectionClass.MINOR_BRUISE: 4.0, DetectionClass.FUNGAL_BLIGHT: 15.0}
-    known = {c.value for c in DetectionClass}
     boxes: list[BoundingBox] = []
-    for i, (xywh, conf, cls) in enumerate(zip(result.boxes.xywh.tolist(), result.boxes.conf.tolist(), result.boxes.cls.tolist())):
-        name = str(result.names[int(cls)])
-        label = DetectionClass(name) if name in known else DetectionClass.UNIFORM_A
-        cx, cy, bw, bh = xywh
-        boxes.append(BoundingBox(object_id=i + 1, box=(int(cx - bw / 2), int(cy - bh / 2), int(bw), int(bh)), class_label=label,
-                                 confidence=round(float(conf), 3), diameter_mm=round(max(bw, bh) * mm_per_px, 1),
-                                 defect_area_pct=typical_defect.get(label, 0.5)))
+    for outline, xyxy, conf in find_potatoes(image):
+        x1, y1, x2, y2 = (int(round(v)) for v in xyxy)
+        potato = fill_outlines((y2 - y1, x2 - x1), [outline], (x1, y1))
+        if potato.sum() < 50:
+            continue
+        crop = green_boost(np.where(potato[..., None], rgb[y1:y2, x1:x2], 0).astype(np.uint8))
+        defects = _YOLO["defect"](Image.fromarray(crop), imgsz=1024, conf=0.25, verbose=False)[0]
+        named = ([(o, str(defects.names[int(c)]), p) for o, c, p in
+                  zip(defects.masks.xy, defects.boxes.cls.tolist(), defects.boxes.conf.tolist())] if defects.masks is not None else [])
+        area: dict[str, float] = {}
+        surest: dict[str, float] = {}
+        for group, classes in (("blemish", BLEMISH_CLASSES), ("rot", ROT_CLASSES)):
+            hits = [(o, p) for o, name, p in named if name in classes]
+            area[group] = 100.0 * float((fill_outlines(potato.shape, [o for o, _ in hits]) & potato).sum()) / float(potato.sum())
+            surest[group] = max((p for _, p in hits), default=0.0)
+        diameter = float(2.0 * np.sqrt(potato.sum() / np.pi) * mm_per_px)
+        # The box's confidence is that of the detection deciding its label, not stage 1's "this is a potato".
+        if diameter < profile.undersized_mm:
+            label, sure = DetectionClass.UNDERSIZED, conf
+        elif area["rot"] > rot_limit:
+            label, sure = DetectionClass.FUNGAL_BLIGHT, surest["rot"]
+        elif area["blemish"] > 0:
+            label, sure = DetectionClass.MINOR_BRUISE, surest["blemish"]
+        else:
+            label, sure = DetectionClass.UNIFORM_A, conf
+        boxes.append(BoundingBox(object_id=len(boxes) + 1, box=(x1, y1, x2 - x1, y2 - y1), class_label=label,
+                                 confidence=round(float(sure), 3), diameter_mm=round(diameter, 1),
+                                 defect_area_pct=round(area["blemish"] + area["rot"], 2)))
     return boxes
+
+
+def yolo_reason() -> str:
+    """The defect segmenter's measured test scores, read from its run reports (never typed in)."""
+    report, check = YOLO_DIR / "eval_report.json", YOLO_DIR / "grade_check.json"
+    if not report.exists():
+        return "defects from the trained Diamant segmenter (no run report installed)"
+    score = {s["metric"]: s for s in json.loads(report.read_text(encoding="utf-8"))["summary"]}["defect_mask_mAP50"]
+    text = (f"defects from the trained Diamant segmenter: test mask mAP50 {score['value']} against a {score['target']} "
+            f"target{'' if score['meets_target'] else ' (not met)'}")
+    if check.exists():
+        g = json.loads(check.read_text(encoding="utf-8"))
+        text += (f"; per-potato grade accuracy {g['grading']['grade_accuracy']} against {g['target']['grade_accuracy']}"
+                 f"{'' if g['meets_target'] else ' (not met)'}, always-C {g['grading']['majority_grade_baseline']['accuracy']}")
+    return text
+
+
+def size_warning(widths: list[float]) -> str | None:
+    """Warns when potatoes are narrower than the size sweep's threshold; both come from its report (never typed in)."""
+    report = YOLO_DIR / "size_sweep.json"
+    if not widths or not report.exists():
+        return None
+    sweep = json.loads(report.read_text(encoding="utf-8"))
+    limit = sweep["min_potato_px"]   # shortcut: run 2's sweep set one; if a re-run sets none (null), word that case first
+    small = [w for w in widths if w < limit]
+    if not small:
+        return None
+    sizes = sorted(int(s) for s in sweep["by_size"])
+    tested = max([s for s in sizes if s <= min(small)] or sizes[:1])   # the sweep's width nearest below the smallest potato
+    at = sweep["by_size"][str(tested)]
+    return (f"{len(small)} of {len(widths)} potatoes are under {limit} px wide in this photo (the smallest is "
+            f"{min(small):.0f} px). In validation photos shrunk until potatoes were {tested} px wide, {at['grade_kept']:.0%} "
+            f"of {at['n']} potatoes kept their full-size grade, so this grade may miss or invent defects. For a grade that "
+            "holds, photograph a few potatoes at a time, close up.")
 
 
 # ---------------------------------------------------------------------------
@@ -486,16 +634,23 @@ class OpticalCropGrader:
         started = time.perf_counter()
         profile = CROP_PROFILES[request.crop]
         reasons_extra: list[str] = []
+        warnings: list[str] = []
         if request.image_base64:
             image = decode_image(request.image_base64)
             boxes = yolo_detect(request, image)
-            backend = f"ultralytics-yolo ({os.getenv('KNX_YOLO_WEIGHTS')})" if boxes is not None else "classical-cv"
             if boxes is None:
-                boxes = classical_cv(request, image)
+                boxes, backend = classical_cv(request, image), "classical-cv"
+            else:
+                backend = f"ultralytics-yolo two-stage ({YOLO_DIR.name}: roi_best.pt + defect_best.pt)"
+                reasons_extra.append(yolo_reason())
+                # diameter_mm came from each potato's pixel area, so this gives back its width in pixels
+                warning = size_warning([b.diameter_mm * image.size[0] / request.frame_width_mm for b in boxes])
+                warnings += [warning] if warning else []
             if not boxes:
                 raise ToolExecutionError("No produce detected; photograph the lot spread on a plain tarp under even light.")
             moisture = sum(profile.moisture_band) / 2
             reasons_extra.append("moisture is the crop band prior: an RGB photo cannot measure moisture")
+            reasons_extra.append(f"sizes assume the photo spans {request.frame_width_mm:g} mm across: a photo carries no scale")
             source, frames, frame_size = "uploaded_image", 1, image.size
         else:
             preset = request.sample_preset or SamplePreset.FIELD_SWEEP
@@ -505,12 +660,12 @@ class OpticalCropGrader:
         metrics = summarize(request.crop, boxes, moisture)
         letter, reasons = assign_grade(request.crop, metrics)
         premium = price_premium(letter, metrics)
-        certificate = issue_certificate(request, letter, metrics, backend, len(boxes))
+        certificate = issue_certificate(request, letter, metrics, backend, len(boxes), warnings)
         return GradeCropResult(
             crop=request.crop, district=request.district, source=source, inference_backend=backend,
             inspector_model_version=INSPECTOR_MODEL_VERSION, frame_size=frame_size, video_frames_analyzed=frames,
             bounding_boxes=boxes, metrics=metrics, assigned_grade=EdgeGrade[letter], grade_letter=letter,
-            grading_reasons=reasons + reasons_extra, price_premium_pct=premium,
+            grading_reasons=reasons + reasons_extra, warnings=warnings, price_premium_pct=premium,
             premium_basis="vs. an ungraded farm-gate lot; BAU trials report up to +32% seasonal income from grading + MAP packaging",
             digital_certificate=certificate, latency_ms=round((time.perf_counter() - started) * 1000, 1),
         )

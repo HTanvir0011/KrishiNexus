@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 
 import { api, ApiError, type PoolView } from "../api/client";
 import { ScoreDial } from "../components/gauges";
+import { WarningNote } from "../components/OpticalGraderCanvas";
+import { PriceMonitorPanel } from "../components/PriceMonitorPanel";
 import { Badge, Button, Panel, ProgressBar, Spinner } from "../components/ui";
 import { cn, kg, shortHash, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
@@ -96,7 +98,7 @@ function gradeMix(pool: PoolView, gradeA: string): string {
   return `${Math.round((a / Math.max(1, pool.loaded_kg)) * 100)}% ${gradeA}`;
 }
 
-type Verification = { cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean };
+type Verification = { cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean; warnings: string[] };
 
 export function BuyerBankPortal({ className }: { className?: string }) {
   const c = useCopy(COPY);
@@ -123,9 +125,12 @@ export function BuyerBankPortal({ className }: { className?: string }) {
     setBusy("underwrite");
     setVerification(null);
     try {
+      // A photo the farmer graded of the same crop (the request below is for Cardinal potato) grades the lot.
+      const photo = grade?.source === "uploaded_image" && grade.crop === "Cardinal Potato" ? grade : null;
       const result = await api.voiceInteract({
         text: "আমার কাছে ৪০০ কেজি কার্ডিনাল আলু আছে, ফড়িয়া ১১ টাকা কেজি বলছে। আমার ফোন 01711223344",
-        district: "Bogura", upazila: "Shibganj", farmer_id: "FARM-BOG-104", grade_sample_preset: "high_grade_harvest",
+        district: "Bogura", upazila: "Shibganj", farmer_id: "FARM-BOG-104",
+        ...(photo ? { edge_certificate_id: photo.digital_certificate.cert_id } : { grade_sample_preset: "high_grade_harvest" as const }),
       });
       setState({ lastVoice: result.data });
       await refreshPools();
@@ -242,12 +247,15 @@ export function BuyerBankPortal({ className }: { className?: string }) {
                   {verification.cert_id}: {verification.known ? c.issuedBy : c.unknownNode} · {c.payloadHash} {verification.payload_hash_valid ? c.valid : c.invalid} · {c.signature} {verification.signature_valid ? c.valid : c.invalid}{verification.tampered ? c.tampered : ""}
                 </div>
               )}
+              {verification?.warnings.map((warning) => <WarningNote key={warning} text={warning} />)}
               {!certId && <p className="m-0 mt-1 text-[12px] text-slate-500">{c.scanHint}</p>}
             </div>
             <p className="m-0 text-[11.5px] text-slate-500">{credit.lender_model}</p>
           </>
         )}
       </Panel>
+
+      <PriceMonitorPanel className="xl:col-span-5" />
     </div>
   );
 }

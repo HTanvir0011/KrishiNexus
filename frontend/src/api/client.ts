@@ -74,6 +74,7 @@ export interface GradeCropResult {
   assigned_grade: string;
   grade_letter: "A" | "B" | "C";
   grading_reasons: string[];
+  warnings: string[];
   price_premium_pct: number;
   premium_basis: string;
   digital_certificate: DigitalCertificate;
@@ -373,6 +374,14 @@ export interface McpTool {
   outputSchema: Record<string, unknown>;
 }
 
+export interface AdapterScoreRow {
+  metric: string;
+  target: number | null;
+  adapter: number;
+  baseline: number | null;
+  meets_target: boolean | null;
+}
+
 export interface LocalModelsReport {
   runtimes: { runtime: string; endpoint: string; reachable: boolean; models: string[] }[];
   models: {
@@ -388,6 +397,10 @@ export interface LocalModelsReport {
     name: string;
     status: string;
     rank: number;
+    /** Measured on the held-out test split by the training run; present only when the adapter is installed. */
+    eval_summary?: AdapterScoreRow[] | null;
+    /** The same split scored on the deployed GGUF through Ollama: the model the app actually runs. */
+    deployed_eval_summary?: AdapterScoreRow[] | null;
     dataset: {
       total_examples: number;
       by_category: Record<string, number>;
@@ -396,6 +409,42 @@ export interface LocalModelsReport {
       test_examples?: number;
     };
   };
+}
+
+export interface PriceMonitorReport {
+  status: "installed" | "not_installed";
+  division: string;
+  divisions: string[];
+  series: {
+    key: string;
+    staple: string;
+    division: string;
+    unit: string;
+    last_month: string;
+    last_price_tk: number;
+    change_1m_pct: number | null;
+    change_12m_pct: number | null;
+    forecast: { month: string; price_tk: number }[];
+    history: [string, number][];
+  }[];
+  model_chosen_on_validation: string | null;
+  data_through: string | null;
+  /** The chosen model's and the "no change" forecast's error on the held-out test year, from the run's report. */
+  test_mean_smape: { chosen: number; naive: number } | null;
+  margin_flags: { series: string; month: string; margin_pct: number; z: number | null; isolation_forest: boolean; reported_window: string | null }[];
+  source: { name: string; licence: string; sha256: string; hdx_last_modified?: string } | null;
+  note: string;
+}
+
+export interface LocalInferenceResult {
+  display_name: string;
+  runtime: string;
+  generated_by: string;
+  telemetry_source: "measured" | "modelled";
+  output_text: string;
+  latency_ms: number;
+  tokens_per_s: number;
+  grounded_prompt: string | null;
 }
 
 export interface HoldoutReport {
@@ -486,6 +535,7 @@ export interface VoiceInteractBody {
   upazila?: string;
   farmer_id?: string;
   grade_sample_preset?: SamplePreset;
+  edge_certificate_id?: string;
   offline_mode?: boolean;
   session_id?: string;
 }
@@ -494,7 +544,7 @@ export const api = {
   health: () => request<{ status: string; mcp_servers: number; tools: number; active_anomalies: number }>("/health", undefined, 4_000),
 
   verifyCertificate: (certId: string) =>
-    post<{ cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean }>("/edge/verify-certificate", { cert_id: certId }),
+    post<{ cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean; warnings: string[] }>("/edge/verify-certificate", { cert_id: certId }),
 
   voiceInteract: (body: VoiceInteractBody) =>
     withFallback(() => post<VoiceInteractResponse>("/edge/voice-interact", body), () => fallbackVoice(body)),
@@ -504,6 +554,10 @@ export const api = {
       () => post<GradeCropResult>("/edge/grade-crop", { crop, sample_preset: preset, district, farmer_id: farmerId }),
       () => fallbackGrade(crop, preset),
     ),
+
+  /** A real photo has no offline stand-in: errors surface instead of a fallback grade. */
+  gradePhoto: (crop: GradeableCrop, imageBase64: string, district: string, frameWidthMm: number) =>
+    post<GradeCropResult>("/edge/grade-crop", { crop, image_base64: imageBase64, district, frame_width_mm: frameWidthMm }),
 
   orchestrate: (body: Record<string, unknown>) => post<OrchestrateResponse>("/agents/orchestrate", body),
 
@@ -552,6 +606,8 @@ export const api = {
   mcpTools: () => request<{ count: number; servers: string[]; tools: McpTool[] }>("/mcp/tools"),
 
   localModels: () => withFallback(() => request<LocalModelsReport>("/edge/local-models"), fallbackLocalModels),
+  localInference: (prompt: string, model_name: string) => post<LocalInferenceResult>("/edge/local-inference", { prompt, model_name }),
+  priceMonitor: (division: string) => request<PriceMonitorReport>(`/market/price-monitor?division=${encodeURIComponent(division)}`),
 
   mcpServers: () => request<McpServerInfo[]>("/mcp/servers"),
   compress: (raw_context: string) => post<CompressReport>("/optimization/compress", { raw_context }),

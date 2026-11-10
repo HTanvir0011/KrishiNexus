@@ -472,7 +472,8 @@ class N8nWebhookHandlers:
     async def hourly_sar_flood_check(self, request: SarFloodCheckRequest) -> SarFloodReport:
         """Hourly job: score every haor upazila from the latest Sentinel-1 pass, queue Bangla voice alerts
         for ORANGE/RED, and open a CRITICAL 72-hour harvest window for RED."""
-        from mcp_servers.agri_weather_sar_mcp import HAOR_UPAZILAS, calculate_haor_flash_flood_risk, trigger_early_harvest_window
+        from mcp_servers.agri_weather_sar_mcp import (HAOR_UPAZILAS, calculate_haor_flash_flood_risk, simulated_sar_db,
+                                                      trigger_early_harvest_window)
         from mcp_servers.anomaly_state import ANOMALIES
         from schemas.mcp_models import CalculateHaorFlashFloodRiskInput, TriggerEarlyHarvestWindowInput, UrgencyLevel
 
@@ -489,8 +490,7 @@ class N8nWebhookHandlers:
             elif injected is not None:
                 sar, source = float(injected.params["sar_water_backscatter_db"]), "injected anomaly scene"
             else:
-                sar = round(-11.5 + 3.0 * (stable_unit("s1-pass", name, now.strftime("%Y%m%d%H")) - 0.5), 2)
-                sar, source = sar, "simulated Sentinel-1 IW GRD pass (no live Copernicus feed)"
+                sar, source = simulated_sar_db(name, now), "simulated Sentinel-1 IW GRD pass (no live Copernicus feed)"
             risk = await calculate_haor_flash_flood_risk(CalculateHaorFlashFloodRiskInput(upazila=name, sar_water_backscatter_db=sar))
             rows.append(FloodCheckRow(upazila=name, district=upazila.district, sar_backscatter_db=sar, sar_source=source,
                                       breach_probability_pct=risk.embankment_breach_probability_pct,

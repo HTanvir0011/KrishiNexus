@@ -1,0 +1,224 @@
+{
+  "model": "yolov11n-krishi-bd-v2.1",
+  "status": "trained",
+  "stages": {
+    "roi": "YOLO11n detect, 1 class (potato)",
+    "defect": "YOLO11n-seg, 4 classes scab, rot, greening, mechanical_damage"
+  },
+  "dataset": {
+    "name": "Diamant Potato Dataset",
+    "doi": "10.17632/4vty9rz7zw.1",
+    "licence": "CC BY 4.0",
+    "sha256": {
+      "defect": "89cbdfc1072415e35ec11fc4a22318a848fa90285b1a927112438af1c1bc3d48",
+      "roi": "27a32167f8c71b88c8ec88f80249b91a3a019ecc1992ed6e95f67fac262cea0d"
+    },
+    "checks": {
+      "roi": {
+        "images": {
+          "test": 239,
+          "train": 1670,
+          "val": 477
+        },
+        "instances": {
+          "test": [
+            363
+          ],
+          "train": [
+            2581
+          ],
+          "val": [
+            645
+          ]
+        },
+        "unknown_class_ids": [],
+        "shapes": {
+          "polygon": 3589
+        },
+        "missing_label_files": 0,
+        "exif_rotated_images": 0,
+        "coord_range": [
+          0.0,
+          1.0
+        ]
+      },
+      "defect": {
+        "images": {
+          "test": 267,
+          "train": 1281,
+          "val": 176
+        },
+        "instances": {
+          "test": [
+            654,
+            190,
+            29,
+            123
+          ],
+          "train": [
+            3188,
+            903,
+            79,
+            562
+          ],
+          "val": [
+            548,
+            175,
+            17,
+            108
+          ]
+        },
+        "unknown_class_ids": [],
+        "shapes": {
+          "polygon": 6576
+        },
+        "missing_label_files": 0,
+        "exif_rotated_images": 0,
+        "coord_range": [
+          0.0,
+          1.0
+        ]
+      },
+      "problems": []
+    }
+  },
+  "grade_inputs": {
+    "bruising_pct": [
+      "scab",
+      "greening",
+      "mechanical_damage"
+    ],
+    "rot_pct": [
+      "rot"
+    ],
+    "limits": {
+      "a_bruising": 3,
+      "a_rot": 2,
+      "b_bruising": 8,
+      "b_rot": 5
+    }
+  },
+  "targets": {
+    "roi_box_mAP50": 0.9,
+    "defect_mask_mAP50": 0.5,
+    "grade_accuracy": 0.7
+  },
+  "summary": [
+    {
+      "metric": "roi_box_mAP50",
+      "target": 0.9,
+      "value": 0.9938,
+      "meets_target": true
+    },
+    {
+      "metric": "defect_mask_mAP50",
+      "target": 0.5,
+      "value": 0.3347,
+      "meets_target": false
+    },
+    {
+      "metric": "grade_accuracy",
+      "target": 0.7,
+      "value": 0.7678,
+      "meets_target": true
+    }
+  ],
+  "results": {
+    "roi_test": {
+      "box": {
+        "precision": 0.9836,
+        "recall": 0.989,
+        "mAP50": 0.9938,
+        "mAP50-95": 0.9775
+      },
+      "n_images": 239
+    },
+    "defect_test": {
+      "box": {
+        "precision": 0.3919,
+        "recall": 0.4777,
+        "mAP50": 0.3668,
+        "mAP50-95": 0.2152
+      },
+      "mask": {
+        "precision": 0.3695,
+        "recall": 0.4423,
+        "mAP50": 0.3347,
+        "mAP50-95": 0.1695
+      },
+      "n_images": 267,
+      "mask_ap50_by_class": {
+        "scab": 0.4346,
+        "rot": 0.4286,
+        "greening": 0.1892,
+        "mechanical_damage": 0.2863
+      },
+      "box_ap50_by_class": {
+        "scab": 0.4952,
+        "rot": 0.4572,
+        "greening": 0.1905,
+        "mechanical_damage": 0.3242
+      }
+    },
+    "grading": {
+      "n_potatoes": 267,
+      "conf": 0.25,
+      "grade_accuracy": 0.7678,
+      "grade_balanced_accuracy": 0.6437,
+      "majority_grade_baseline": {
+        "grade": "C",
+        "accuracy": 0.6742,
+        "train_grade_counts": {
+          "C": 829,
+          "A": 362,
+          "B": 90
+        }
+      },
+      "confusion_label_to_predicted": {
+        "A": {
+          "B": 4,
+          "A": 41,
+          "C": 19
+        },
+        "B": {
+          "C": 10,
+          "A": 3,
+          "B": 10
+        },
+        "C": {
+          "C": 154,
+          "B": 6,
+          "A": 20
+        }
+      },
+      "bruising_pct_mae": 19.2,
+      "rot_pct_mae": 1.0,
+      "presence": {
+        "scab": {
+          "precision": 0.9347,
+          "recall": 0.9622,
+          "f1": 0.9482,
+          "support": 238
+        },
+        "rot": {
+          "precision": 0.6491,
+          "recall": 0.6852,
+          "f1": 0.6667,
+          "support": 108
+        },
+        "greening": {
+          "precision": 0.6,
+          "recall": 0.24,
+          "f1": 0.3429,
+          "support": 25
+        },
+        "mechanical_damage": {
+          "precision": 0.5616,
+          "recall": 0.5694,
+          "f1": 0.5655,
+          "support": 72
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,871 @@
+{
+  "model": "krishi-price-v1",
+  "status": "trained",
+  "data": {
+    "source": "WFP Bangladesh - Food Prices (HDX)",
+    "licence": "CC BY-IGO",
+    "sha256": "2f0090107e98beb11e09d423f9b8a1482e6f74b854e075fa36696ec7c818c0ce",
+    "rows": 34489,
+    "first": "1998-07",
+    "last": "2026-09",
+    "hdx_dataset": "wfp-food-prices-for-bangladesh",
+    "hdx_last_modified": "2026-11-04T01:13:39"
+  },
+  "series": {
+    "rice_coarse|Barisal": {
+      "first": "2006-08",
+      "last": "2026-07",
+      "observed_months": 227
+    },
+    "rice_coarse|Chittagong": {
+      "first": "2005-10",
+      "last": "2026-07",
+      "observed_months": 245
+    },
+    "rice_coarse|Dhaka": {
+      "first": "2004-01",
+      "last": "2026-07",
+      "observed_months": 253
+    },
+    "rice_coarse|Khulna": {
+      "first": "2005-10",
+      "last": "2026-07",
+      "observed_months": 246
+    },
+    "rice_coarse|Rajshahi": {
+      "first": "2006-05",
+      "last": "2026-07",
+      "observed_months": 237
+    },
+    "rice_coarse|Sylhet": {
+      "first": "2007-01",
+      "last": "2026-07",
+      "observed_months": 193
+    },
+    "wheat_flour|Barisal": {
+      "first": "2006-12",
+      "last": "2026-08",
+      "observed_months": 232
+    },
+    "wheat_flour|Chittagong": {
+      "first": "2006-01",
+      "last": "2026-08",
+      "observed_months": 246
+    },
+    "wheat_flour|Dhaka": {
+      "first": "2005-11",
+      "last": "2026-08",
+      "observed_months": 246
+    },
+    "wheat_flour|Khulna": {
+      "first": "2005-10",
+      "last": "2026-08",
+      "observed_months": 244
+    },
+    "wheat_flour|Rajshahi": {
+      "first": "2006-07",
+      "last": "2026-08",
+      "observed_months": 238
+    },
+    "wheat_flour|Sylhet": {
+      "first": "2007-01",
+      "last": "2026-08",
+      "observed_months": 232
+    },
+    "lentils_masur|Barisal": {
+      "first": "2006-08",
+      "last": "2026-07",
+      "observed_months": 221
+    },
+    "lentils_masur|Chittagong": {
+      "first": "2005-10",
+      "last": "2026-07",
+      "observed_months": 248
+    },
+    "lentils_masur|Dhaka": {
+      "first": "2005-10",
+      "last": "2026-07",
+      "observed_months": 244
+    },
+    "lentils_masur|Khulna": {
+      "first": "2006-01",
+      "last": "2026-07",
+      "observed_months": 243
+    },
+    "lentils_masur|Rajshahi": {
+      "first": "2006-05",
+      "last": "2026-07",
+      "observed_months": 238
+    },
+    "lentils_masur|Sylhet": {
+      "first": "2007-02",
+      "last": "2026-07",
+      "observed_months": 223
+    },
+    "palm_oil|Barisal": {
+      "first": "2006-09",
+      "last": "2026-09",
+      "observed_months": 198
+    },
+    "palm_oil|Chittagong": {
+      "first": "2005-10",
+      "last": "2026-09",
+      "observed_months": 236
+    },
+    "palm_oil|Dhaka": {
+      "first": "2006-04",
+      "last": "2026-09",
+      "observed_months": 241
+    },
+    "palm_oil|Khulna": {
+      "first": "2005-10",
+      "last": "2026-09",
+      "observed_months": 235
+    },
+    "palm_oil|Rajshahi": {
+      "first": "2006-07",
+      "last": "2026-09",
+      "observed_months": 238
+    },
+    "palm_oil|Sylhet": {
+      "first": "2007-04",
+      "last": "2026-07",
+      "observed_months": 210
+    }
+  },
+  "joins": {
+    "rice_coarse|Barisal": {
+      "first_month": "2020-08",
+      "log_jump": 0.0407
+    },
+    "rice_coarse|Chittagong": {
+      "first_month": "2020-07",
+      "log_jump": 0.1557
+    },
+    "rice_coarse|Dhaka": {
+      "first_month": "2020-08",
+      "log_jump": 0.0389
+    },
+    "rice_coarse|Khulna": {
+      "first_month": "2020-08",
+      "log_jump": 0.0684
+    },
+    "rice_coarse|Rajshahi": {
+      "first_month": "2020-07",
+      "log_jump": 0.1045
+    },
+    "rice_coarse|Sylhet": {
+      "first_month": "2020-08",
+      "log_jump": 0.1608
+    },
+    "wheat_flour|Barisal": {
+      "first_month": "2020-08",
+      "log_jump": 0.0075
+    },
+    "wheat_flour|Chittagong": {
+      "first_month": "2020-08",
+      "log_jump": 0.0037
+    },
+    "wheat_flour|Dhaka": {
+      "first_month": "2020-08",
+      "log_jump": -0.0106
+    },
+    "wheat_flour|Khulna": {
+      "first_month": "2020-08",
+      "log_jump": -0.0486
+    },
+    "wheat_flour|Rajshahi": {
+      "first_month": "2020-08",
+      "log_jump": 0.0157
+    },
+    "wheat_flour|Sylhet": {
+      "first_month": "2020-08",
+      "log_jump": 0.0303
+    },
+    "lentils_masur|Barisal": {
+      "first_month": "2020-08",
+      "log_jump": -0.1175
+    },
+    "lentils_masur|Chittagong": {
+      "first_month": "2020-07",
+      "log_jump": -0.1267
+    },
+    "lentils_masur|Dhaka": {
+      "first_month": "2020-07",
+      "log_jump": -0.164
+    },
+    "lentils_masur|Khulna": {
+      "first_month": "2020-08",
+      "log_jump": -0.0788
+    },
+    "lentils_masur|Rajshahi": {
+      "first_month": "2020-08",
+      "log_jump": -0.0844
+    },
+    "lentils_masur|Sylhet": {
+      "first_month": "2020-08",
+      "log_jump": -0.111
+    },
+    "palm_oil|Barisal": {
+      "first_month": "2020-08",
+      "log_jump": 0.1034
+    },
+    "palm_oil|Chittagong": {
+      "first_month": "2020-08",
+      "log_jump": 0.0389
+    },
+    "palm_oil|Dhaka": {
+      "first_month": "2020-07",
+      "log_jump": -0.0017
+    },
+    "palm_oil|Khulna": {
+      "first_month": "2020-08",
+      "log_jump": 0.1186
+    },
+    "palm_oil|Rajshahi": {
+      "first_month": "2020-08",
+      "log_jump": 0.0578
+    },
+    "palm_oil|Sylhet": {
+      "first_month": "2020-08",
+      "log_jump": -0.0519
+    }
+  },
+  "features": {
+    "rainfall": true,
+    "fx": "taka per USD implied by WFP price / usdprice",
+    "ramadan": "share of the month in Ramadan, tabular Islamic calendar"
+  },
+  "windows": {
+    "train": "targets before 2024-10",
+    "val": "2024-10 to 2025-09",
+    "test": "2025-10 to 2026-09"
+  },
+  "training": {
+    "lightgbm_best_iteration": {
+      "1": 42,
+      "2": 22,
+      "3": 75
+    },
+    "gru_epochs": 33,
+    "tcn_epochs": 32,
+    "sequence_windows": 5139
+  },
+  "results": {
+    "1": {
+      "naive": {
+        "val": {
+          "n": 288,
+          "smape": 1.734,
+          "mae_tk": 1.632,
+          "direction_accuracy": 0.0
+        },
+        "test": {
+          "n": 172,
+          "smape": 1.773,
+          "mae_tk": 1.589,
+          "direction_accuracy": 0.0
+        }
+      },
+      "seasonal_naive": {
+        "val": {
+          "n": 288,
+          "smape": 10.2,
+          "mae_tk": 10.41,
+          "direction_accuracy": 0.4014
+        },
+        "test": {
+          "n": 172,
+          "smape": 8.366,
+          "mae_tk": 7.435,
+          "direction_accuracy": 0.439
+        }
+      },
+      "lightgbm": {
+        "val": {
+          "n": 288,
+          "smape": 1.706,
+          "mae_tk": 1.585,
+          "direction_accuracy": 0.669
+        },
+        "test": {
+          "n": 172,
+          "smape": 1.856,
+          "mae_tk": 1.648,
+          "direction_accuracy": 0.4512
+        }
+      },
+      "gru": {
+        "val": {
+          "n": 288,
+          "smape": 1.722,
+          "mae_tk": 1.604,
+          "direction_accuracy": 0.5775
+        },
+        "test": {
+          "n": 172,
+          "smape": 1.826,
+          "mae_tk": 1.629,
+          "direction_accuracy": 0.3902
+        }
+      },
+      "tcn": {
+        "val": {
+          "n": 288,
+          "smape": 1.736,
+          "mae_tk": 1.631,
+          "direction_accuracy": 0.5563
+        },
+        "test": {
+          "n": 172,
+          "smape": 1.802,
+          "mae_tk": 1.621,
+          "direction_accuracy": 0.4756
+        }
+      },
+      "ensemble": {
+        "val": {
+          "n": 288,
+          "smape": 1.714,
+          "mae_tk": 1.6,
+          "direction_accuracy": 0.5986
+        },
+        "test": {
+          "n": 172,
+          "smape": 1.81,
+          "mae_tk": 1.613,
+          "direction_accuracy": 0.3902
+        }
+      }
+    },
+    "2": {
+      "naive": {
+        "val": {
+          "n": 288,
+          "smape": 2.761,
+          "mae_tk": 2.741,
+          "direction_accuracy": 0.0
+        },
+        "test": {
+          "n": 193,
+          "smape": 2.767,
+          "mae_tk": 2.554,
+          "direction_accuracy": 0.0
+        }
+      },
+      "seasonal_naive": {
+        "val": {
+          "n": 288,
+          "smape": 10.217,
+          "mae_tk": 10.42,
+          "direction_accuracy": 0.3439
+        },
+        "test": {
+          "n": 193,
+          "smape": 8.351,
+          "mae_tk": 7.57,
+          "direction_accuracy": 0.3415
+        }
+      },
+      "lightgbm": {
+        "val": {
+          "n": 288,
+          "smape": 2.756,
+          "mae_tk": 2.738,
+          "direction_accuracy": 0.5926
+        },
+        "test": {
+          "n": 193,
+          "smape": 2.948,
+          "mae_tk": 2.69,
+          "direction_accuracy": 0.5447
+        }
+      },
+      "gru": {
+        "val": {
+          "n": 288,
+          "smape": 2.75,
+          "mae_tk": 2.705,
+          "direction_accuracy": 0.6085
+        },
+        "test": {
+          "n": 193,
+          "smape": 2.831,
+          "mae_tk": 2.601,
+          "direction_accuracy": 0.4797
+        }
+      },
+      "tcn": {
+        "val": {
+          "n": 288,
+          "smape": 2.761,
+          "mae_tk": 2.729,
+          "direction_accuracy": 0.4974
+        },
+        "test": {
+          "n": 193,
+          "smape": 2.792,
+          "mae_tk": 2.579,
+          "direction_accuracy": 0.4878
+        }
+      },
+      "ensemble": {
+        "val": {
+          "n": 288,
+          "smape": 2.74,
+          "mae_tk": 2.709,
+          "direction_accuracy": 0.582
+        },
+        "test": {
+          "n": 193,
+          "smape": 2.812,
+          "mae_tk": 2.588,
+          "direction_accuracy": 0.4959
+        }
+      }
+    },
+    "3": {
+      "naive": {
+        "val": {
+          "n": 288,
+          "smape": 3.713,
+          "mae_tk": 3.755,
+          "direction_accuracy": 0.0
+        },
+        "test": {
+          "n": 177,
+          "smape": 3.388,
+          "mae_tk": 3.159,
+          "direction_accuracy": 0.0
+        }
+      },
+      "seasonal_naive": {
+        "val": {
+          "n": 288,
+          "smape": 10.234,
+          "mae_tk": 10.431,
+          "direction_accuracy": 0.3302
+        },
+        "test": {
+          "n": 177,
+          "smape": 8.17,
+          "mae_tk": 7.549,
+          "direction_accuracy": 0.3582
+        }
+      },
+      "lightgbm": {
+        "val": {
+          "n": 288,
+          "smape": 3.73,
+          "mae_tk": 3.882,
+          "direction_accuracy": 0.6415
+        },
+        "test": {
+          "n": 177,
+          "smape": 4.207,
+          "mae_tk": 3.773,
+          "direction_accuracy": 0.5299
+        }
+      },
+      "gru": {
+        "val": {
+          "n": 288,
+          "smape": 3.754,
+          "mae_tk": 3.794,
+          "direction_accuracy": 0.5425
+        },
+        "test": {
+          "n": 177,
+          "smape": 3.53,
+          "mae_tk": 3.279,
+          "direction_accuracy": 0.5149
+        }
+      },
+      "tcn": {
+        "val": {
+          "n": 288,
+          "smape": 3.72,
+          "mae_tk": 3.753,
+          "direction_accuracy": 0.5142
+        },
+        "test": {
+          "n": 177,
+          "smape": 3.425,
+          "mae_tk": 3.184,
+          "direction_accuracy": 0.4478
+        }
+      },
+      "ensemble": {
+        "val": {
+          "n": 288,
+          "smape": 3.709,
+          "mae_tk": 3.786,
+          "direction_accuracy": 0.6085
+        },
+        "test": {
+          "n": 177,
+          "smape": 3.619,
+          "mae_tk": 3.334,
+          "direction_accuracy": 0.4925
+        }
+      }
+    }
+  },
+  "mean_smape": {
+    "val": {
+      "naive": 2.736,
+      "seasonal_naive": 10.217,
+      "lightgbm": 2.731,
+      "gru": 2.742,
+      "tcn": 2.739,
+      "ensemble": 2.721
+    },
+    "test": {
+      "naive": 2.643,
+      "seasonal_naive": 8.296,
+      "lightgbm": 3.004,
+      "gru": 2.729,
+      "tcn": 2.673,
+      "ensemble": 2.747
+    }
+  },
+  "chosen_on_validation": "ensemble",
+  "targets": {
+    "mean_smape_below_naive": {
+      "chosen": 2.747,
+      "naive": 2.643,
+      "meets": false
+    },
+    "h3_smape_below_seasonal_naive": {
+      "chosen": 3.619,
+      "seasonal_naive": 8.17,
+      "meets": true
+    },
+    "h3_direction_accuracy_at_least_0.55": {
+      "chosen": 0.4925,
+      "meets": false
+    }
+  },
+  "spread_anomalies": {
+    "per_series": {
+      "rice_coarse": {
+        "months": 158,
+        "first": "2008-01",
+        "last": "2021-05",
+        "margin_median_pct": 9.78,
+        "margin_range_pct": [
+          2.18,
+          29.69
+        ],
+        "flags": 18,
+        "flags_in_windows": 2,
+        "months_in_windows": 13
+      },
+      "rice_medium": {
+        "months": 160,
+        "first": "2008-01",
+        "last": "2021-05",
+        "margin_median_pct": 8.66,
+        "margin_range_pct": [
+          4.07,
+          22.03
+        ],
+        "flags": 11,
+        "flags_in_windows": 1,
+        "months_in_windows": 15
+      },
+      "wheat_flour": {
+        "months": 155,
+        "first": "2008-07",
+        "last": "2021-05",
+        "margin_median_pct": 15.84,
+        "margin_range_pct": [
+          6.11,
+          35.69
+        ],
+        "flags": 5,
+        "flags_in_windows": 0,
+        "months_in_windows": 10
+      }
+    },
+    "flagged": [
+      {
+        "series": "rice_coarse",
+        "month": "2008-11",
+        "margin_pct": 14.61,
+        "z": null,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2011-12",
+        "margin_pct": 11.32,
+        "z": 3.94,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-03",
+        "margin_pct": 12.41,
+        "z": 3.69,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-04",
+        "margin_pct": 13.28,
+        "z": 3.65,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-05",
+        "margin_pct": 15.32,
+        "z": 4.23,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-06",
+        "margin_pct": 18.65,
+        "z": 6.16,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-07",
+        "margin_pct": 18.19,
+        "z": 5.06,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-08",
+        "margin_pct": 19.66,
+        "z": 5.69,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-09",
+        "margin_pct": 21.5,
+        "z": 5.61,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2012-10",
+        "margin_pct": 21.04,
+        "z": 4.33,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2015-02",
+        "margin_pct": 21.98,
+        "z": 4.45,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2015-03",
+        "margin_pct": 25.42,
+        "z": 5.76,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2015-04",
+        "margin_pct": 29.69,
+        "z": 6.79,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2015-05",
+        "margin_pct": 20.18,
+        "z": 3.44,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2016-08",
+        "margin_pct": 4.87,
+        "z": -3.64,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2016-09",
+        "margin_pct": 3.9,
+        "z": -4.05,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2020-03",
+        "margin_pct": 12.47,
+        "z": -0.46,
+        "isolation_forest": true,
+        "reported_window": "2020 COVID-19 lockdown"
+      },
+      {
+        "series": "rice_coarse",
+        "month": "2020-04",
+        "margin_pct": 9.89,
+        "z": -0.94,
+        "isolation_forest": true,
+        "reported_window": "2020 COVID-19 lockdown"
+      },
+      {
+        "series": "rice_medium",
+        "month": "2010-01",
+        "margin_pct": 8.65,
+        "z": 0.01,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2011-05",
+        "margin_pct": 7.31,
+        "z": -0.35,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2012-04",
+        "margin_pct": 12.94,
+        "z": 4.17,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2012-06",
+        "margin_pct": 12.93,
+        "z": 3.7,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2012-09",
+        "margin_pct": 17.72,
+        "z": 4.71,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2015-05",
+        "margin_pct": 14.93,
+        "z": 4.41,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2015-06",
+        "margin_pct": 15.29,
+        "z": 4.6,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2015-08",
+        "margin_pct": 14.93,
+        "z": 3.58,
+        "isolation_forest": false,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2017-05",
+        "margin_pct": 5.38,
+        "z": -1.94,
+        "isolation_forest": true,
+        "reported_window": "2017 haor-flood rice spike"
+      },
+      {
+        "series": "rice_medium",
+        "month": "2020-07",
+        "margin_pct": 19.6,
+        "z": 1.2,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "rice_medium",
+        "month": "2020-08",
+        "margin_pct": 8.02,
+        "z": -2.37,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "wheat_flour",
+        "month": "2008-11",
+        "margin_pct": 12.1,
+        "z": null,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "wheat_flour",
+        "month": "2008-12",
+        "margin_pct": 11.34,
+        "z": null,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "wheat_flour",
+        "month": "2010-08",
+        "margin_pct": 7.42,
+        "z": -2.96,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "wheat_flour",
+        "month": "2010-09",
+        "margin_pct": 7.57,
+        "z": -2.66,
+        "isolation_forest": true,
+        "reported_window": null
+      },
+      {
+        "series": "wheat_flour",
+        "month": "2011-09",
+        "margin_pct": 6.11,
+        "z": -1.9,
+        "isolation_forest": true,
+        "reported_window": null
+      }
+    ],
+    "share_of_months_in_windows": 0.0803,
+    "share_of_flags_in_windows": 0.0882,
+    "enrichment": 1.1,
+    "note": "No hoarding labels exist; the windows are publicly reported disruptions, so this is a case study."
+  },
+  "seconds": 48.9
+}

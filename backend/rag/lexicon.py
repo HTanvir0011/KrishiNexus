@@ -70,7 +70,7 @@ DIALECT_NORMALIZATION: dict[str, str] = {
 
 CROP_TERMS: dict[str, Crop] = {
     "কার্ডিনাল": Crop.CARDINAL_POTATO, "cardinal": Crop.CARDINAL_POTATO,
-    "ডায়মন্ড": Crop.DIAMANT_POTATO, "ডায়মন্ট": Crop.DIAMANT_POTATO, "diamant": Crop.DIAMANT_POTATO,
+    "ডায়মন্ড": Crop.DIAMANT_POTATO, "ডায়মন্ট": Crop.DIAMANT_POTATO, "diamant": Crop.DIAMANT_POTATO, "diamond": Crop.DIAMANT_POTATO,
     "আলু": Crop.CARDINAL_POTATO, "alu": Crop.CARDINAL_POTATO, "aloo": Crop.CARDINAL_POTATO, "potato": Crop.CARDINAL_POTATO,
     "কাঁচা মরিচ": Crop.GREEN_CHILI, "মরিচ": Crop.GREEN_CHILI, "morich": Crop.GREEN_CHILI, "chili": Crop.GREEN_CHILI,
     "chilli": Crop.GREEN_CHILI, "বেগুন": Crop.BRINJAL, "begun": Crop.BRINJAL, "brinjal": Crop.BRINJAL,

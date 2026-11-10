@@ -70,7 +70,7 @@ export function fallbackGrade(crop: GradeableCrop, preset: SamplePreset): GradeC
       estimated_moisture_pct: 79.6, undersized_pct: 0,
     },
     assigned_grade: letter === "A" ? "Grade-A (Export / Supermarket Direct)" : "Grade-B (Standard Wholesale)",
-    grade_letter: letter, grading_reasons: ["Offline preview: start the backend for a signed certificate"],
+    grade_letter: letter, grading_reasons: ["Offline preview: start the backend for a signed certificate"], warnings: [],
     price_premium_pct: letter === "A" ? 27.5 : 8, premium_basis: "BAU benchmark: up to +32% from grading + MAP packaging",
     digital_certificate: {
       cert_id: `OFFLINE-PREVIEW-${hex(rand, 10).toUpperCase()}`, issued_at: new Date().toISOString(),
@@ -178,9 +178,11 @@ export function fallbackLocalModels(): LocalModelsReport {
   return {
     runtimes: [runtime("ollama", "http://localhost:11434"), runtime("llama.cpp", "http://localhost:8080"), runtime("vllm", "http://localhost:8001")],
     models: [
-      { key: "qwen2.5-7b", display_name: "Qwen-2.5-7B-Instruct (Q4_K_M GGUF)", ollama_tag: "qwen2.5:7b-instruct-q4_K_M", quantization: "Q4_K_M GGUF",
-        role: "Bangla negotiation answers", lora_adapter: "krishi-bangla-lora-v1", telemetry: { vram_mb: 5366, decode_tokens_per_s: 4.9, fits_on_accelerator: true } },
+      { key: "krishi-bangla-1.5b", display_name: "KrishiNexus Bangla advisor: Qwen2.5-1.5B + LoRA (Q8_0 GGUF)", ollama_tag: "krishi-bangla:latest",
+        quantization: "Q8_0 GGUF", role: "Fine-tuned: fair price, store or sell, flood alert and storage answers from the agent's tool results",
+        lora_adapter: "krishi-bangla-lora-v2", telemetry: { vram_mb: 2152, decode_tokens_per_s: 14.0, fits_on_accelerator: true } },
     ],
-    lora_adapter: { name: "krishi-bangla-lora-v1", status: "dataset_ready_not_trained", rank: 16, dataset: { total_examples: 3200, by_category: {} } },
+    // The backend is unreachable here, so whether the adapter is installed is unknown.
+    lora_adapter: { name: "krishi-bangla-lora-v2", status: "unknown (backend offline)", rank: 16, dataset: { total_examples: 4800, by_category: {} } },
   };
 }

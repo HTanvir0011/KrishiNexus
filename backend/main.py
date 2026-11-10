@@ -32,7 +32,7 @@ POST   /edge/grade-crop              Optical grading with bounding boxes + signe
 POST   /edge/verify-certificate      Re-verify a Digital Quality Certificate
 GET    /edge/local-models            Ollama / llama.cpp / vLLM runtimes, Q4_K_M telemetry, LoRA registry
 POST   /edge/local-inference         On-device generation (live runtime or offline-blackout fallback)
-GET    /edge/lora-dataset            krishi-bangla-lora-v1 SFT examples (json or jsonl)
+GET    /edge/lora-dataset            SFT examples of the deployed krishi-bangla model (json or jsonl)
 GET    /evals/metrics                Measured RAGAS-style metrics, MCP schema validity, PII recall
 GET    /evals/holdout               Frozen 66-probe blind retrieval test (cached 10 min)
 POST   /evals/run-regression         Seeded 5-category regression suite (20 per category = 100 cases)
@@ -42,6 +42,7 @@ Run:  uvicorn main:app --reload --port 8000
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -100,6 +101,7 @@ from mcp_servers import registry
 from mcp_servers.anomaly_state import ANOMALIES
 from mcp_servers.base import JsonRpcDispatcher, ToolExecutionError, parse_error_response
 from optimization.token_compressor import TOKEN_OPTIMIZER
+from price_monitor import PriceMonitorReport, price_monitor
 from rag.crag_pipeline import CRAG_PIPELINE, RagQueryResult
 from rag.graph_rag import GraphTraversalResult, get_graph
 from rag.hybrid_retriever import PGVECTOR_SCHEMA, get_retriever
@@ -538,7 +540,7 @@ async def edge_grade_crop(
         "crop": "Cardinal Potato", "district": "Bogura", "sample_preset": "high_grade_harvest"}}})],
 ) -> GradeCropResult:
     try:
-        return OPTICAL_GRADER.grade(body)
+        return await asyncio.to_thread(OPTICAL_GRADER.grade, body)   # the YOLO cascade takes seconds on CPU
     except ToolExecutionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -549,6 +551,15 @@ async def edge_verify_certificate(body: VerifyCertificateRequest) -> Certificate
     if certificate is None:
         raise HTTPException(status_code=404, detail=f"No certificate '{body.cert_id}' was issued by this node.")
     return OPTICAL_GRADER.verify(certificate)
+
+
+@app.get("/market/price-monitor", response_model=PriceMonitorReport, tags=["market"])
+async def market_price_monitor(division: str = "Dhaka") -> PriceMonitorReport:
+    """WFP staple prices, krishi-price-v1 forecasts beside their measured test score, and Dhaka margin flags."""
+    try:
+        return price_monitor(division)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/edge/local-models", response_model=LocalModelsReport, tags=["edge"])
