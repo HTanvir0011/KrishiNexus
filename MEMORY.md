@@ -27,11 +27,12 @@
   - a transit-heat truck reroute (`/os/coop`);
   - compose profile `data`: pgvector, Neo4j, Redis and n8n, seeded from the node's own data.
 - Docker on a real host (GitHub Actions, `.github/workflows/docker-smoke.yml`, 2026-11-12): the default stack builds
-  and passes its smoke test. Profile `data` failed its first run (the seed volume's ownership). The `nocopy` fix was
-  pushed on 2026-11-12, and its CI re-run is recorded in the handover log.
+  and passes its smoke test. Profile `data` failed its first run (the seed volume's ownership); the `nocopy` fix was
+  pushed on 2026-11-12. The re-run stopped earlier, at a flaky regression case (COLD-005). That fix was pushed the
+  same day, and the CI run it started is recorded in the handover log.
 
 **Next:**
-1. Read the CI re-run of profile `data` and fix whatever it finds.
+1. Read the CI run after the regression fix, including profile `data`, and fix whatever it finds.
 2. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
 3. A showcase run-sheet, and a demo rehearsal with a real microphone.
 
@@ -1487,3 +1488,34 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - **Fix:** the postgres mount uses `nocopy`. The compose file still validates against the compose-spec schema
   (0 errors; the broken copy fails).
 - **Next:** the user said "Yes, push"; the fix went out with the pending docs, and that push re-runs CI.
+
+### 2026-11-12 · Fix and results pushed (the user said "Yes, push")
+- **Mirror sync as before:** the `/L` dry run showed only the v7 reports, the citation-check record and a
+  timestamp-only `ollama_local.py`, with nothing to delete. The root docs and `.github/workflows/docker-smoke.yml`
+  are copied too; `.github` is now part of the sync.
+- **README** (mirror only): the Docker note now gives the CI result, v2's row adds the fresh-batch citation score, and
+  the v7 line says it was not shipped.
+- **Checked before committing:** 15 files, +2,449/−33, no binaries. No state, weights, data or `.env` were staged. The
+  secret scan had no hits. The compose diff is only the `nocopy` mount.
+- **Commit** `295dead` "Fix the data profile's seed volume; record v7 and the citation check": author and committer
+  HTanvir0011, no co-author line. Pushed `9c819c8..295dead`; the GitHub API shows 15 files, +2449/−33.
+- **CI:** the push started Docker smoke-test run 43190290880.
+
+### 2026-11-12 · CI re-run found a flaky regression case; fixed locally
+- **Run 43190290880 failed earlier than the first run:** at the default stack's checks, where the regression suite
+  returned 99/100. Profile `data` never started.
+- **Reproduced in process:** COLD-005 (BCSA-MUN-05/CH-01, a 122-min power cut) read 49.98 °F and 94.55% RH. That is
+  inside the band the case always expects the chamber to leave.
+- **Cause:** the case drew outages of 60–600 min. The chamber model drifts toward a monthly ambient (Nov 24.5 °C,
+  Dec 20.5 °C, Jan 19 °C) from a setpoint that swings with the hour, so a 1–4 h cut stays in band at some hours.
+  - At worst, humidity alone needs 3.9 h to pass 95%, and in December temperature needs 3.4 h to pass 50 °F.
+  - The first CI run passed only because of the hour it ran at.
+- **Fix:** `_case_cold_chamber` draws 300–600 min (5–10 h). Each category has its own seeded RNG, so no other case
+  changes.
+- **Verified:**
+  - The cold-chamber category was run at every hour of the 12th of Nov, Dec, Jan and Feb (480 case runs a month),
+    with both module clocks patched. The old range failed 24 / 35 / 38 / 35 times; the new range failed 0.
+  - The full suite is 100/100 now.
+- **Why it matters:** at a December showcase the old suite would often have shown 98–99/100.
+- **Docs:** an AGENTS §7.2 row ("Power-cut outage (regression)") and the CI bullet in §3.
+- **Pushed** after the user said "Yes, push". That push re-runs CI, including profile `data`.

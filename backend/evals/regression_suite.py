@@ -551,7 +551,9 @@ async def _case_cold_chamber(i: int, rng: np.random.Generator) -> RegressionCase
 
     facility = list(FACILITIES.values())[i % len(FACILITIES)]
     chamber = f"CH-{int(rng.integers(1, facility.chambers + 1)):02d}"
-    elapsed = int(rng.integers(60, 601))
+    # 5-10 h: only outages this long leave the 48-50 F / 92-95% RH band in every month and at every hour (at worst,
+    # humidity alone needs 3.9 h); a 1-4 h outage in a cool month can stay in band, so the expectation below would not hold.
+    elapsed = int(rng.integers(300, 601))
     anomaly = ANOMALIES.inject("cold_chamber_power_cut", f"{facility.facility_id}/ALL", {
         "facility_id": facility.facility_id, "chamber_id": None, "generator_failed": True, "elapsed_minutes": elapsed}, 10)
     try:
