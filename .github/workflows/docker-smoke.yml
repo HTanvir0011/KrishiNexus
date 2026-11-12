@@ -1,0 +1,110 @@
+# Builds the KrishiNexus images on a Linux Docker host and smoke-tests the default stack and the `data` profile.
+name: Docker smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - docker-compose.yml
+      - backend/**
+      - frontend/**
+      - .github/workflows/docker-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Docker versions
+        run: |
+          docker version --format 'Docker Engine {{.Server.Version}}'
+          docker compose version
+
+      - name: Start the default stack (backend + frontend)
+        run: docker compose up --build --detach --wait --wait-timeout 300
+
+      - name: Check the backend, MCP, regression suite and nginx proxy
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost:8000/health | jq -e '.status == "ok"'
+          curl -fsS http://localhost:8000/mcp/tools | jq -e '.count == 13'
+          curl -fsS -X POST http://localhost:8000/evals/run-regression -H 'Content-Type: application/json' \
+            -d '{"sample_size": 20}' | jq -e '.passed == 100 and .failed == 0'
+          curl -fsS http://localhost:5173/health | jq -e '.status == "ok"'      # proxied by nginx
+          curl -fsS http://localhost:5173/os/market | grep -q 'id="root"'        # SPA fallback
+          echo "| Default stack | health, 13 MCP tools, regression 100/100, nginx proxy and SPA fallback | passed |" >> checks.md
+
+      - name: Check that backend state survives a restart (escrow lock)
+        run: |
+          set -euo pipefail
+          bids=$(curl -fsS 'http://localhost:8000/market/bids?crop=Cardinal%20Potato&district=Bogura&weight_kg=400&grade=B')
+          hub=$(jq -r '.bids[0].hub_id' <<<"$bids")
+          body=$(jq -n --arg hub "$hub" '{crop: "Cardinal Potato", origin_district: "Bogura", weight_kg: 400, grade: "B",
+                 hub_id: $hub, wallet: "bKash", wallet_number: "01711223344", farmer_id: "FARM-CI-001"}')
+          lock() { curl -fsS -X POST http://localhost:8000/market/bids/lock -H 'Content-Type: application/json' -d "$body"; }
+          first=$(lock | jq -r '.escrow_id')
+          docker compose restart backend
+          for i in $(seq 1 60); do curl -fsS http://localhost:8000/health >/dev/null 2>&1 && break; sleep 2; done
+          second=$(lock | jq -r '.escrow_id')
+          echo "escrow before restart $first, after $second"
+          test "$first" = "$second"
+          echo "| State volume | escrow $first is the same after \`docker compose restart backend\` | passed |" >> checks.md
+
+      - name: Start the data profile (pgvector, Neo4j, Redis, n8n)
+        run: docker compose --profile data up --build --detach
+
+      - name: Check the data services against the backend's own counts
+        run: |
+          set -euo pipefail
+          retry() { for i in $(seq 1 60); do "$@" && return 0; sleep 5; done; echo "gave up: $*"; return 1; }
+          stats=$(curl -fsS http://localhost:8000/rag/stats)
+          chunks=$(jq '.retriever.chunks' <<<"$stats"); nodes=$(jq '.graph.nodes' <<<"$stats"); edges=$(jq '.graph.edges' <<<"$stats")
+          echo "backend: $chunks chunks, $nodes graph nodes, $edges graph edges"
+          for s in data-seed neo4j-seed n8n-import; do   # one-shot jobs; nothing waits for neo4j-seed, so wait here
+            code=$(timeout 300 docker wait "$(docker compose ps -a -q "$s")")
+            echo "$s exited $code"; test "$code" = 0
+          done
+          pg() { docker compose exec -T postgres psql -U krishinexus -d krishinexus -tAc "$1"; }
+          test "$(pg 'SELECT count(*) FROM rag_chunks')" = "$chunks"
+          test "$(pg 'SELECT vector_dims(embedding) FROM rag_chunks LIMIT 1')" = 384
+          nearest=$(pg "SELECT a.chunk_id = (SELECT b.chunk_id FROM rag_chunks b ORDER BY b.embedding <=> a.embedding LIMIT 1)
+                        FROM rag_chunks a ORDER BY a.chunk_id LIMIT 1")
+          test "$nearest" = t     # a chunk's nearest neighbour by cosine distance is itself
+          pg "SELECT 1 FROM pg_database WHERE datname = 'n8n'" | grep -qx 1
+          cy() { docker compose exec -T neo4j cypher-shell -u neo4j -p krishinexus-dev --format plain "$1" | tail -n 1; }
+          test "$(cy 'MATCH (n:KnxNode) RETURN count(n)')" = "$nodes"
+          test "$(cy 'MATCH (:KnxNode)-[r]->(:KnxNode) RETURN count(r)')" = "$edges"
+          retry sh -c 'docker compose exec -T n8n n8n list:workflow | grep -c "KrishiNexus" | grep -qx 2'
+          echo "| pgvector | $chunks rows = backend chunks, 384-dim vectors, cosine nearest neighbour, n8n database | passed |" >> checks.md
+          echo "| Neo4j | $nodes nodes and $edges relationships = backend graph | passed |" >> checks.md
+          echo "| n8n | both KrishiNexus workflows imported | passed |" >> checks.md
+
+      - name: n8n details (reported, not required)
+        continue-on-error: true
+        run: |
+          echo "n8n $(docker compose exec -T n8n n8n --version)"
+          active=$(docker compose exec -T n8n n8n list:workflow --active=true | grep -c KrishiNexus || true)
+          echo "| n8n | $active of 2 workflows switched on after import | reported |" >> checks.md
+          docker compose exec -T n8n n8n execute --id KnxDailyDamSync1 > execute.log 2>&1 || true
+          calls=$(docker compose logs backend | grep -c 'POST /automation/n8n/daily-dam-sync' || true)
+          echo "| n8n → backend | \`n8n execute\` of the DAM sync; backend logged $calls call(s) | reported |" >> checks.md
+          tail -n 20 execute.log
+
+      - name: Summary
+        if: always()
+        run: |
+          { echo "### Docker smoke test"; echo; echo "| Area | Check | Result |"; echo "|---|---|---|"; cat checks.md 2>/dev/null || true; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --profile data logs --no-color --tail 200
+
+      - name: Stop and remove everything
+        if: always()
+        run: docker compose --profile data down --volumes
