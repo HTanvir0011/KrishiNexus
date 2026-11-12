@@ -181,7 +181,8 @@ services:
     volumes:
       - data-seed:/seed:ro
     entrypoint: ["/bin/sh", "-c"]
-    command: ["n8n list:workflow | grep -q 'KrishiNexus - Daily DAM Price Sync' || (n8n import:workflow --input=/seed/n8n-workflows.json && (n8n update:workflow --all --active=true || echo 'Turn on the two KrishiNexus workflows in the n8n editor.'))"]
+    # Switching on is publish:workflow per id on n8n 2.x; update:workflow is the 1.x way (on 2.x it exits 0 and does nothing).
+    command: ["n8n list:workflow | grep -q 'KrishiNexus - Daily DAM Price Sync' || (n8n import:workflow --input=/seed/n8n-workflows.json && (n8n publish:workflow --id=KnxDailyDamSync1 && n8n publish:workflow --id=KnxHourlySarChk1 || n8n update:workflow --all --active=true || echo 'Turn on the two KrishiNexus workflows in the n8n editor.'))"]
     restart: "no"
 
   n8n:

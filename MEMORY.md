@@ -29,10 +29,12 @@
 - Docker on a real host (GitHub Actions, `.github/workflows/docker-smoke.yml`): run 43192104384 (2026-11-12, commit
   `af327a3`) passed every required check for the default stack and profile `data`. Two fixes got it there: the seed
   volume's `nocopy` mount and the flaky COLD-005 regression case.
+  - Run 43193046477 found that n8n 2.x left both cron workflows switched off (`update:workflow --all` no longer
+    publishes). The fix (`publish:workflow` per id, with CI requiring 2 of 2) was pushed the same day; its CI run is
+    in the handover log.
 
 **Next:**
-1. Read the CI run after the n8n check fix (pushed 2026-11-12; it runs `n8n execute` in its own container) to see
-   whether the cron job reaches the backend.
+1. Read the CI run after the n8n publish fix: are both cron workflows switched on?
 2. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
 3. A showcase run-sheet, and a demo rehearsal with a real microphone.
 
@@ -1545,3 +1547,28 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   - AGENTS §3: data services verified, plus this run.
   - DepthMatrix notes: "checked by CI on a Linux Docker host", seen rendered on `/docs`; `tsc` clean.
   - The mirror README's Docker note.
+
+### 2026-11-12 · n8n check fix pushed (the user said "Yes, push")
+- **Sync:** the dry run showed only `DepthMatrixSection.tsx`; the root docs and the workflow were copied. 7 files,
+  +56/−20. No excluded paths, no secret-scan hits.
+- **Commit** `0dba2c9` "Run the n8n check in its own container; record the passing Docker smoke test": author and
+  committer HTanvir0011, no co-author line. Pushed `af327a3..0dba2c9`.
+- **CI:** the push started run 43193046477.
+
+### 2026-11-12 · n8n cron workflows were never switched on; fixed locally
+- **Run 43193046477:** every required step passed again. Reaching the run's log needed a second try after a TLS
+  handshake timeout on this machine. The reported n8n step showed two problems:
+  - **Never switched on (0 of 2).** n8n 2.47.5 printed "Workflow publishing via update:workflow --all is no longer
+    supported. Please publish workflows individually using: publish:workflow --id=<workflow-id>", and exited 0. On
+    a real `--profile data` start, the DAM sync and flood check would never fire.
+  - **`n8n execute` cannot run them:** "Missing node to start execution … Execute Workflow Trigger node". n8n 2.x's
+    CLI runs only workflows with that trigger, and ours start on a schedule. The backend logged 0 calls.
+- **Fix** (pushed after the user said "Yes, push"):
+  - `n8n-import` runs `publish:workflow --id=KnxDailyDamSync1` and `--id=KnxHourlySarChk1`, then falls back to
+    `update:workflow` (1.x), then to the editor message. Still only on the first import.
+  - CI requires `list:workflow --active=true` to show 2 of 2.
+  - The reported n8n step now prints the import and startup log lines and POSTs from inside the n8n container to
+    the URL its HTTP node calls.
+- **Checked here:** compose schema 0 errors; `bash -n` on every CI step and `sh -n` on the import command all pass.
+  (A first try hung because Python fed `bash` cp1252 text containing "→"; it was stopped and re-run with UTF-8.)
+- **Not checked:** whether `--active=true` counts published workflows on n8n 2.x. CI will show it.
