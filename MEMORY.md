@@ -26,13 +26,13 @@
   - modelled buyer bids, including 4 agro-processors, with a simulated 1-tap bKash/Nagad escrow (`/os/market`);
   - a transit-heat truck reroute (`/os/coop`);
   - compose profile `data`: pgvector, Neo4j, Redis and n8n, seeded from the node's own data.
-- Docker on a real host (GitHub Actions, `.github/workflows/docker-smoke.yml`, 2026-11-12): the default stack builds
-  and passes its smoke test. Profile `data` failed its first run (the seed volume's ownership); the `nocopy` fix was
-  pushed on 2026-11-12. The re-run stopped earlier, at a flaky regression case (COLD-005). That fix was pushed the
-  same day, and the CI run it started is recorded in the handover log.
+- Docker on a real host (GitHub Actions, `.github/workflows/docker-smoke.yml`): run 43192104384 (2026-11-12, commit
+  `af327a3`) passed every required check for the default stack and profile `data`. Two fixes got it there: the seed
+  volume's `nocopy` mount and the flaky COLD-005 regression case.
 
 **Next:**
-1. Read the CI run after the regression fix, including profile `data`, and fix whatever it finds.
+1. Read the CI run after the n8n check fix (pushed 2026-11-12; it runs `n8n execute` in its own container) to see
+   whether the cron job reaches the backend.
 2. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
 3. A showcase run-sheet, and a demo rehearsal with a real microphone.
 
@@ -1519,3 +1519,29 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - **Why it matters:** at a December showcase the old suite would often have shown 98–99/100.
 - **Docs:** an AGENTS §7.2 row ("Power-cut outage (regression)") and the CI bullet in §3.
 - **Pushed** after the user said "Yes, push". That push re-runs CI, including profile `data`.
+
+### 2026-11-12 · Regression fix pushed (the user said "Yes, push")
+- **Sync:** the dry run showed only `backend/evals/regression_suite.py`; the root docs were copied. 5 files, +45/−9.
+  No excluded paths, no secret-scan hits.
+- **Commit** `af327a3` "Make the power-cut regression cases independent of the hour and month": author and committer
+  HTanvir0011, no co-author line. Pushed `295dead..af327a3`.
+- **CI:** the push started Docker smoke-test run 43192104384.
+
+### 2026-11-12 · Docker smoke test passes on GitHub Actions
+- **Run 43192104384** (commit `af327a3`; Docker Engine 28.0.4, Compose 2.38.2): every required step passed.
+  - Default stack: health, 13 MCP tools, regression 100/100, nginx proxy and SPA fallback.
+  - Escrow `ESC-0E87F1FCE814` was the same before and after `docker compose restart backend`.
+  - Profile `data`: `data-seed`, `neo4j-seed` and `n8n-import` exited 0. pgvector and Neo4j matched the backend's
+    19 chunks, 194 nodes and 776 edges, with 384-dim vectors and a cosine nearest-neighbour check. The `n8n` database
+    exists, and n8n 2.47.5 lists both KrishiNexus workflows.
+- **Reported, not required:**
+  - `n8n execute` failed: "Task Broker's port 5679 is already in use". It ran inside the main n8n container, so it
+    proves nothing about the stack.
+  - The activation count went only to the job summary, which the API does not return.
+- **Fixed and pushed** after the user said "Yes, push": the n8n step runs `n8n execute` in its own container
+  (`docker compose run --rm --no-deps`) and prints the import log, the activation count and the backend's call count
+  to the log.
+- **Docs:**
+  - AGENTS §3: data services verified, plus this run.
+  - DepthMatrix notes: "checked by CI on a Linux Docker host", seen rendered on `/docs`; `tsc` clean.
+  - The mirror README's Docker note.

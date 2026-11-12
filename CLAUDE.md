@@ -55,7 +55,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
 | Full stack in Docker (verified on GitHub Actions) | `docker compose up --build` | same host ports: backend `8000`, frontend (nginx) `5173` |
 | + local Ollama | `docker compose --profile local-llm up --build` | `11434`; `ollama-pull` fetches `qwen2.5:7b-instruct-q4_K_M` + `llama3.2:3b-instruct-q4_K_M` (≈6.7 GB) |
-| + data services (**its first CI run failed on a volume-permission bug; see CI below**) | `docker compose --profile data up --build` | on `127.0.0.1` only: Postgres + pgvector `5432`, Neo4j `7474` / `7687`, n8n `5678`; Redis internal |
+| + data services (verified on GitHub Actions) | `docker compose --profile data up --build` | on `127.0.0.1` only: Postgres + pgvector `5432`, Neo4j `7474` / `7687`, n8n `5678`; Redis internal |
 
 Docker layout:
 - `backend/Dockerfile`: `python:3.14-slim`, installs the pinned `backend/requirements.lock`, runs as uid 10001, HEALTHCHECK on `GET /health`, named volume `backend-state` at `/app/.state`.
@@ -74,7 +74,9 @@ Docker layout:
 - CI: `.github/workflows/docker-smoke.yml` builds and starts the stack on a GitHub-hosted Linux Docker host on pushes that touch `docker-compose.yml`, `backend/`, `frontend/` or the workflow, or by hand.
   - It checks health, the 13 MCP tools, the 100-case regression suite, the nginx proxy and SPA fallback, and that an escrow lock survives `docker compose restart backend`.
   - Then it starts profile `data` and checks that pgvector and Neo4j hold exactly the backend's chunks and graph (`/rag/stats`), that a chunk's nearest neighbour is itself, and that n8n has both workflows. It also reports, without requiring, whether n8n switched them on and can call the backend.
-  - Run 43188379771 (2026-11-12): the default stack passed every check. Profile `data` failed: `data-seed` got `PermissionError` writing its volume, fixed by the `nocopy` mount above. Run 43190290880 stopped earlier: regression case COLD-005 (a 122-min outage) stayed in band at that hour, so the suite read 99/100; fixed by the power-cut outage range in §7.2. Later runs are in the repository's Actions tab and in MEMORY.
+  - Run 43188379771 (2026-11-12): the default stack passed every check. Profile `data` failed: `data-seed` got `PermissionError` writing its volume, fixed by the `nocopy` mount above. Run 43190290880 stopped earlier: regression case COLD-005 (a 122-min outage) stayed in band at that hour, so the suite read 99/100; fixed by the power-cut outage range in §7.2.
+  - Run 43192104384 (2026-11-12, commit `af327a3`, Docker 28.0.4, Compose 2.38.2) passed every required check: the default stack, the escrow across a restart, all three seeders exiting 0, pgvector and Neo4j matching the backend's 19 chunks, 194 nodes and 776 edges, and n8n 2.47.5 holding both workflows.
+  - Its reported `n8n execute` failed because it ran inside the main n8n container, whose task broker already holds port 5679. The step now runs it in its own container (`docker compose run`); later runs, including that one, are in the repository's Actions tab and in MEMORY.
 
 Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SECONDS`, `KNX_FORCE_OFFLINE_WEATHER`,
 `KNX_RECEIPT_SIGNING_KEY` (HMAC for receipts and certificates), `KNX_CORS_ORIGINS`, `KNX_OLLAMA_HOST`,

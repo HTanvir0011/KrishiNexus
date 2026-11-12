@@ -89,12 +89,16 @@ jobs:
         continue-on-error: true
         run: |
           echo "n8n $(docker compose exec -T n8n n8n --version)"
+          docker compose logs --no-color n8n-import | tail -n 5
           active=$(docker compose exec -T n8n n8n list:workflow --active=true | grep -c KrishiNexus || true)
+          echo "workflows switched on: $active of 2"
           echo "| n8n | $active of 2 workflows switched on after import | reported |" >> checks.md
-          docker compose exec -T n8n n8n execute --id KnxDailyDamSync1 > execute.log 2>&1 || true
-          calls=$(docker compose logs backend | grep -c 'POST /automation/n8n/daily-dam-sync' || true)
-          echo "| n8n → backend | \`n8n execute\` of the DAM sync; backend logged $calls call(s) | reported |" >> checks.md
+          # Its own container: inside the running main container the CLI's task-broker port (5679) is already taken.
+          docker compose run --rm --no-deps -T n8n execute --id KnxDailyDamSync1 > execute.log 2>&1 || true
           tail -n 20 execute.log
+          calls=$(docker compose logs backend | grep -c 'POST /automation/n8n/daily-dam-sync' || true)
+          echo "backend logged $calls DAM-sync call(s) from n8n"
+          echo "| n8n → backend | \`n8n execute\` of the DAM sync; backend logged $calls call(s) | reported |" >> checks.md
 
       - name: Summary
         if: always()

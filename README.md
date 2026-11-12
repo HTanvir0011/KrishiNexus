@@ -210,10 +210,12 @@ Optional settings:
 - `.env` next to `docker-compose.yml` (see `.env.example`): host ports, the Ollama and n8n image tags, and the data-profile passwords (local-demo defaults; set your own for anything else).
 - `backend/.env` (see `backend/.env.example`): application settings. Set `KNX_RECEIPT_SIGNING_KEY` before any shared deployment.
 
-> A GitHub Actions workflow (`.github/workflows/docker-smoke.yml`) builds and starts the stack on a Linux Docker host.
-> The default stack passes its smoke test: health, all 13 MCP tools, the 100-case regression suite, the nginx proxy,
-> and state surviving a backend restart. The `data` profile failed its first run on a volume-permission bug; the fix
-> is in this commit, and the workflow re-runs on push.
+> A GitHub Actions workflow (`.github/workflows/docker-smoke.yml`) builds the images on a Linux Docker host and starts
+> the default stack and then the `data` profile. Both pass its smoke test:
+> - The default stack: health, all 13 MCP tools, the 100-case regression suite, the nginx proxy, and state surviving
+>   a backend restart.
+> - The `data` profile: PostgreSQL + pgvector and Neo4j hold exactly the backend's knowledge chunks and graph, and n8n
+>   has both cron workflows.
 
 ### Local development
 
