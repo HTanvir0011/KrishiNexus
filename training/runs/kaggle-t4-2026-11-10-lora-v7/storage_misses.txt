@@ -1,0 +1,31 @@
+# v7 (krishi-bangla-lora-v4) storage citation on its test, by gold sentence: 4-bit model, Q8_0 GGUF, and whether the gold passage was in the prompt.
+# From predictions_test.jsonl and predictions_test_gguf.jsonl (Kaggle kernel output, not kept in the repo).
+gold sentence (first 70 chars)                                           rows  4bit  gguf  gold-in-prompt
+About 12-13 million tonnes of potatoes compete for 2.7-3.27 million to     20 0.75  0.75  20/20
+Crops deposited in licensed storage can be pledged against a warehouse     20 0.75  0.80  20/20
+Humidity above 95% causes condensation on tubers and soft rot; below 9     20 0.80  0.75  20/20
+UCB extends collateral-free agricultural loans to smallholders at 6% i     20 0.80  0.85  20/20
+Use only DAE-registered pesticides at label dose and respect each prod     20 0.80  0.75  20/20
+For fruit and shoot borer, emamectin benzoate at label dose with a 3-d     20 0.85  0.75  20/20
+Both underwrite on evidence: a signed grading certificate, a pooled B2     20 0.85  0.90  20/20
+Brinjal keeps 1-2 weeks at 10-12 C and 90-95% relative humidity; below     20 0.90  0.80  20/20
+Cure freshly harvested table potatoes for 10-14 days in shade at 15-20     20 0.95  0.85  20/20
+Modified atmosphere packaging (MAP) in perforated low-density polyethy     20 0.95  0.85  20/20
+Store at 7-10 C and 90-95% relative humidity in perforated bags for a      20 1.00  0.95  20/20
+In April 2017 flash floods destroyed about 65% of the Boro crop in Sun     20 1.00  0.95  20/20
+Alerts 72 hours ahead allow emergency harvest of mature plots.             20 1.00  0.95  20/20
+BCSA doubled the tariff (a 100% hike) from Tk 4-5.50 to Tk 8.00-9.50 p     20 1.00  1.00  20/20
+
+most common (gold -> cited instead), 4-bit:
+    3  ('AGRI-FIN-01',) -> ('BB-WHR-01',)
+    2  ('BB-WHR-01',) -> ('FFWC-HAOR-01',)
+    2  ('BARI-POT-STORE-01',) -> ('BARI-POT-STORE-02',)
+    1  ('BARI-POT-STORE-01',) -> ('BRRI-BORO-01',)
+    1  ('BAU-MAP-01',) -> ('BAU-PHL-02',)
+    1  ('DAE-SAFE-01',) -> ('FFWC-HAOR-01',)
+    1  ('BARI-POT-STORE-01',) -> ('BAU-MAP-01',)
+    1  ('BCSA-QUOTA-01',) -> ('BARI-POT-STORE-01',)
+
+# Kinds of 4-bit misses: a wrong single passage from the prompt, one outside it, no citation, or several.
+misses: 32 {'another retrieved passage': 32}
+distinct (gold, cited) pairs: 28 | largest: [((('AGRI-FIN-01',), ('BB-WHR-01',)), 3)]

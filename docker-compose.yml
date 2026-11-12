@@ -111,7 +111,9 @@ services:
       - "127.0.0.1:${KNX_PG_PORT:-5432}:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - data-seed:/docker-entrypoint-initdb.d:ro
+      # nocopy: otherwise creating this container copies its image's root-owned initdb.d ownership onto the still-empty
+      # volume, and data-seed (uid 10001) can no longer write the seeds (seen on a GitHub Actions Docker host).
+      - {type: volume, source: data-seed, target: /docker-entrypoint-initdb.d, read_only: true, volume: {nocopy: true}}
     healthcheck:
       # Over TCP, so it stays unhealthy while the init scripts run on the socket-only bootstrap server.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d krishinexus"]

@@ -71,7 +71,9 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 - **Training update.**
   - Prompts v6 fixed storage citation (0.911 on the exported model) but store-or-sell verdicts fell to 0.895, so that
     model was not shipped.
-  - Prompts v7, where the circuit breaker states whether today's price is below the floor, is training.
+  - Prompts v7, where the circuit breaker states whether today's price is below the floor, fixed those verdicts
+    (1.000 in every check). But storage citation fell to 0.85–0.89 on 14 unseen sentences, so that model was not
+    shipped either.
   - The deployed model is unchanged. All results are in `TRAINING_PLAN.md` §6.
 
 ### Trained models (Phase 9 training, 8–10 November 2026)
@@ -82,7 +84,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
 
 | Model | What it does | Measured on held-out test data | In the app |
 |---|---|---|---|
-| `krishi-bangla-lora-v2`: Qwen2.5-1.5B + QLoRA, Q8_0 GGUF served by Ollama | Bangla advisor: fair offer, store or sell (with the ΔΠ working), flood alert, storage advice, read from the agents' tool results | 888 questions, deployed file: fair offer 0.988, store or sell 1.000, flood alert 0.955 (1.000 on wordings written separately), storage citation 0.800, **missing its 0.90 target** | yes: offline kiosk answers |
+| `krishi-bangla-lora-v2`: Qwen2.5-1.5B + QLoRA, Q8_0 GGUF served by Ollama | Bangla advisor: fair offer, store or sell (with the ΔΠ working), flood alert, storage advice, read from the agents' tool results | 888 questions, deployed file: fair offer 0.988, store or sell 1.000, flood alert 0.955 (1.000 on wordings written separately), storage citation 0.800, **missing its 0.90 target**; on a later fresh batch of 600 storage questions worded about each answer's own subject, 0.933 (0.975 on sentences it never trained on) | yes: offline kiosk answers |
 | `yolov11n-krishi-bd-v2.1`: two-stage YOLO11, Diamant Potato Dataset (CC BY 4.0) | finds each potato, then segments scab, rot, greening and damage | finder mAP50 0.994 (target 0.90); defect mask mAP50 0.342, **missing 0.50**; grade accuracy 0.764 (target 0.70) | yes: potato photo grading, with a size warning signed into the certificate |
 | `krishi-price-v1`: LightGBM, GRU, TCN and an ensemble, on WFP prices | staple price forecasts 1–3 months ahead, plus margin flags | **misses 2 of 3 targets**; it doesn't beat "no change" overall | yes: shown as indicative only |
 | `krishi-whisper-bn-v1`: Whisper Small, Common Voice 13 Bengali | Bangla speech-to-text on the device | word error 0.435 (target 0.45); character error 0.229, **missing 0.15**. Both were measured with a 128-token cap that cut long transcripts; the app's own setup scores 0.335 / 0.110 on 300 test clips | yes: offline, the farmer app records speech and the kiosk transcribes it |
@@ -208,9 +210,10 @@ Optional settings:
 - `.env` next to `docker-compose.yml` (see `.env.example`): host ports, the Ollama and n8n image tags, and the data-profile passwords (local-demo defaults; set your own for anything else).
 - `backend/.env` (see `backend/.env.example`): application settings. Set `KNX_RECEIPT_SIGNING_KEY` before any shared deployment.
 
-> The compose file is validated against the official compose-spec schema, and the backend is tested with the
-> container's start command. The `data` profile's seed files are generated and checked locally. A full
-> `docker compose up` on a Docker host, including the `data` profile, is the next verification step.
+> A GitHub Actions workflow (`.github/workflows/docker-smoke.yml`) builds and starts the stack on a Linux Docker host.
+> The default stack passes its smoke test: health, all 13 MCP tools, the 100-case regression suite, the nginx proxy,
+> and state surviving a backend restart. The `data` profile failed its first run on a volume-permission bug; the fix
+> is in this commit, and the workflow re-runs on push.
 
 ### Local development
 

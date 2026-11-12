@@ -745,6 +745,107 @@ Rule: v4 replaces v2 in the app only if targets 1–4 are all met, and only afte
 **Training started:** kernel `krishinexus-bangla-lora-training` version 5, on the private dataset
 `taksimulhasandip/krishinexus-bangla-agri-sft-v7`; queued at 22:19 on 2026-11-10.
 
+**Measured run (prompts v7, kernel version 5, Kaggle T4): store-or-sell verdicts fixed; storage citation now
+misses.**
+
+Run setup:
+- The kernel waited in Kaggle's queue until 23:20 and finished at 01:31 on 2026-11-11.
+- 648 steps in 73.7 min. Validation loss was lowest at step 350 (0.00297) and rose slightly after it (0.00379 at the
+  end).
+- The Q8_0 GGUF (1.65 GB) exported and was scored through Ollama 0.40.16 on the T4: 29.2 min, 78.4 tok/s, 964 of
+  1,024 answers identical to the 4-bit model's.
+- Reports are in `training/runs/kaggle-t4-2026-11-10-lora-v7/`; the model files are not downloaded.
+
+| Metric | Target | 1: all | 2: `ood_wording` | 3: `iid` | 4: GGUF, all |
+|---|---|---|---|---|---|
+| negotiation decision accuracy | 0.90 | 0.986 | 0.988 | 0.977 | 0.986 |
+| negotiation price fidelity | 0.85 | 1.000 | 1.000 | 1.000 | 1.000 |
+| arbitrage verdict exact match | 0.90 | 1.000 | 1.000 | 1.000 | 1.000 |
+| arbitrage trace fidelity | 0.80 | 1.000 | 1.000 | 1.000 | 1.000 |
+| flood alert accuracy | 0.90 | 0.975 | 0.974 | 1.000 | 0.907 |
+| flood probability within ±2 pts | 0.85 | 1.000 | 1.000 | 1.000 | 0.932 |
+| **storage citation accuracy** | 0.90 | **0.886** | **0.858** | 0.917 | **0.850** |
+| storage chrF | 60 | 91.15 | 89.44 | 93.06 | 88.78 |
+
+The base model and the prompt-blind baseline both score 0.000 on storage citation.
+
+What it shows:
+- **Store-or-sell verdicts are fixed:** 1.000 in all four checks, including all 176 rows of the 7-month holding that
+  never occurs in training (v3: 0.891 / 0.857 / 0.900 / 0.895). Stating `spot_below_floor` worked.
+- **Storage citation misses 0.90 in checks 1, 2 and 4** (v3, on v6's 9 test sentences: 0.928 / 0.919 / 0.936 /
+  0.911).
+  - v7's test holds 14 unseen sentences (`storage_misses.txt`). The misses are spread over 10 of them; the worst
+    sentence scores 0.75.
+  - The gold passage was in the prompt in every row. All 32 wrong citations (4-bit) name another of the three
+    retrieved passages, in 28 different pairs, so no single confusion dominates.
+  - So this is how well the model cites sentences it has never seen. It is not a data fault, and with 14 sentences
+    of 20 rows each, it is a wider sample than v6's 9.
+- The exported GGUF loses some flood accuracy (0.907 against 0.975 for the 4-bit model) but still meets its target.
+- **By the pre-registered rule, v4 does not ship.** v2 stays deployed. Every v4 metric except storage citation meets
+  its target, but the rule needs all of them.
+
+**Node-side citation check (2026-11-12): rule and targets set before any result.** The user said "Yes, try it".
+
+The rule (`ollama_local.cite_quoted_passage`):
+- For an answer grounded on retrieved passages, the node keeps the model's words and sets the citation to the passage
+  the answer quotes.
+- "Quotes" means the retrieved passage holding the largest share of the answer's character 4-grams (citation tags
+  removed, case and spacing normalised).
+- Nothing changes when that share is below 0.5 (the answer quotes no passage), when the model already cites exactly
+  that passage, or when the prompt has no retrieval result.
+- The 0.5 is fixed here and is not tuned.
+
+Data:
+- **Dev:** the deployed v2 GGUF on the v7 validation split's 180 storage rows (9 sentences), with and without the
+  check. Dev only confirms the rule behaves; it changes nothing unless the rule is plainly broken, and any change is
+  recorded.
+- **Test, opened once after dev:** a freshly generated batch of 600 storage questions, 10 per knowledge sentence. It
+  comes from the v7 storage builder at indices it never used (1,200–1,799), with a fresh seed (20261113). The
+  deployed v2 GGUF answers through the local Ollama with greedy decoding, as scored before.
+- v2 trained on 48 of the 60 sentences, so the 120 rows on the other 12 are reported on their own.
+
+| # | Measure, on the fresh batch with the check | Target |
+|---|---|---|
+| 1 | storage citation accuracy, all 600 rows | ≥ 0.90 |
+| 2 | storage citation accuracy, the 120 rows on sentences v2 never trained on | ≥ 0.90 |
+| 3 | correct citations the check turns wrong | at most 1% of rows (6) |
+
+Rule: the check goes into the app's local inference only if targets 1–3 are all met. An answer's words never change;
+only its citation tag can.
+
+**Dev result** (v7 validation, 180 storage rows, deployed v2 through the local Ollama, 3.2 min):
+- Citation 0.967 without the check and 0.967 with it. On the 3 sentences v2 never trained on (60 rows) it is 0.933
+  both ways.
+- The check changed no answer. Every answer quotes a passage (share ≥ 0.5), and every citation already names the
+  passage its answer quotes. The 6 misses are answers that quote a wrong passage outright, which a citation check
+  cannot fix.
+- The rule behaves (it broke nothing), so it is unchanged and the fresh batch is opened as planned.
+
+**Test result** (the fresh batch, opened once: 600 questions, deployed v2 through the local Ollama 0.40.16, 9.6 min).
+Reports and the script, with the rule inline, are in `training/runs/local-ollama-2026-11-12-citation-check/`.
+
+| # | Measure | Target | Without the check | With the check |
+|---|---|---|---|---|
+| 1 | storage citation, all 600 rows (60 sentences) | ≥ 0.90 | 0.933 | **0.933** |
+| 2 | storage citation, 120 rows on the 12 sentences v2 never trained on | ≥ 0.90 | 0.975 | **0.975** |
+| 3 | correct citations the check turned wrong | ≤ 6 | — | **0** |
+
+On the 480 rows about sentences v2 trained on, citation is 0.923 both ways.
+
+What it shows:
+- **All three targets are met, but the check changed no answer** (0 of 600; 0 of 780 with dev). Every answer
+  quotes a passage, and v2's citation always names the passage it quotes. Its misses quote a wrong passage
+  outright, which a citation check cannot fix.
+- **So the check is not added to the app:** it would be code with no effect for the deployed model. The rule and
+  this result stay here in case a future model cites a passage other than the one it quotes. (v4's 32 misses on the
+  v7 test were not checked for this.)
+- **The deployed model meets the 0.90 storage citation target on fresh, well-worded questions:** 0.933 overall and
+  0.975 on sentences it never trained on.
+  - Its 0.806 on v5's test came largely from v5's questions, which asked about the document's first topic instead
+    of the answer sentence's own subject.
+  - That pre-registered v5 result still stands as measured. This batch is a separate test with different
+    questions.
+
 ## 7. Retrieval: the blind holdout probe — measured today
 
 66 new farmer questions in `evals/holdout_probe.py`, written by six independent agents that each read only a third of

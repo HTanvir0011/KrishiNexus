@@ -1,0 +1,30 @@
+{
+ "all": {
+  "rows": 180,
+  "sentences": 9,
+  "citation_without_check": 0.9667,
+  "citation_with_check": 0.9667
+ },
+ "never_seen_by_v2": {
+  "rows": 60,
+  "sentences": 3,
+  "citation_without_check": 0.9333,
+  "citation_with_check": 0.9333
+ },
+ "seen_by_v2": {
+  "rows": 120,
+  "sentences": 6,
+  "citation_without_check": 0.9833,
+  "citation_with_check": 0.9833
+ },
+ "check": {
+  "quote_min_share": 0.5,
+  "changed": 0,
+  "fixed": 0,
+  "broke": 0,
+  "below_share_unchanged": 0,
+  "minutes": 3.2,
+  "model": "krishi-bangla:latest",
+  "mode": "dev"
+ }
+}

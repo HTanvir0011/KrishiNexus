@@ -1,6 +1,6 @@
 # MEMORY.md — KrishiNexus OS Live State & Handover
 
-**Last updated:** 2026-11-10 (BDT)
+**Last updated:** 2026-11-12 (BDT)
 
 **Status:**
 - Phases 0–10 are built and published to GitHub `HTanvir0011/KrishiNexus` `main`, pushed from the mirror
@@ -9,7 +9,9 @@
 - Models trained on Kaggle and measured (TRAINING_PLAN §6, §8, §8b, §8c):
   - **Bangla advisor `krishi-bangla-lora-v2`** (prompts v5, freely worded questions) is **deployed**: Ollama
     `krishi-bangla:latest`, Q8_0, `PROMPT_VERSION = 5`.
-    - It meets every target except storage citation (0.806 against 0.90).
+    - It meets every target except storage citation (0.806 against 0.90) on v5's test, whose storage questions were
+      mis-targeted. On a fresh batch of 600 well-worded storage questions it cites correctly in 0.933 of answers
+      (0.975 on the 12 sentences it never trained on).
     - v1 (prompts v4) is kept as `krishi-bangla:v4` and `backend/models/lora/krishi-bangla-v4-q8_0.gguf`.
   - **Potato cascade** run 2 is wired into the grader. Finder 0.99; defect model 0.34 (misses); grade accuracy 0.764.
     It has the size warning and the signed certificate.
@@ -17,20 +19,21 @@
   - **Bangla Whisper** `krishi-whisper-bn-v1` is **installed**, and the offline farmer app transcribes speech with it.
     Pre-registered WER 0.435 meets and CER 0.229 misses, but both were measured with a 128-token cap that cut long
     transcripts. The app's path scores WER 0.335 and CER 0.110 on 300 clips.
-  - **v3** (prompts v6) fixed storage citation but regressed store-or-sell verdicts, so it was not shipped. **v4**
-    (prompts v7, `spot_below_floor` stated) is queued on Kaggle.
+  - **v3** (prompts v6) fixed storage citation but regressed store-or-sell verdicts, so it was not shipped.
+  - **v4** (prompts v7, `spot_below_floor` stated) fixed the verdicts (1.000 everywhere), but storage citation fell
+    to 0.85–0.89 on 14 unseen sentences, so it was not shipped either. v2 stays deployed.
 - Phase 10 (the developer task list, 2026-11-10) is built:
   - modelled buyer bids, including 4 agro-processors, with a simulated 1-tap bKash/Nagad escrow (`/os/market`);
   - a transit-heat truck reroute (`/os/coop`);
   - compose profile `data`: pgvector, Neo4j, Redis and n8n, seeded from the node's own data.
-- The Docker files, including profile `data`, have never run on a Docker host.
+- Docker on a real host (GitHub Actions, `.github/workflows/docker-smoke.yml`, 2026-11-12): the default stack builds
+  and passes its smoke test. Profile `data` failed its first run (the seed volume's ownership). The `nocopy` fix was
+  pushed on 2026-11-12, and its CI re-run is recorded in the handover log.
 
 **Next:**
-1. When kernel v5 (v7 data, adapter `krishi-bangla-lora-v4`) finishes: download only the small reports, check the
-   pre-registered v7 targets, record them, and ask the user before the ~1.6 GB download.
-2. Run `docker compose up --build` and `docker compose --profile data up --build` on a Docker host.
-3. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
-4. A demo rehearsal with a real microphone.
+1. Read the CI re-run of profile `data` and fix whatever it finds.
+2. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
+3. A showcase run-sheet, and a demo rehearsal with a real microphone.
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -1413,3 +1416,74 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   saw, citation is 0.925 over 40 rows, too few sentences to conclude from. No store-or-sell prompt or answer overlaps.
 - **Reading:** v3's verdict regression came from training on v6's data, not from the test rows. v7's stated flag
   removes the comparison either way. No rule changes: v2 stays deployed.
+
+### 2026-11-10 · Phase 10 pushed (the user said "Yes, push")
+- **Mirror sync as before:** a `/L` dry run showed 9 backend, 6 frontend and 8 training files, with nothing to delete.
+  `frontend/tsconfig.tsbuildinfo` (a tsc build cache) is now excluded too. The root docs were copied.
+- **README** (mirror only): a Phase 10 section, the v6/v7 training status, the `data` profile in the Docker
+  quickstart, the Market and transit-check routes, the layout, and the real-versus-simulated list (modelled bids,
+  simulated escrow). The route count is now 41.
+- **Checked before committing:**
+  - The compose file validates against the official compose-spec schema (draft 2020-12; schema fetched to the
+    scratchpad), and a copy with 3 planted errors fails.
+  - The mirror's backend imports standalone and serves the new routes. The import's stray `.state` was removed.
+  - 30 files, +3,960/−96, no binaries. The secret scan's only hits are the documented local-demo default passwords
+    in `.env.example` and the compose file. No state, weights, data or `.env` were staged.
+- **Commit** `70055ee` "Phase 10: buyer bids with a 1-tap escrow, truck reroute on transit heat, compose data
+  services": author and committer HTanvir0011, no AI trailer.
+- **Pushed** `39c3dad..70055ee` to `main`. The GitHub API shows 30 files, +3960/−96.
+
+### 2026-11-11 · v7 (`krishi-bangla-lora-v4`) measured: verdicts fixed, storage citation misses, not shipped
+- **Run:** kernel v5 queued until 23:20 and completed at 01:31. 648 steps in 73.7 min; best validation loss at step
+  350. Q8_0 GGUF (1.65 GB) scored through Ollama on Kaggle: 29.2 min, 964 of 1,024 answers identical to the 4-bit
+  model's. Reports are in `training/runs/kaggle-t4-2026-11-10-lora-v7/`; no model file was downloaded.
+- **Store-or-sell verdict:** 1.000 in all four checks, including the 176 unseen 7-month rows (v3: 0.857–0.900).
+- **Storage citation misses 0.90:** 0.886 all, 0.858 held-out wordings, 0.917 iid, 0.850 GGUF.
+  - The misses are spread over 10 of the 14 unseen test sentences (worst 0.75) (`storage_misses.txt`).
+  - The gold passage was in every prompt. All 32 wrong citations name another retrieved passage, in 28 different
+    pairs.
+  - So it is how well the model cites sentences it has never seen, not a data fault.
+- **Everything else meets.** Flood alert on the GGUF is 0.907 (4-bit 0.975).
+- **Not shipped**, per the pre-registered rule; v2 stays in the app. No download was asked for.
+- **Kaggle:** the private v6 and v7 dataset cards now carry their measured results, each published as a new version
+  with the data unchanged. The live cards are identical to the local ones (5,341 and 4,866 chars) and still private.
+  The v6 card had not been refreshed after its run.
+- **GitHub:** the pushed README (`70055ee`) still says v7 is training, until the next push.
+- **Next:** the user decides whether to stop here or try another approach (see Next at the top).
+
+### 2026-11-12 · Node-side citation check: measured, not added (the user said "Yes, try it")
+- **Pre-registered first** (TRAINING_PLAN §6, "Node-side citation check"):
+  - The rule: cite the retrieved passage holding the largest share of the answer's character 4-grams, if that share
+    is ≥ 0.5. The words never change.
+  - Dev is the v7 validation split; the test is a fresh batch of 600 questions, opened once. Targets: citation
+    ≥ 0.90 overall and on the 12 sentences v2 never trained on, and at most 6 correct citations turned wrong.
+- **Dev** (180 rows): 0.967 both ways; the check changed nothing.
+- **Fresh batch**: the v7 storage builder at unused indices 1,200–1,799, seed 20261113. The deployed v2 answered
+  through the local Ollama in 9.6 min.
+  - 0.933 overall and 0.975 on never-seen sentences, both with and without the check. Changed 0, fixed 0, broke 0.
+    All three targets are met.
+- **Not added to the app:** it would have no effect for the deployed model, because its citation always names the
+  passage its answer quotes. The function was removed from `ollama_local.py`.
+- **Record:** `training/runs/local-ollama-2026-11-12-citation-check/` holds `citation_check.py` with the rule inline,
+  and both summaries. Re-applied to the stored answers, it reproduces all 600 rows (0 mismatches).
+- **Reading:** the deployed model meets 0.90 storage citation on fresh, well-worded questions. Its 0.806 came from
+  v5's mis-targeted questions; that pre-registered result still stands as measured.
+
+### 2026-11-12 · Docker smoke test on GitHub Actions (the user said "Yes, set it up")
+- **Workflow:** `.github/workflows/docker-smoke.yml` (checks listed in AGENTS §3). It runs on pushes that touch
+  `docker-compose.yml`, `backend/`, `frontend/` or the workflow, or by hand.
+  - Before pushing, its response fields were checked in process: 13 tools, 19 chunks, 194 nodes, 776 edges.
+- **Pushed** alone as commit `9c819c8` (`70055ee..9c819c8`; author and committer HTanvir0011, no AI trailer). The
+  mirror's README edit was left uncommitted.
+- **Run 43188379771:**
+  - The default stack built and passed every check: health, 13 MCP tools, regression 100/100, nginx proxy and SPA
+    fallback, and an escrow lock surviving `docker compose restart backend`.
+  - Profile `data` failed. `data-seed` raised `PermissionError` writing `/app/.seed/00-n8n-database.sql`.
+- **Cause:**
+  - Docker copies a mount point's ownership onto an empty named volume when a container is created.
+  - `postgres` mounts the same volume over its root-owned `/docker-entrypoint-initdb.d` and was created after
+    `data-seed`, so the volume became root-owned before `data-seed` (uid 10001) ran.
+  - The single-user `backend-state` volume worked, which fits.
+- **Fix:** the postgres mount uses `nocopy`. The compose file still validates against the compose-spec schema
+  (0 errors; the broken copy fails).
+- **Next:** the user said "Yes, push"; the fix went out with the pending docs, and that push re-runs CI.

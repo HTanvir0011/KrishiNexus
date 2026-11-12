@@ -1,0 +1,46 @@
+{
+  "adapter": "krishi-bangla-lora-v4",
+  "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seed": 20261022,
+  "epochs": 3,
+  "learning_rate": 0.0002,
+  "effective_batch": 16,
+  "max_len": 1024,
+  "precision": "fp16",
+  "gpu": "Tesla T4",
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.22.2",
+    "trl": "1.17.1",
+    "peft": "0.21.2",
+    "accelerate": "1.15.0",
+    "datasets": "5.2.0",
+    "bitsandbytes": "0.50.2"
+  },
+  "data_dir": "/kaggle/input/krishinexus-bangla-agri-sft-v7",
+  "data_sha256": "394c20dad1b07daa11808326d0d2cd3fed15dbb29ca87e9a0043868da0f8c593",
+  "prompt_version": 7,
+  "splits": {
+    "train": 3454,
+    "val": 322,
+    "test": 1024
+  },
+  "train_minutes": 73.7,
+  "eval_examples": 1024,
+  "gguf_exported": true,
+  "gguf_error": null,
+  "gguf_scores": {
+    "arbitrage_trace_fidelity": 1.0,
+    "arbitrage_verdict_exact_match": 1.0,
+    "flood_alert_accuracy": 0.9068,
+    "flood_probability_mae_pts": 0.0,
+    "flood_probability_within_2pts": 0.9322,
+    "negotiation_balanced_accuracy": 0.9856,
+    "negotiation_decision_accuracy": 0.9863,
+    "negotiation_price_fidelity": 1.0,
+    "negotiation_unparsed_rate": 0.0,
+    "storage_chrf": 88.78,
+    "storage_citation_accuracy": 0.85
+  },
+  "gguf_score_error": null
+}
