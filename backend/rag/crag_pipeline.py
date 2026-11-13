@@ -389,7 +389,7 @@ class CragPipeline:
         retriever = get_retriever()
         lexical_query = f"{rewrite.formal_query} {rewrite.normalized_bangla}"
         chunks = retriever.search(lexical_query, top_k, crop.value if crop else None, district,
-                                  dense_query=rewrite.hypothetical_document)
+                                  dense_query=rewrite.hypothetical_document, question=scrub.anonymized_text)
         grades = [self.evaluator.grade(c, rewrite.intents, crop, district) for c in chunks]
         verdict, confidence, coverage = self.evaluator.overall(grades, rewrite.intents)
 

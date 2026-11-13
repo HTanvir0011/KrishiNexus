@@ -76,10 +76,10 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
     shipped either.
   - The deployed model is unchanged. All results are in `TRAINING_PLAN.md` §6.
 
-### Trained models (Phase 9 training, 8–10 November 2026)
+### Trained models (Phase 9 training, 8–13 November 2026)
 
-Four models are trained on Kaggle and measured against targets set before training. The notebooks are in
-`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `TRAINING_PLAN.md` §6, §8, §8b
+Five models are trained on Kaggle and measured against targets set before training. The notebooks are in
+`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `TRAINING_PLAN.md` §6, §7b, §8, §8b
 and §8c. The weights are not in this repository; without them, the app says so and uses its labelled fallback.
 
 | Model | What it does | Measured on held-out test data | In the app |
@@ -88,6 +88,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
 | `yolov11n-krishi-bd-v2.1`: two-stage YOLO11, Diamant Potato Dataset (CC BY 4.0) | finds each potato, then segments scab, rot, greening and damage | finder mAP50 0.994 (target 0.90); defect mask mAP50 0.342, **missing 0.50**; grade accuracy 0.764 (target 0.70) | yes: potato photo grading, with a size warning signed into the certificate |
 | `krishi-price-v1`: LightGBM, GRU, TCN and an ensemble, on WFP prices | staple price forecasts 1–3 months ahead, plus margin flags | **misses 2 of 3 targets**; it doesn't beat "no change" overall | yes: shown as indicative only |
 | `krishi-whisper-bn-v1`: Whisper Small, Common Voice 13 Bengali | Bangla speech-to-text on the device | word error 0.435 (target 0.45); character error 0.229, **missing 0.15**. Both were measured with a 128-token cap that cut long transcripts; the app's own setup scores 0.335 / 0.110 on 300 test clips | yes: offline, the farmer app records speech and the kiosk transcribes it |
+| `krishi-dialect-e5-small-v1`: multilingual-e5-small, 840 dialect questions, int8 ONNX | reads the farmer's own words and scores each knowledge document; blended 50/50 into the retrieval ranking | 66 fresh blind questions: top-1 0.591 → 0.955, top-3 0.864 → 0.985; the frozen 66-question probe 0.500 → 0.833. It **missed one pre-registered target**: the curated set's context precision fell to 0.974. The owner switched it on anyway (`TRAINING_PLAN.md` §7b) | yes, when its folder is installed; otherwise retrieval runs as before |
 
 - **Freely worded questions (SFT prompts v5).** 4,800 generated training questions in colloquial Bangla, Rangpuri,
   Bogura, Sylheti, Banglish and English. The test includes 32 wordings written separately, which no model trained on.
@@ -102,7 +103,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
 - **A frozen blind retrieval test.** `backend/evals/holdout_probe.py` holds 66 farmer questions written blind to the
   retrieval rules — six dialects and surface forms, plus paraphrase, negation and cross-document traps. It is served live
   at `GET /evals/holdout` (cached 10 minutes) and runnable from the whitepaper. Measured 29 October 2026: top-1 **0.500**,
-  top-3 **0.848**, against **1.00** on the curated 19-question set — the honest generalisation number. The set is frozen:
+  top-3 **0.848**, against **1.00** on the curated 19-question set — the honest generalisation number. With the trained dialect retriever (13 November 2026) it reads top-1 **0.833** and top-3 **0.970**. The set is frozen:
   the rules are never tuned against it.
 - **A family-aware SFT split.** The generated fine-tuning dataset now has a deterministic train/val/test split (2,301 /
   239 / 660) in which negotiation cells, dialect, timing and region holdouts never straddle splits, with leakage
@@ -214,8 +215,8 @@ Optional settings:
 > the default stack and then the `data` profile. Both pass its smoke test:
 > - The default stack: health, all 13 MCP tools, the 100-case regression suite, the nginx proxy, and state surviving
 >   a backend restart.
-> - The `data` profile: PostgreSQL + pgvector and Neo4j hold exactly the backend's knowledge chunks and graph, and n8n
->   has both cron workflows.
+> - The `data` profile: PostgreSQL + pgvector and Neo4j hold exactly the backend's knowledge chunks and graph, n8n has
+>   both cron workflows switched on, and the n8n container reaches the backend endpoint they call.
 
 ### Local development
 
@@ -296,7 +297,7 @@ Metrics are **computed live** by `backend/evals/regression_suite.py`; none are h
 |---|---|---|
 | Faithfulness | 1.00 | 0.94 |
 | Answer relevancy | 1.00 | 0.92 |
-| Context precision | 1.00 | 0.95 |
+| Context precision | 1.00 (0.974 with the dialect retriever installed) | 0.95 |
 | Context recall | 1.00 | 0.91 |
 | MCP JSON-schema validity (22 live calls) | 100% | 99.4% |
 | PII redaction recall (12 entities) | 100% | 100% |
@@ -347,7 +348,7 @@ Real:
 - HMAC-signed certificates and receipts;
 - the durable truck pools and their transit-heat reroute rule;
 - the measured metrics;
-- the four trained models and their test scores (above).
+- the five trained models and their test scores (above).
 
 Simulated or modelled, and labelled as such in the UI and API:
 - DAM, BCSA and IoT figures are seeded data, not live feeds;

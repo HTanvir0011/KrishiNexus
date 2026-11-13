@@ -1,0 +1,86 @@
+[{"stream_name":"stderr","time":7.624057146,"data":"/usr/local/lib/python3.13/dist-packages/nbformat/validator.py:434: MissingIDFieldWarning: Cell is missing an id field, this will become a hard error in future nbformat versions. You may want to use `normalize()` on your notebooks before validations (available since nbformat 5.1.4). Previous versions of nbformat are fixing this issue transparently, and will stop doing so in the future.\n"}
+,{"stream_name":"stderr","time":7.624102044,"data":"  _validate(nbdict, ref, version, version_minor, relax_add_props)\n"}
+,{"stream_name":"stderr","time":8.675707425,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":8.675739782,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":8.67574757,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":8.675758072,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":9.334476101,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":9.334505791,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":9.334511352,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":9.334515545,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":17.124108197,"data":"Note: you may need to restart the kernel to use updated packages.\n"}
+,{"stream_name":"stdout","time":46.331949453,"data":"train 840  dev 144  docs 18  gpu Tesla T4\n"}
+,{"stream_name":"stdout","time":46.33203025,"data":"torch 2.11.0+cu130  transformers 5.20.2\n"}
+,{"stream_name":"stderr","time":46.868538625,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":46.86857264,"data":"\n"}
+,{"stream_name":"stderr","time":46.868580784,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stdout","time":52.545241368,"data":"longest passage, tokens: 279 (cap 320 )\n"}
+,{"stream_name":"stdout","time":68.942053045,"data":"zero-shot e5-small: {'n': 144, 'top1': 0.5139, 'top3': 0.7778, 'mrr': 0.6681}\n"}
+,{"stream_name":"stdout","time":68.942107906,"data":"char n-gram logreg: {'n': 144, 'top1': 0.8889, 'top3': 0.9653, 'mrr': 0.9331}\n"}
+,{"stream_name":"stdout","time":76.775054385,"data":"{'epoch': 1, 'train_loss': 2.0071, 'dev_top1': 0.6319, 'dev_top3': 0.8958, 'dev_mrr': 0.7674, 'seconds': 6.1}\n"}
+,{"stream_name":"stdout","time":82.804623348,"data":"{'epoch': 2, 'train_loss': 0.9407, 'dev_top1': 0.8125, 'dev_top3': 0.9444, 'dev_mrr': 0.8848, 'seconds': 5.4}\n"}
+,{"stream_name":"stdout","time":88.909640938,"data":"{'epoch': 3, 'train_loss': 0.5317, 'dev_top1': 0.8403, 'dev_top3': 0.9653, 'dev_mrr': 0.9038, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":94.939029248,"data":"{'epoch': 4, 'train_loss': 0.2947, 'dev_top1': 0.8681, 'dev_top3': 0.9722, 'dev_mrr': 0.9194, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":100.969459054,"data":"{'epoch': 5, 'train_loss': 0.1853, 'dev_top1': 0.8472, 'dev_top3': 0.9653, 'dev_mrr': 0.9068, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":106.478550659,"data":"{'epoch': 6, 'train_loss': 0.1207, 'dev_top1': 0.8681, 'dev_top3': 0.9653, 'dev_mrr': 0.9196, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":112.55791474,"data":"{'epoch': 7, 'train_loss': 0.0911, 'dev_top1': 0.875, 'dev_top3': 0.9653, 'dev_mrr': 0.9255, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":118.665541937,"data":"{'epoch': 8, 'train_loss': 0.0719, 'dev_top1': 0.8681, 'dev_top3': 0.9653, 'dev_mrr': 0.9207, 'seconds': 5.5}\n"}
+,{"stream_name":"stdout","time":118.682220483,"data":"fine-tuned, epoch 7 {'n': 144, 'top1': 0.875, 'top3': 0.9653, 'mrr': 0.9255}\n"}
+,{"stream_name":"stderr","time":120.339393153,"data":"/tmp/ipykernel_22/2416862590.py:23: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html\n"}
+,{"stream_name":"stderr","time":120.339431947,"data":"  torch.onnx.export(Wrap(cpu_model), args, str(fp32), dynamo=False, **kw)\n"}
+,{"stream_name":"stderr","time":120.339436966,"data":"/usr/local/lib/python3.13/dist-packages/transformers/masking_utils.py:208: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n"}
+,{"stream_name":"stderr","time":120.339441115,"data":"  if (padding_length := kv_length + kv_offset - attention_mask.shape[-1]) \u003e 0:\n"}
+,{"stream_name":"stderr","time":120.339445356,"data":"/usr/local/lib/python3.13/dist-packages/transformers/integrations/sdpa_attention.py:136: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n"}
+,{"stream_name":"stderr","time":120.339449166,"data":"  is_causal = q_length \u003e 1 and attention_mask is None and is_causal\n"}
+,{"stream_name":"stderr","time":120.339452665,"data":"\n"}
+,{"stream_name":"stderr","time":120.339455814,"data":"/tmp/ipykernel_22/2416862590.py:23: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html\n"}
+,{"stream_name":"stderr","time":120.339459773,"data":"  torch.onnx.export(Wrap(cpu_model), args, str(fp32), dynamo=False, **kw)\n"}
+,{"stream_name":"stderr","time":120.339464316,"data":"/usr/local/lib/python3.13/dist-packages/transformers/masking_utils.py:208: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n"}
+,{"stream_name":"stderr","time":120.339468226,"data":"  if (padding_length := kv_length + kv_offset - attention_mask.shape[-1]) \u003e 0:\n"}
+,{"stream_name":"stderr","time":120.339471649,"data":"/usr/local/lib/python3.13/dist-packages/transformers/integrations/sdpa_attention.py:136: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n"}
+,{"stream_name":"stderr","time":120.339475476,"data":"  is_causal = q_length \u003e 1 and attention_mask is None and is_causal\n"}
+,{"stream_name":"stderr","time":123.988544399,"data":"/usr/local/lib/python3.13/dist-packages/torch/onnx/_internal/torchscript_exporter/symbolic_opset11.py:954: UserWarning: Exporting aten::index operator of advanced indexing in opset 17 is achieved by combination of multiple ONNX operators, including Reshape, Transpose, Concat, and Gather. If indices include negative values, the exported graph will produce incorrect results.\n"}
+,{"stream_name":"stderr","time":123.98858772,"data":"  return opset9.index(g, self, index)\n"}
+,{"stream_name":"stderr","time":123.988591327,"data":"\n"}
+,{"stream_name":"stderr","time":123.988593774,"data":"/usr/local/lib/python3.13/dist-packages/torch/onnx/_internal/torchscript_exporter/symbolic_opset11.py:954: UserWarning: Exporting aten::index operator of advanced indexing in opset 17 is achieved by combination of multiple ONNX operators, including Reshape, Transpose, Concat, and Gather. If indices include negative values, the exported graph will produce incorrect results.\n"}
+,{"stream_name":"stderr","time":123.988597053,"data":"  return opset9.index(g, self, index)\n"}
+,{"stream_name":"stderr","time":128.877401001,"data":"WARNING:root:Please consider to run pre-processing before quantization. Refer to example: https://github.com/microsoft/onnxruntime-inference-examples/blob/main/quantization/image_classification/cpu/ReadMe.md \n"}
+,{"stream_name":"stderr","time":128.87743669,"data":"\n"}
+,{"stream_name":"stderr","time":128.877442347,"data":"WARNING:root:Please consider to run pre-processing before quantization. Refer to example: https://github.com/microsoft/onnxruntime-inference-examples/blob/main/quantization/image_classification/cpu/ReadMe.md \n"}
+,{"stream_name":"stdout","time":133.218242761,"data":"{'tokenizer.json': '17.1 MB', 'model_int8.onnx': '118.1 MB', 'krishi_retriever.json': '0.0 MB', 'tokenizer_config.json': '0.0 MB'}\n"}
+,{"stream_name":"stdout","time":141.066512558,"data":"int8 ONNX: {'n': 144, 'top1': 0.8472, 'top3': 0.9722, 'mrr': 0.9105} agreement 0.875 ms/question 18.08\n"}
+,{"stream_name":"stdout","time":141.557934998,"data":"{\n"}
+,{"stream_name":"stdout","time":141.557963926,"data":"  \"dev_zero_shot\": {\n"}
+,{"stream_name":"stdout","time":141.557969789,"data":"    \"n\": 144,\n"}
+,{"stream_name":"stdout","time":141.55797473,"data":"    \"top1\": 0.5139,\n"}
+,{"stream_name":"stdout","time":141.557999457,"data":"    \"top3\": 0.7778,\n"}
+,{"stream_name":"stdout","time":141.558005399,"data":"    \"mrr\": 0.6681\n"}
+,{"stream_name":"stdout","time":141.558010492,"data":"  },\n"}
+,{"stream_name":"stdout","time":141.558014245,"data":"  \"dev_char_ngram_logreg\": {\n"}
+,{"stream_name":"stdout","time":141.558018141,"data":"    \"n\": 144,\n"}
+,{"stream_name":"stdout","time":141.558022017,"data":"    \"top1\": 0.8889,\n"}
+,{"stream_name":"stdout","time":141.558026449,"data":"    \"top3\": 0.9653,\n"}
+,{"stream_name":"stdout","time":141.558030629,"data":"    \"mrr\": 0.9331\n"}
+,{"stream_name":"stdout","time":141.558034557,"data":"  },\n"}
+,{"stream_name":"stdout","time":141.558038754,"data":"  \"dev_fine_tuned\": {\n"}
+,{"stream_name":"stdout","time":141.55804369,"data":"    \"n\": 144,\n"}
+,{"stream_name":"stdout","time":141.558047913,"data":"    \"top1\": 0.875,\n"}
+,{"stream_name":"stdout","time":141.558052604,"data":"    \"top3\": 0.9653,\n"}
+,{"stream_name":"stdout","time":141.558057162,"data":"    \"mrr\": 0.9255\n"}
+,{"stream_name":"stdout","time":141.55806185,"data":"  },\n"}
+,{"stream_name":"stdout","time":141.558066505,"data":"  \"dev_onnx_int8\": {\n"}
+,{"stream_name":"stdout","time":141.558070926,"data":"    \"n\": 144,\n"}
+,{"stream_name":"stdout","time":141.558075352,"data":"    \"top1\": 0.8472,\n"}
+,{"stream_name":"stdout","time":141.55809127,"data":"    \"top3\": 0.9722,\n"}
+,{"stream_name":"stdout","time":141.558095705,"data":"    \"mrr\": 0.9105\n"}
+,{"stream_name":"stdout","time":141.558100126,"data":"  }\n"}
+,{"stream_name":"stdout","time":141.558103917,"data":"}\n"}
+,{"stream_name":"stderr","time":147.243180279,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":147.243208741,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":147.413695855,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":147.413727857,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":148.247347797,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":148.350496103,"data":"[NbConvertApp] Writing 167692 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":151.048252496,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":151.691247794,"data":"[NbConvertApp] Writing 469898 bytes to __results__.html\n"}
+]

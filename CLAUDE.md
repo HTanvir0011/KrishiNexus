@@ -80,6 +80,7 @@ Docker layout:
   - Run 43193046477 (commit `0dba2c9`) passed every required check, but its n8n log showed two things.
     - Both workflows were imported but never switched on: n8n 2.x replaced `update:workflow --all` with `publish:workflow --id`. The import now publishes, and CI requires 2 of 2 switched on.
     - n8n 2.x's CLI cannot execute a workflow that starts on a schedule, so the `n8n execute` check was replaced by a request from the n8n container to the workflow's URL.
+  - Run 43202024656 (commit `5bbf0f7`) passed everything. Both workflows were published ("2 published workflows" in n8n's startup log; 2 of 2 active), and the n8n container's POST to the DAM-sync URL returned HTTP 200. Nothing yet shows a workflow firing on its schedule; that needs waiting for the hour.
   - Later runs are in the repository's Actions tab and in MEMORY.
 
 Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SECONDS`, `KNX_FORCE_OFFLINE_WEATHER`,
@@ -87,7 +88,8 @@ Environment (`backend/.env.example`): `KNX_OPEN_METEO_URL`, `KNX_HTTP_TIMEOUT_SE
 `KNX_LLAMACPP_URL`, `KNX_VLLM_URL`; optional model upgrades `KNX_EMBEDDING_MODEL`, `KNX_RERANKER_MODEL`,
 `KNX_WHISPER_MODEL` (default `backend/models/whisper/krishi-whisper-bn-v1-ct2-int8`, used when `faster-whisper` is
 installed), `KNX_YOLO_WEIGHTS` (a folder holding `roi_best.pt` + `defect_best.pt`; default
-`backend/models/yolo/run2`, used when `ultralytics` is installed); LLM keys `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`,
+`backend/models/yolo/run2`, used when `ultralytics` is installed), `KNX_DIALECT_RETRIEVER` (the dialect retriever's
+folder; default `backend/models/retrieval/krishi-dialect-e5-small-v1`, loaded only while `DIALECT_WEIGHT` > 0); LLM keys `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`,
 `GEMINI_API_KEY`.
 All times are BDT (UTC+06:00, `config.BDT`, `now_bdt()`); no `zoneinfo`/`tzdata` dependency.
 
@@ -112,6 +114,8 @@ krishinexus-os/
 ├── .github/workflows/docker-smoke.yml  # CI: builds the images and smoke-tests the default stack and profile data on Linux
 ├── training/
 │   ├── prepare_data.py                 # backend venv, --version 4-7 (default 7): exports train/val/test JSONL, re-asserts no leakage
+│   ├── prepare_retrieval_data.py       # merges writer-agent question files into data/retrieval_v1 (train/dev/passages), drops near-copies of the frozen probe
+│   ├── score_retrieval_test.py         # scores the fresh blind batch once, without and with the dialect retriever, plus the frozen probe
 │   ├── HOW_TO_TRAIN.md                 # per-model runbook (LoRA + YOLO): data, commands, eval targets
 │   ├── train_qlora.ipynb               # minimal QLoRA notebook (Colab / local GPU): train + merge
 │   ├── kaggle/krishinexus_lora_kaggle.ipynb  # full Kaggle run: train, frozen-test eval vs base + prompt-blind baseline, Q8_0 GGUF scored through Ollama
@@ -144,7 +148,8 @@ krishinexus-os/
 │   ├── rag/
 │   │   ├── lexicon.py                  # Bangla/dialect/Banglish concept lexicon, crop & district detection
 │   │   ├── knowledge_seed.py           # 18 KnowledgeDoc with contextual headers + 8 GraphRule
-│   │   ├── hybrid_retriever.py         # HashingEmbedder(384), SemanticChunker, BM25, RRF, BGEReranker, PGVECTOR_SCHEMA
+│   │   ├── hybrid_retriever.py         # HashingEmbedder(384), SemanticChunker, BM25, RRF, BGEReranker, PGVECTOR_SCHEMA, DIALECT_WEIGHT
+│   │   ├── dialect_encoder.py          # krishi-dialect-e5-small-v1: int8 ONNX e5-small via onnxruntime + tokenizers (on: DIALECT_WEIGHT 0.5)
 │   │   ├── graph_rag.py                # SupplyChainGraph (NetworkX, Neo4j-compatible Cypher)
 │   │   └── crag_pipeline.py            # HyDEDialectRewriter, CorrectiveRAGEvaluator, CragPipeline (CRAG_PIPELINE)
 │   ├── prompts/prompt_registry.py      # versioned XML prompts, DSPyPromptOptimizer, decision rules (PROMPT_REGISTRY)
@@ -163,12 +168,12 @@ krishinexus-os/
 │   │   ├── ollama_local.py             # LocalEdgeInferenceEngine (EDGE_ENGINE), LoRA spec, SFT dataset (v4, v5), ground_prompt
 │   │   ├── sft_wordings.py             # prompts v5: freely worded question banks per task (Bangla, dialects, Banglish, English)
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
-│   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/
+│   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/, retrieval/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
 │   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)
 │   ├── data_seed.py                    # seed files for the compose data profile: pgvector SQL, Neo4j Cypher, n8n workflows
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
-│   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner; a FROZEN test set
+│   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner (also scores any probe set); a FROZEN test set
 │   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed); escrows.json beside it
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
@@ -309,6 +314,7 @@ voice_synthesizer → END`. `trace_events`, `errors`, `node_path` use `operator.
 | Power-cut outage (regression) | cold-chamber cases sample outages of 300–600 min, the range where a cut leaves the 48–50 °F / 92–95% RH band in every month and at every hour (humidity alone needs 3.9 h at worst); the earlier 60–600 min failed 24–38 of 480 hourly case runs a month from November to February | `regression_suite._case_cold_chamber` |
 | Knowledge seed | 18 passages (incl. `AGRI-FIN-01` for UCB/iFarmer); RAG eval set 19 curated questions + 66 frozen blind probes | `rag/knowledge_seed.KNOWLEDGE_DOCS`, `regression_suite.RAG_EVAL_SET`, `evals/holdout_probe.HOLDOUT_PROBES` |
 | Blind holdout probe | 66 frozen probes (never tune against them); live at `GET /evals/holdout?refresh`, cached 10 min, with a run-live card in the whitepaper's EvalsSection | `evals/holdout_probe.get_holdout_report`, route in `main.py` |
+| Dialect retriever (on, by owner override) | `krishi-dialect-e5-small-v1`: multilingual-e5-small fine-tuned on 840 dialect questions (Kaggle T4), int8 ONNX per channel, in `backend/models/retrieval/` (or `KNX_DIALECT_RETRIEVER`); it reads the farmer's own words, and its softmax over documents (temperature 0.05) is blended into the rerank score with weight `DIALECT_WEIGHT`. Fresh blind batch: top-1 0.591 → 0.955 at weight 0.5 (chosen on dev); the frozen probe rises from 0.500 to 0.833. The curated eval's context precision falls to 0.974, missing a pre-registered target, and the project owner switched it on anyway on 2026-11-13; weight 0 turns it off (TRAINING_PLAN §7b) | `rag/dialect_encoder.py`, `hybrid_retriever.DIALECT_WEIGHT`, `HybridRetriever.search(question=)` |
 | SFT dataset v4 | seed 20261109, split salt `split-v4`: train 2,434 / val 125 / test 641; OOD holdouts fully in test: Chittagonian dialect, holding_months 7, খালিয়াজুরী haor; families (response groups, negotiation cells) never straddle splits; tool-grounded prompts v4: each user turn carries the agent's `<tool_result>` (prices, ΔΠ, breach %, 3 retrieved passages) and the model decides from it; labels balanced by re-sampling to a drawn target | `ollama_local.SFT_SEED`, `_grounded`, `_draw`, `_family_split`; re-asserted by `training/prepare_data.py` |
 | SFT dataset v5 (deployed with `krishi-bangla-lora-v2`) | seed 20261110, salt `split-v5`, 4,800 rows: train 3,638 / val 274 / test 888; each question is drawn from a wording bank per task (colloquial Bangla, Rangpuri, Bogura, Sylheti, Banglish, English; v4's template included); the arbitrage tool result also carries the breaker's seven inputs; negotiation families are (crop, district, quarter) market cells; test subsets `iid`, `ood_wording` (32 wordings written separately, test only), and v4's three OOD families; `build_sft_dataset(4)` still reproduces v4 byte for byte | `ollama_local.SFT_V5_SEED`, `_v5_split`, `_v5_wording`, `subset_of`, `edge_node/sft_wordings.py`, `sft_heldout_wordings.json`; `training/prepare_data.py --version 5` |
 | SFT dataset v6 (trained `krishi-bangla-lora-v3`: storage fixed, verdicts 0.895, not shipped) | v5 with each storage question about its own sentence's subject (60 sentences, English and Bangla, unique per language), so exactly one retrieved passage answers it; storage test takes a fifth of the sentences (9 unseen); seed 20261111, salt `split-v6`, 4,800 rows: train 3,598 / val 318 / test 884; same tool-result formats as v5 | `sft_wordings.SENTENCE_TOPICS`, `ollama_local.SFT_V6_SEED`, `V6_TEST_FRACTIONS`, `_salt`; `training/prepare_data.py --version 6` |
@@ -367,7 +373,8 @@ fungal risk = `100 · max(humidity_sigmoid, wetness_sigmoid) · e^(−((T−T_op
 agronomic(≤60) + verified_identity(≤40)`, climate = `(1 − p_flood) × 120`.
 
 **Retrieval:** BM25 (k1 1.5, b 0.75) + 384-dim hashing embeddings, fused with RRF (k = 60) + metadata boost, reranked
-by a logistic cross-feature reranker. CRAG chunk confidence = `0.5·rerank + 0.3·intent_coverage + 0.2·entity_match`;
+by a logistic cross-feature reranker; with the dialect retriever installed, the final score is
+`(1 − w)·rerank + w·p(doc | question)`, w = `DIALECT_WEIGHT` = 0.5. CRAG chunk confidence = `0.5·rerank + 0.3·intent_coverage + 0.2·entity_match`;
 overall = `0.6·best + 0.4·coverage`; CORRECT ≥ 0.70, AMBIGUOUS ≥ 0.45; below 0.70 → rewrite + re-retrieve + MCP augmentation.
 
 **Query intents (`crag_pipeline.detect_intents`):**

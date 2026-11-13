@@ -1,0 +1,426 @@
+{
+  "fresh_questions": 66,
+  "frozen_blend_weight": 0.5,
+  "nearest_train_jaccard": {
+    "max": 0.312,
+    "mean": 0.173,
+    "at_least_0.5": 0
+  },
+  "fresh_without_model": {
+    "generated_at": "2026-11-13T20:42:52.653597+06:00",
+    "duration_ms": 1862.3,
+    "probes": 66,
+    "top1_gold": 0.5909,
+    "top3_gold": 0.8636,
+    "by_kind": {
+      "cross_doc": {
+        "n": 6.0,
+        "top1": 0.5,
+        "top3": 1.0
+      },
+      "negation": {
+        "n": 6.0,
+        "top1": 0.5,
+        "top3": 1.0
+      },
+      "paraphrase": {
+        "n": 18.0,
+        "top1": 0.5,
+        "top3": 0.7222
+      },
+      "topical": {
+        "n": 36.0,
+        "top1": 0.6667,
+        "top3": 0.8889
+      }
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 11.0,
+        "top1": 0.6364
+      },
+      "Bogura (Varendri)": {
+        "n": 11.0,
+        "top1": 0.8182
+      },
+      "English": {
+        "n": 11.0,
+        "top1": 0.7273
+      },
+      "Rangpuri": {
+        "n": 11.0,
+        "top1": 0.6364
+      },
+      "Standard Bangla": {
+        "n": 11.0,
+        "top1": 0.3636
+      },
+      "Sylheti": {
+        "n": 11.0,
+        "top1": 0.3636
+      }
+    },
+    "misses": [
+      {
+        "kind": "topical",
+        "gold": "BARI-POT-STORE-02",
+        "got": "DAM-POT-PRICE-01",
+        "question": "আমরার কার্ডিনাল আলু হিমাগারো আছে, কয় ঘণ্টা পরপর কতক্ষণ চেম্বারো বাতাস ছাড়া লাগ"
+      },
+      {
+        "kind": "negation",
+        "gold": "BARI-POT-STORE-02",
+        "got": "BARI-POT-STORE-01",
+        "question": "মুন্সীগঞ্জের হিমাগারে ডায়মন্ড আলু রাখব। তাপমাত্রা আর আর্দ্রতা কত রাখতে হবে সেটা"
+      },
+      {
+        "kind": "topical",
+        "gold": "BAU-MAP-01",
+        "got": "CPD-SYND-01",
+        "question": "বেগুন আর শাক বাজারো পাঠাইবার লাগি পলিথিনর ব্যাগো ভরি। ব্যাগর মুখ পুরা বন্ধ করি দ"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BAU-MAP-01",
+        "got": "CPD-SYND-01",
+        "question": "Morich ar begun bechar age bhalo-kharap alada kore futo-wala plastic bag e bhore"
+      },
+      {
+        "kind": "topical",
+        "gold": "BAU-PHL-02",
+        "got": "BARI-POT-STORE-01",
+        "question": "মাঠ থেকে ক্রেতার হাতে পৌঁছাতে পৌঁছাতে কলা আর কাঁঠালের কত ভাগ নষ্ট হয়ে যায়?"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BARI-POT-STORE-01",
+        "got": "DAM-POT-PRICE-01",
+        "question": "Diamant alu tolar por himagare dhukanor age koto din chhayay rekhe dite hobe, ja"
+      },
+      {
+        "kind": "topical",
+        "gold": "BARI-POT-STORE-02",
+        "got": "DAM-POT-PRICE-01",
+        "question": "আমার কার্ডিনাল আলু হিমাগারো রাখছি। চেম্বারো কয় ঘণ্টা পরে পরে বাতাস ছাড়া লাগে? "
+      },
+      {
+        "kind": "negation",
+        "gold": "BARI-POT-STORE-02",
+        "got": "BARI-POT-STORE-01",
+        "question": "হামি ডায়মন্ড আলু হিমাগারত থুছি। তাপমাত্রা কতো রাখা লাগবি সেটা হামি জানি, ওটা জি"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "DAE-BLIGHT-01",
+        "got": "BARI-POT-STORE-01",
+        "question": "কুয়াশা পড়া শুরু অইলে আমার আলুর পাতাত কালা কালা দাগ পড়ি পাতা পচি যার। কোন ঔষধ "
+      },
+      {
+        "kind": "topical",
+        "gold": "BAU-PHL-02",
+        "got": "BARI-POT-STORE-01",
+        "question": "মাঠ থেকে ক্রেতার হাতে পৌঁছানো পর্যন্ত কাঁঠাল, কলা, আনারস আর আমের কত অংশ নষ্ট হয়"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BARI-CHILI-01",
+        "got": "CPD-SYND-01",
+        "question": "Kacha morich kokhon tulle bhalo, ar tolar por koto ghontar moddhe thanda jaygay "
+      },
+      {
+        "kind": "topical",
+        "gold": "BARI-BRINJAL-01",
+        "got": "BARI-POT-STORE-01",
+        "question": "বাহে, হামার বাইগন তুলি কত ঠান্ডাত থুইলে কয় দিন ভালো থাকিবে? বেশি ঠান্ডাত থুইলে "
+      },
+      {
+        "kind": "topical",
+        "gold": "BRRI-BORO-01",
+        "got": "FFWC-HAOR-01",
+        "question": "হাওরো আমরার বোরো ধান পুরা পাকা পর্যন্ত বই থাকমু নি, না কতখানি পাকলে কাটা শুরু কর"
+      },
+      {
+        "kind": "cross_doc",
+        "gold": "BRRI-BORO-01",
+        "got": "FFWC-HAOR-01",
+        "question": "পাউবো তিন দিন আগে পাহাড়ি ঢলের সতর্কবার্তা দেওয়ায় তাড়াহুড়ো করে বোরো ধান কেটে"
+      },
+      {
+        "kind": "topical",
+        "gold": "BARI-BRINJAL-01",
+        "got": "CPD-SYND-01",
+        "question": "যশোর থেকে বেগুন তুলে কিছুদিন ঠান্ডা ঘরে রেখে পরে বিক্রি করতে চাই। কত ডিগ্রি তাপম"
+      },
+      {
+        "kind": "topical",
+        "gold": "BRRI-BORO-01",
+        "got": "FFWC-HAOR-01",
+        "question": "সুনামগঞ্জর হাওরো বোরো ধান মাড়াইর পরে কতখান হুকাইলে বস্তাত ভরিয়া রাখা যায়, যাত"
+      },
+      {
+        "kind": "negation",
+        "gold": "FFWC-HAOR-01",
+        "got": "BRRI-BORO-01",
+        "question": "The normal satellite pictures show only clouds over Kishoreganj during the rains"
+      },
+      {
+        "kind": "cross_doc",
+        "gold": "CPD-SYND-01",
+        "got": "BCSA-QUOTA-01",
+        "question": "মুন্সীগঞ্জের হিমাগারে জায়গা না পেয়ে কার্ডিনাল আলু মাঠেই বেচে দিচ্ছি, অথচ শুনি "
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "DAM-POT-PRICE-01",
+        "got": "CPD-SYND-01",
+        "question": "হামার ডায়মন্ড আলু এলা ক্ষেত থাকি তুলি বেচাইলে গাঁটের ট্যাকাও ওঠে না। কয়েক মাস "
+      },
+      {
+        "kind": "topical",
+        "gold": "DAE-SAFE-01",
+        "got": "CPD-SYND-01",
+        "question": "Someone at the arat told me to dip my brinjal in formalin so it still looks fres"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BARI-POT-VAR-01",
+        "got": "CPD-SYND-01",
+        "question": "হামরা লাল খোসার আলু লাগাই, কায়ও কয় হলদিয়া খোসারটা বিদেশত চালান যায়। কোনটা বি"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "DAM-POT-PRICE-01",
+        "got": "DAE-BLIGHT-01",
+        "question": "Is it worth holding my Diamant potatoes for six months rather than letting them "
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BB-WHR-01",
+        "got": "DAM-POT-PRICE-01",
+        "question": "Amar Cardinal alu cold storage e rakhsi. Becha porjonto songsar khoroch ar porer"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "AGRI-FIN-01",
+        "got": "BARI-CHILI-01",
+        "question": "মরিচ লাগানির লাগি বীজ-সার আর কামলার টেকা নাই, জমির কাগজও নাই। এমন কোনো কোম্পানি "
+      },
+      {
+        "kind": "cross_doc",
+        "gold": "DAM-TRANS-01",
+        "got": "BCSA-QUOTA-01",
+        "question": "কোল্ড স্টোরেজের ভাড়া দুই গুণ হয়্যা গেছে, তাই এবার আলু সোজা ঢাকাত পাঠামো ভাবিচ্"
+      },
+      {
+        "kind": "topical",
+        "gold": "DAM-TRANS-01",
+        "got": "BAU-MAP-01",
+        "question": "যশোর থেকে বেগুন ঢাকায় পাঠাতে চাই। পদ্মা সেতুর টোল কত লাগবে, আর কাঁচা সবজি দিনে "
+      },
+      {
+        "kind": "topical",
+        "gold": "BARI-POT-VAR-01",
+        "got": "DAM-POT-PRICE-01",
+        "question": "লাল খোসার কার্ডিনাল আর হলদা খোসার ডায়মন্ড আলুর মইদ্যে কোনটে বিদেশোত পাঠাবার তান"
+      }
+    ]
+  },
+  "fresh_with_model": {
+    "generated_at": "2026-11-13T20:42:54.622968+06:00",
+    "duration_ms": 1969.3,
+    "probes": 66,
+    "top1_gold": 0.9545,
+    "top3_gold": 0.9848,
+    "by_kind": {
+      "cross_doc": {
+        "n": 6.0,
+        "top1": 1.0,
+        "top3": 1.0
+      },
+      "negation": {
+        "n": 6.0,
+        "top1": 0.8333,
+        "top3": 1.0
+      },
+      "paraphrase": {
+        "n": 18.0,
+        "top1": 0.9444,
+        "top3": 0.9444
+      },
+      "topical": {
+        "n": 36.0,
+        "top1": 0.9722,
+        "top3": 1.0
+      }
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 11.0,
+        "top1": 0.9091
+      },
+      "Bogura (Varendri)": {
+        "n": 11.0,
+        "top1": 1.0
+      },
+      "English": {
+        "n": 11.0,
+        "top1": 1.0
+      },
+      "Rangpuri": {
+        "n": 11.0,
+        "top1": 0.9091
+      },
+      "Standard Bangla": {
+        "n": 11.0,
+        "top1": 0.9091
+      },
+      "Sylheti": {
+        "n": 11.0,
+        "top1": 1.0
+      }
+    },
+    "misses": [
+      {
+        "kind": "paraphrase",
+        "gold": "BARI-POT-STORE-01",
+        "got": "DAE-BLIGHT-01",
+        "question": "Diamant alu tolar por himagare dhukanor age koto din chhayay rekhe dite hobe, ja"
+      },
+      {
+        "kind": "topical",
+        "gold": "BARI-BRINJAL-01",
+        "got": "BARI-CHILI-01",
+        "question": "বাহে, হামার বাইগন তুলি কত ঠান্ডাত থুইলে কয় দিন ভালো থাকিবে? বেশি ঠান্ডাত থুইলে "
+      },
+      {
+        "kind": "negation",
+        "gold": "AGRI-FIN-01",
+        "got": "BB-WHR-01",
+        "question": "আমার জমির দলিল নেই, আর কোল্ড স্টোরেজে রাখা ফসলও বন্ধক দিতে চাই না। কিছু বন্ধক না"
+      }
+    ]
+  },
+  "frozen_probe_with_model": {
+    "generated_at": "2026-11-13T20:42:56.933362+06:00",
+    "duration_ms": 2310.3,
+    "probes": 66,
+    "top1_gold": 0.8333,
+    "top3_gold": 0.9697,
+    "by_kind": {
+      "cross_doc": {
+        "n": 6.0,
+        "top1": 0.5,
+        "top3": 1.0
+      },
+      "negation": {
+        "n": 6.0,
+        "top1": 0.5,
+        "top3": 1.0
+      },
+      "paraphrase": {
+        "n": 18.0,
+        "top1": 0.8333,
+        "top3": 0.9444
+      },
+      "topical": {
+        "n": 36.0,
+        "top1": 0.9444,
+        "top3": 0.9722
+      }
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 14.0,
+        "top1": 0.6429
+      },
+      "Bogura (Varendri)": {
+        "n": 9.0,
+        "top1": 1.0
+      },
+      "English": {
+        "n": 11.0,
+        "top1": 0.9091
+      },
+      "Rangpuri": {
+        "n": 10.0,
+        "top1": 0.6
+      },
+      "Standard Bangla": {
+        "n": 13.0,
+        "top1": 0.9231
+      },
+      "Sylheti": {
+        "n": 9.0,
+        "top1": 1.0
+      }
+    },
+    "misses": [
+      {
+        "kind": "cross_doc",
+        "gold": "DAE-BLIGHT-01",
+        "got": "BARI-POT-STORE-01",
+        "question": "হিমাগারের ভেতরের মতো ঠান্ডা আর ভেজা হাওয়া যদি রাতে মাঠেই পড়ে, তাহলে দাঁড়ানো আ"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BAU-MAP-01",
+        "got": "CPD-SYND-01",
+        "question": "হামরা যদি সবজিগুলা বাছাই করি, গ্রেড করি আর প্যাকেট করি বেচাই, তাইলে এক মৌসুমোত হ"
+      },
+      {
+        "kind": "negation",
+        "gold": "BARI-CHILI-01",
+        "got": "BAU-MAP-01",
+        "question": "কোনো প্যাকেট-ট্যাকেট বা ব্যাগ ছাড়ায়, খালি ঠান্ডা করি মরিচ থুইলে তাপমাত্রা আর ভ"
+      },
+      {
+        "kind": "cross_doc",
+        "gold": "BAU-MAP-01",
+        "got": "CPD-SYND-01",
+        "question": "বেপারীলার হাতোত এত মাল নষ্ট হয় শুনি — হামরা নিজেরায় বাছাই করি ব্যাগোত ভরি বেচা"
+      },
+      {
+        "kind": "topical",
+        "gold": "BCSA-QUOTA-01",
+        "got": "DAE-BLIGHT-01",
+        "question": "Munshiganj e joto alu othe tar koto tuku himaghar e jayga pay? Baki alu gulor ki"
+      },
+      {
+        "kind": "negation",
+        "gold": "CPD-SYND-01",
+        "got": "DAM-POT-PRICE-01",
+        "question": "I cannot afford cold storage or a warehouse receipt this season. How do I still "
+      },
+      {
+        "kind": "topical",
+        "gold": "DAM-POT-PRICE-01",
+        "got": "DAE-BLIGHT-01",
+        "question": "Mui ekhon alu bechim naki thuya dim? Pore koto dam uthibe, kon mashot bechile be"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "BB-WHR-01",
+        "got": "DAE-SAFE-01",
+        "question": "Dhan katar por shongshar ar shamner mousumer shar-beej er taka lage, kintu ekhon"
+      },
+      {
+        "kind": "negation",
+        "gold": "AGRI-FIN-01",
+        "got": "BB-WHR-01",
+        "question": "Amar jomir dolil o nai, cold storage er warehouse receipt o nai — kono bandhok c"
+      },
+      {
+        "kind": "cross_doc",
+        "gold": "DAM-POT-PRICE-01",
+        "got": "BCSA-QUOTA-01",
+        "question": "BCSA cold storage e quota ar slot paile alu rekhe dibo bhabchi — August-Septembe"
+      },
+      {
+        "kind": "paraphrase",
+        "gold": "DAE-SAFE-01",
+        "got": "FFWC-HAOR-01",
+        "question": "Holud ar dal e je holde rong meshay dokandar ra, oita khaile ki khoti hobe?"
+      }
+    ]
+  }
+}

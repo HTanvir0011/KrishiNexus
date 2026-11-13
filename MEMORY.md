@@ -1,6 +1,6 @@
 # MEMORY.md — KrishiNexus OS Live State & Handover
 
-**Last updated:** 2026-11-12 (BDT)
+**Last updated:** 2026-11-13 (BDT)
 
 **Status:**
 - Phases 0–10 are built and published to GitHub `HTanvir0011/KrishiNexus` `main`, pushed from the mirror
@@ -22,6 +22,11 @@
   - **v3** (prompts v6) fixed storage citation but regressed store-or-sell verdicts, so it was not shipped.
   - **v4** (prompts v7, `spot_below_floor` stated) fixed the verdicts (1.000 everywhere), but storage citation fell
     to 0.85–0.89 on 14 unseen sentences, so it was not shipped either. v2 stays deployed.
+  - **Dialect retriever `krishi-dialect-e5-small-v1`** (TRAINING_PLAN §7b, 2026-11-13) is trained and installed in
+    `backend/models/retrieval/` and **on by owner override** (`DIALECT_WEIGHT = 0.5`). On 66 fresh blind questions it lifts top-1 from
+    0.591 to 0.955 (top-3 0.864 → 0.985), and the frozen probe from 0.500 to 0.833. It misses its pre-registered
+    target 3: the curated eval's context precision falls to 0.974, because Rahim's Rangpuri sell question ranks
+    `DAM-POT-PRICE-01` above the gold `CPD-SYND-01`. The owner switched it on anyway (recorded in §7b).
 - Phase 10 (the developer task list, 2026-11-10) is built:
   - modelled buyer bids, including 4 agro-processors, with a simulated 1-tap bKash/Nagad escrow (`/os/market`);
   - a transit-heat truck reroute (`/os/coop`);
@@ -30,13 +35,21 @@
   `af327a3`) passed every required check for the default stack and profile `data`. Two fixes got it there: the seed
   volume's `nocopy` mount and the flaky COLD-005 regression case.
   - Run 43193046477 found that n8n 2.x left both cron workflows switched off (`update:workflow --all` no longer
-    publishes). The fix (`publish:workflow` per id, with CI requiring 2 of 2) was pushed the same day; its CI run is
-    in the handover log.
+    publishes). With the `publish:workflow` fix, run 43202024656 (`5bbf0f7`) passed everything: 2 of 2 workflows on,
+    and the n8n container reaches the backend's DAM-sync URL (HTTP 200).
+
+- Showcase run-sheet (2026-11-12): a Claude doc, https://claude.ai/artifact/6eri8U8cGwVjg65dC5sg82.
+- Preliminary submission ("Idea to Unicorn", team Heat Wave, CloudCamp portal) is **due 2026-11-20**. The paste-ready
+  draft for every field is a Claude doc, https://claude.ai/artifact/CX8q9krrMSNDEQhRgmHXNL (2026-11-13).
 
 **Next:**
-1. Read the CI run after the n8n publish fix: are both cron workflows switched on?
-2. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
-3. A showcase run-sheet, and a demo rehearsal with a real microphone.
+0. Finish the preliminary submission by 2026-11-20: paste the draft, Save Draft, record and link the YouTube video,
+   choose the demo link (repo now; a hosted demo is being prepared in a separate session), decide whether the Kaggle
+   notebooks go public, then Submit at 9/9.
+1. Copy `backend/models/retrieval/` to the backup laptop with the other models; rehearse one dialect question live.
+2. Confirm the showcase slot length and rubric with the organisers. Rehearse the run-sheet's core path three times
+   with a real microphone.
+3. Optional: re-score Whisper on the same 2,000 clips without the 128-token cap (an evaluation fix).
 
 > Update this file at the end of every phase: tick checkboxes, record what was verified and how, and append a
 > `Session Handover Log` entry naming the exact next file. Architecture, contracts and formulas live in `AGENTS.md`.
@@ -1572,3 +1585,83 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - **Checked here:** compose schema 0 errors; `bash -n` on every CI step and `sh -n` on the import command all pass.
   (A first try hung because Python fed `bash` cp1252 text containing "→"; it was stopped and re-run with UTF-8.)
 - **Not checked:** whether `--active=true` counts published workflows on n8n 2.x. CI will show it.
+
+### 2026-11-12 · n8n publish fix pushed (the user said "Yes, push")
+- **Sync:** no folder changes; the compose file, the workflow and the docs were copied. 6 files, +59/−21. No excluded
+  paths, no secret-scan hits.
+- **Commit** `5bbf0f7` "Switch the n8n cron workflows on with publish:workflow; require it in CI": author and
+  committer HTanvir0011, no co-author line. Pushed `0dba2c9..5bbf0f7`.
+- **CI:** run 43202024656. The watcher now retries GitHub API calls after the earlier TLS timeout.
+
+### 2026-11-12 · Docker smoke test passes, n8n cron workflows on
+- **Run 43202024656** (commit `5bbf0f7`): every step passed.
+  - Backend counts: 19 chunks, 194 nodes, 776 edges, matched in pgvector and Neo4j.
+  - `data-seed`, `neo4j-seed` and `n8n-import` exited 0.
+  - **Workflows switched on: 2 of 2** (now required).
+  - The import log shows "Publishing workflow with ID: …", and n8n's startup log shows "2 published workflows".
+  - Reported: a POST from the n8n container to `http://backend:8000/automation/n8n/daily-dam-sync` returned
+    HTTP 200.
+- **Not shown:** a workflow firing on its own schedule (hourly at :00; daily at 06:00 Dhaka). That needs a run that
+  waits past the hour.
+- **Docs (local):** AGENTS §3 run note, the DepthMatrix n8n note ("imported and switched on"; `tsc` clean) and the
+  mirror README.
+
+### 2026-11-12 · Showcase run-sheet written (the user said "Yes, write it")
+- **Doc:** "KrishiNexus OS showcase run-sheet", https://claude.ai/artifact/6eri8U8cGwVjg65dC5sg82. Sections:
+  - at a glance (roles, the three beliefs);
+  - setup checklist with commands;
+  - a 5-minute core path (time, screen, click, say);
+  - an extended path;
+  - judge Q&A with measured numbers;
+  - fallbacks;
+  - reset between judges.
+- **Every label was taken from the code** ("Launch judge split-screen", "Simulate haor flood", "Check route", "Lock
+  best bid", "Run live regression suite", "Run the 66 blind probes", "Scan sample lot", …).
+- **Checked with every module's clock set to 2026-12-26** (in process):
+  - All five presets answer. Rahim's Tk 12 Faria sale is still blocked.
+  - Abdul's natural flood risk is 4%. "Simulate haor flood" raises it to 97%, with 6 RED alerts and 6
+    early-harvest trucks.
+  - After a pool reset no truck is on the road. One 3,750 kg join (FARM-BOG-901) fills POOL-BOGURA-02 and
+    dispatches it to Mirpur DC (7.2 h). "Check route" at 38 °C then reroutes it to Mahasthangarh Haat Arat
+    (2.0 h; shelf life 4.7 h).
+- **Reset commands tested:** the four PowerShell commands ran as written against a live backend on port 8010.
+- **Local state:** `.state/truck_pools.json` was restored from a backup after each experiment.
+- **Open question in the doc:** the slot length (it assumes 5 minutes plus questions).
+
+### 2026-11-13 · Dialect retriever trained and tested; not shipped (the user said "Yes, start it")
+- **Plan first:** TRAINING_PLAN §7b pre-registered the model, the data protocol, three targets on a fresh blind batch
+  and the ship rule before any data existed.
+- **Data:** 840 train questions (five writer agents; a sixth was blocked by a content filter, so the first six docs
+  have 28 each, the rest 56) and 144 dev questions (three other writers), six surface forms, four kinds.
+  `training/prepare_retrieval_data.py` dropped nothing. Private Kaggle dataset `krishinexus-dialect-retrieval`.
+- **Training:** private kernel `krishinexus-dialect-retriever-training`, T4, 1.6 min, epoch 7 of 8 best on dev.
+  - Run 1's per-tensor int8 copy agreed with the checkpoint on only 0.875 of dev top-1 picks.
+  - Run 2 quantises per channel: agreement 0.924. Its int8 copy (118 MB, SHA-256 `d9e149d4…`, plus a 17 MB tokenizer)
+    is in `backend/models/retrieval/krishi-dialect-e5-small-v1/` with the user's download approval.
+- **Dev (144):** pipeline 0.493 → 0.882 top-1 with the model at blend weight 0.5. Baselines: zero-shot e5-small
+  0.514, character n-gram logistic regression 0.889. The model adds 7.3 ms per question on the laptop.
+- **Test (66 fresh, scored once):** top-1 0.591 → 0.955, top-3 0.864 → 0.985 (targets 1 and 2 met). Nearest training
+  question by character 4-gram Jaccard: at most 0.31. The frozen probe re-run with the model: 0.833 / 0.970.
+- **Target 3 missed:** the curated context precision is 0.974 (the regression suite still passes 100/100), so under
+  the rule the weight is 0 and the app is unchanged. Verified with the weight at 0: the curated metrics are all 1.00,
+  the regression suite passes 100/100, and the model isn't loaded.
+- **Code:** `rag/dialect_encoder.py`; `hybrid_retriever` (`DIALECT_WEIGHT`, `search(question=)`); `crag_pipeline`
+  passes the scrubbed question; `run_holdout_probe(probes)` scores any probe set; `training/score_retrieval_test.py`;
+  the notebook `training/kaggle/krishinexus_dialect_retriever_kaggle.ipynb`. Records are in
+  `training/runs/kaggle-t4-2026-11-13-dialect-retriever/`.
+- **Owner override (the user said "Switch it on"):** `DIALECT_WEIGHT = 0.5`. Verified with the model on: curated
+  context precision 0.974 (others 1.00), regression 100/100, `GET /evals/holdout?refresh=true` 0.833 / 0.970 and
+  `/rag/stats` `dialect_retriever` on a live backend (port 8010); a Sylheti blight question ranks `DAE-BLIGHT-01` first.
+- **Next file:** none in code; copy `backend/models/retrieval/` to the backup laptop.
+
+### 2026-11-13 · Submission draft written; dialect retriever and docs pushed (the user said "Yes, push")
+- **Submission:** the user shared the portal's requirements doc and screenshots of every tab. The draft fills the
+  portal's real fields in order (Story, Proof with a timed video plan, the AI-Native Build sections with which boxes
+  to tick, Data Lifecycle sections 1–10 plus tunneling, Prompt Library). Every figure in it was checked against a
+  report or the code; four overstatements were corrected before handing it over (truck dispatch rule, CI trigger,
+  non-root containers, where two timings and the checksums came from).
+- **Honest ticks:** the runtime calls no cloud LLM (Claude, Gemini and DeepSeek are only in the router's catalogue),
+  so the draft ticks Claude (build tool) and Qwen (runtime) only; modelled telemetry and radar inputs stay unticked.
+- **Pushed:** the dialect-retriever code, scripts, notebook and run records; TRAINING_PLAN §7b; AGENTS/CLAUDE;
+  MEMORY; the memory graph; the DepthMatrix n8n note; the mirror README. A hosted-demo session was started in this
+  folder at the same time; none of its files are in this push.

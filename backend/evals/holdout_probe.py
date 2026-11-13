@@ -187,7 +187,7 @@ class HoldoutReport(BaseModel):
     misses: list[dict[str, str]]
 
 
-async def run_holdout_probe() -> HoldoutReport:
+async def run_holdout_probe(probes: tuple[HoldoutProbe, ...] = HOLDOUT_PROBES) -> HoldoutReport:
     """Retrieval accuracy on the blind probes, offline (climatology weather), gold doc in top-1 / top-3 chunks."""
     from rag.crag_pipeline import CRAG_PIPELINE
 
@@ -198,7 +198,7 @@ async def run_holdout_probe() -> HoldoutReport:
     misses: list[dict[str, str]] = []
     token = NETWORK_BLACKOUT.set(True)
     try:
-        for probe in HOLDOUT_PROBES:
+        for probe in probes:
             result = await CRAG_PIPELINE.run(probe.question, probe.district, probe.crop, top_k=5)
             docs = list(dict.fromkeys(chunk.doc_id for chunk in result.retrieval))
             top1, top3 = int(docs[:1] == [probe.gold_doc]), int(probe.gold_doc in docs[:3])
@@ -222,7 +222,7 @@ async def run_holdout_probe() -> HoldoutReport:
         by_kind[name]["top3"] = round(sum(values) / len(values), 4)
     return HoldoutReport(
         generated_at=now_bdt().isoformat(), duration_ms=round((time.perf_counter() - started) * 1000, 1),
-        probes=len(HOLDOUT_PROBES), top1_gold=round(sum(all1) / len(all1), 4), top3_gold=round(sum(all3) / len(all3), 4),
+        probes=len(probes), top1_gold=round(sum(all1) / len(all1), 4), top3_gold=round(sum(all3) / len(all3), 4),
         by_kind=by_kind, by_dialect=summary(dialect1), misses=misses,
     )
 

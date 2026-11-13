@@ -1,0 +1,29 @@
+{
+  "kernel": "krishinexus-dialect-retriever-training",
+  "smoke": false,
+  "seed": 20261113,
+  "minutes": 1.6,
+  "gpu": "Tesla T4",
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.20.2",
+  "onnxruntime": "1.32.0",
+  "files": {
+    "krishi_retriever.json": {
+      "bytes": 601,
+      "sha256": "1e91cfe1c225291ce22db07f625895c4c4432407bcb49163de44acb0edab48b7"
+    },
+    "model_int8.onnx": {
+      "bytes": 118073663,
+      "sha256": "fcedf399eb35be2c5f9e7964319e32c1c158f20241859df1ede6e7b26173ce34"
+    },
+    "tokenizer.json": {
+      "bytes": 17082988,
+      "sha256": "69b97c319616a6c495f09a709e55c6e87923c6dd77bfc838f93fe6328919bbc8"
+    },
+    "tokenizer_config.json": {
+      "bytes": 408,
+      "sha256": "33b75086cc783ee5d78cab4dae0762d9cab1c40a8e0feb6e65d60c8d69a6afc1"
+    }
+  }
+}

@@ -874,6 +874,103 @@ integrity order: (1) this 66-probe set is **frozen as test** — never tune the 
 price, blight vs pesticide-safety, post-harvest-loss vs syndicate); (3) after changes, generate a **fresh** blind
 batch the same way and report that. Target: top-1 ≥ 0.75 on a fresh batch before the showcase.
 
+### 7b. Trained dialect retriever `krishi-dialect-e5-small-v1` (pre-registered 2026-11-13, before any data exists)
+
+**Why:** the misses above come from the lexicon. A dialect word it lacks gives the wrong intent, so the English HyDE
+passage, and therefore the dense search, point at the wrong document. A multilingual encoder that reads the farmer's
+own words skips that step.
+
+**Model:** `intfloat/multilingual-e5-small` (118M parameters, 384-dim, MIT). It is fine-tuned on (question, document)
+pairs with in-batch negatives and no duplicate documents in a batch, on a Kaggle T4. It is then exported to ONNX with
+int8 weights, so the app runs it with onnxruntime and tokenizers, which faster-whisper already installs.
+
+**Data (all new, written for this model):**
+- Train: six writer agents, two per third of the 18 docs, each reading only `rag/knowledge_seed.py`. Every doc gets
+  questions in the six surface forms of §7, plus negation and cross-doc traps.
+- Dev: three other agents, written the same way. Epochs and the blend weight into the pipeline are chosen on dev only.
+- Test: a **fresh blind batch** of 66 questions, written after the model and blend are frozen, the same way as the
+  §7 probe (six agents, each reading one third of the docs). It is read once.
+- The frozen §7 probe is re-run once after freezing and reported, never tuned on.
+- Caveat: every writer is the same model family, so the test is independent of the training questions but not blind to
+  their style. The report gives each test question's nearest training question by character 4-gram Jaccard similarity.
+
+**Targets on the fresh batch, scored with the full CRAG pipeline exactly as `evals/holdout_probe.py` scores:**
+
+| # | Metric | Target |
+|---|---|---|
+| 1 | top-1 gold doc | ≥ 0.75 |
+| 2 | top-3 gold doc | ≥ 0.90 |
+| 3 | regression suite and the curated 19-question eval | unchanged (100/100; context precision 1.00) |
+| 4 | each non-English surface form, top-1 | reported (n ≈ 10 each, too small for a target) |
+| 5 | added latency per question on the laptop CPU | reported |
+
+Also reported on dev: the zero-shot e5-small and a character n-gram logistic-regression classifier trained on the same
+data, so the fine-tune has two baselines. **Ship rule:** the pipeline uses the trained retriever only if targets 1–3 are
+all met; otherwise the run is recorded and the app is unchanged.
+
+**Frozen 2026-11-13, before any test question was written.**
+- Data: 840 train and 144 dev questions (`training/prepare_retrieval_data.py`; Kaggle dataset
+  `krishinexus-dialect-retrieval`). None was near a frozen-probe question. The first six docs have 28 training questions
+  each, the rest 56, because a content filter blocked one writer (most likely its blight-spray questions).
+- Kaggle kernel `krishinexus-dialect-retriever-training` on a T4, 1.6 min. Epoch 7 of 8 was best on dev. Run 1
+  quantised with one scale per tensor, and its int8 copy agreed with the checkpoint on only 0.875 of dev top-1 picks.
+  Run 2 (the frozen model) quantises per channel: agreement 0.924, SHA-256 `d9e149d4…ad7ac4`, 118 MB, plus a 17 MB
+  tokenizer. Records are in `training/runs/kaggle-t4-2026-11-13-dialect-retriever/`.
+
+| Dev, 144 questions | top-1 | top-3 |
+|---|---|---|
+| Pipeline today (full CRAG) | 0.493 | 0.799 |
+| Zero-shot e5-small | 0.514 | 0.778 |
+| Character n-gram logistic regression | 0.889 | 0.965 |
+| Fine-tuned e5-small checkpoint | 0.875 | 0.965 |
+| Its int8 ONNX copy on Kaggle / on the laptop | 0.868 / 0.861 | 0.979 / 0.972 |
+| Pipeline + model, blend weight 0.25 / **0.5** / 0.75 / 1.0 | 0.792 / **0.882** / 0.882 / 0.861 | 0.951 / **0.972** / 0.965 / 0.972 |
+
+- The simple character n-gram baseline matches the fine-tune on dev. Dev and train come from the same kind of writer,
+  so this may flatter memorising models; the blind batch is the real test.
+- Blend weight 0.5 is chosen on dev (it ties 0.75 on top-1 and has the better top-3). The model adds 7.3 ms per
+  question on the laptop CPU.
+- Target 3 is already **missed**, so under the ship rule the app stays unchanged. The regression suite passes 100/100
+  and five of the six curated metrics stay at 1.00, but context precision falls to 0.974. One question moved: Rahim's
+  Rangpuri "where do I sell potatoes tomorrow, the Faria pays little" now ranks `DAM-POT-PRICE-01` first and the gold
+  `CPD-SYND-01` second. Its CRAG verdict, faithfulness and relevancy are unchanged. The blend weight is not re-chosen
+  on the curated set, because the rule above says dev only.
+
+**Test, scored once on 2026-11-13** (`training/score_retrieval_test.py`; the questions and report are in the run folder):
+- 66 fresh questions from six new writers, two per third of the docs, each reading only `rag/knowledge_seed.py`.
+- Each writer covered all six surface forms, with 6 topical, 3 paraphrase, 1 negation and 1 cross-doc question.
+- The harness loaded `CLAUDE.md` into each writer's context. It names the eval files and lists the intent trigger
+  words, but holds no questions; the §7 probe has the same caveat.
+- The nearest training question has a character 4-gram Jaccard similarity of at most 0.31 (mean 0.17), and none
+  reaches 0.5.
+
+| | top-1 | top-3 | Target | |
+|---|---|---|---|---|
+| Fresh batch, pipeline today | 0.591 | 0.864 | — | |
+| **Fresh batch, pipeline + model (weight 0.5)** | **0.955** | **0.985** | 1: ≥ 0.75; 2: ≥ 0.90 | **both met** |
+| Frozen §7 probe, re-run once with the model (was 0.500 / 0.848) | 0.833 | 0.970 | reported | |
+| Curated eval context precision / regression suite | 0.974 / 100 of 100 | | 3: 1.00 / 100 | **missed** |
+
+Fresh batch with the model, top-1 by form: Standard Bangla 0.91, Rangpuri 0.91, Sylheti 1.00, Bogura 1.00, Banglish
+0.91 and English 1.00 (11 each; without the model 0.36, 0.64, 0.36, 0.82, 0.64 and 0.73). On the frozen probe, Banglish
+(0.64) and Rangpuri (0.60) stay weakest.
+
+**Decision under the ship rule: not shipped.** Target 3 is missed, so `hybrid_retriever.DIALECT_WEIGHT` was set to 0
+and the app stayed unchanged, even with the model installed.
+
+**Owner override, 2026-11-13: switched on.** The project owner chose to ship the model despite target 3
+(`DIALECT_WEIGHT = 0.5`, the dev-chosen weight; nothing re-tuned). The reasons:
+- The miss is one curated question moving from rank 1 to rank 2, with its verdict and answer unchanged.
+- Blind dialect retrieval improves by 36 points on the fresh batch and 33 on the frozen probe.
+
+This is a decision against the pre-registered rule, recorded as such. Verified with the model on:
+- the curated context precision is 0.974 (the other five curated metrics are 1.00);
+- the regression suite passes 100/100;
+- `GET /evals/holdout?refresh=true` returns 0.833 / 0.970;
+- `GET /rag/stats` reports `dialect_retriever`.
+
+Setting the weight back to 0 restores the pre-override app.
+
 ## 8. YOLO `yolov11n-krishi-bd-v2.1` (two-stage potato inspector; training on Kaggle from 2026-11-09)
 
 **Dataset, as checked on Mendeley on 2026-11-09:** Diamant Potato Dataset, DOI 10.17632/4vty9rz7zw.1.

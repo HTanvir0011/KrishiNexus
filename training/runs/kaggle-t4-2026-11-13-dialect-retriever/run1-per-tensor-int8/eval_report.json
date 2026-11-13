@@ -1,0 +1,387 @@
+{
+  "model": "krishi-dialect-e5-small-v1",
+  "base_model": "intfloat/multilingual-e5-small",
+  "seed": 20261113,
+  "smoke": false,
+  "rows": {
+    "train": 840,
+    "dev": 144
+  },
+  "docs": [
+    "BARI-POT-STORE-01",
+    "BARI-POT-STORE-02",
+    "DAE-BLIGHT-01",
+    "BAU-MAP-01",
+    "BAU-PHL-02",
+    "BARI-CHILI-01",
+    "BARI-BRINJAL-01",
+    "BRRI-BORO-01",
+    "FFWC-HAOR-01",
+    "CPD-SYND-01",
+    "WFP-AGG-01",
+    "BCSA-QUOTA-01",
+    "DAM-POT-PRICE-01",
+    "BB-WHR-01",
+    "AGRI-FIN-01",
+    "DAE-SAFE-01",
+    "DAM-TRANS-01",
+    "BARI-POT-VAR-01"
+  ],
+  "dev_zero_shot": {
+    "all": {
+      "n": 144,
+      "top1": 0.5139,
+      "top3": 0.7778,
+      "mrr": 0.6681
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 24,
+        "top1": 0.2917,
+        "top3": 0.625,
+        "mrr": 0.4762
+      },
+      "Bogura (Varendri)": {
+        "n": 24,
+        "top1": 0.625,
+        "top3": 0.8333,
+        "mrr": 0.7428
+      },
+      "English": {
+        "n": 24,
+        "top1": 0.8333,
+        "top3": 1.0,
+        "mrr": 0.9167
+      },
+      "Rangpuri": {
+        "n": 24,
+        "top1": 0.3333,
+        "top3": 0.6667,
+        "mrr": 0.5514
+      },
+      "Standard Bangla": {
+        "n": 24,
+        "top1": 0.5,
+        "top3": 0.75,
+        "mrr": 0.6536
+      },
+      "Sylheti": {
+        "n": 24,
+        "top1": 0.5,
+        "top3": 0.7917,
+        "mrr": 0.6677
+      }
+    },
+    "by_kind": {
+      "cross_doc": {
+        "n": 18,
+        "top1": 0.3889,
+        "top3": 0.7778,
+        "mrr": 0.6025
+      },
+      "negation": {
+        "n": 18,
+        "top1": 0.3889,
+        "top3": 0.7778,
+        "mrr": 0.593
+      },
+      "paraphrase": {
+        "n": 54,
+        "top1": 0.3889,
+        "top3": 0.6667,
+        "mrr": 0.566
+      },
+      "topical": {
+        "n": 54,
+        "top1": 0.7222,
+        "top3": 0.8889,
+        "mrr": 0.817
+      }
+    }
+  },
+  "dev_char_ngram_logreg": {
+    "all": {
+      "n": 144,
+      "top1": 0.8889,
+      "top3": 0.9653,
+      "mrr": 0.9331
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 24,
+        "top1": 0.7083,
+        "top3": 0.875,
+        "mrr": 0.8115
+      },
+      "Bogura (Varendri)": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 0.9583,
+        "mrr": 0.9688
+      },
+      "English": {
+        "n": 24,
+        "top1": 0.8333,
+        "top3": 0.9583,
+        "mrr": 0.9018
+      },
+      "Rangpuri": {
+        "n": 24,
+        "top1": 0.9167,
+        "top3": 1.0,
+        "mrr": 0.9583
+      },
+      "Standard Bangla": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 1.0,
+        "mrr": 0.9792
+      },
+      "Sylheti": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 1.0,
+        "mrr": 0.9792
+      }
+    },
+    "by_kind": {
+      "cross_doc": {
+        "n": 18,
+        "top1": 0.6111,
+        "top3": 1.0,
+        "mrr": 0.8056
+      },
+      "negation": {
+        "n": 18,
+        "top1": 0.9444,
+        "top3": 0.9444,
+        "mrr": 0.9583
+      },
+      "paraphrase": {
+        "n": 54,
+        "top1": 0.8889,
+        "top3": 0.9259,
+        "mrr": 0.9189
+      },
+      "topical": {
+        "n": 54,
+        "top1": 0.963,
+        "top3": 1.0,
+        "mrr": 0.9815
+      }
+    }
+  },
+  "best_epoch": 7,
+  "training_log": [
+    {
+      "epoch": 1,
+      "train_loss": 2.0071,
+      "dev_top1": 0.6319,
+      "dev_top3": 0.8958,
+      "dev_mrr": 0.7674,
+      "seconds": 6.1
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.9407,
+      "dev_top1": 0.8125,
+      "dev_top3": 0.9444,
+      "dev_mrr": 0.8848,
+      "seconds": 5.4
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5317,
+      "dev_top1": 0.8403,
+      "dev_top3": 0.9653,
+      "dev_mrr": 0.9038,
+      "seconds": 5.5
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.2947,
+      "dev_top1": 0.8681,
+      "dev_top3": 0.9722,
+      "dev_mrr": 0.9194,
+      "seconds": 5.5
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.1853,
+      "dev_top1": 0.8472,
+      "dev_top3": 0.9653,
+      "dev_mrr": 0.9068,
+      "seconds": 5.5
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.1207,
+      "dev_top1": 0.8681,
+      "dev_top3": 0.9653,
+      "dev_mrr": 0.9196,
+      "seconds": 5.5
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.0911,
+      "dev_top1": 0.875,
+      "dev_top3": 0.9653,
+      "dev_mrr": 0.9255,
+      "seconds": 5.5
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0719,
+      "dev_top1": 0.8681,
+      "dev_top3": 0.9653,
+      "dev_mrr": 0.9207,
+      "seconds": 5.5
+    }
+  ],
+  "dev_fine_tuned": {
+    "all": {
+      "n": 144,
+      "top1": 0.875,
+      "top3": 0.9653,
+      "mrr": 0.9255
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 24,
+        "top1": 0.7083,
+        "top3": 0.8333,
+        "mrr": 0.8017
+      },
+      "Bogura (Varendri)": {
+        "n": 24,
+        "top1": 0.9167,
+        "top3": 1.0,
+        "mrr": 0.9514
+      },
+      "English": {
+        "n": 24,
+        "top1": 1.0,
+        "top3": 1.0,
+        "mrr": 1.0
+      },
+      "Rangpuri": {
+        "n": 24,
+        "top1": 0.7917,
+        "top3": 1.0,
+        "mrr": 0.8958
+      },
+      "Standard Bangla": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 1.0,
+        "mrr": 0.9792
+      },
+      "Sylheti": {
+        "n": 24,
+        "top1": 0.875,
+        "top3": 0.9583,
+        "mrr": 0.925
+      }
+    },
+    "by_kind": {
+      "cross_doc": {
+        "n": 18,
+        "top1": 0.8889,
+        "top3": 1.0,
+        "mrr": 0.9444
+      },
+      "negation": {
+        "n": 18,
+        "top1": 0.7222,
+        "top3": 0.8889,
+        "mrr": 0.8259
+      },
+      "paraphrase": {
+        "n": 54,
+        "top1": 0.8333,
+        "top3": 0.9444,
+        "mrr": 0.8965
+      },
+      "topical": {
+        "n": 54,
+        "top1": 0.963,
+        "top3": 1.0,
+        "mrr": 0.9815
+      }
+    }
+  },
+  "dev_onnx_int8": {
+    "all": {
+      "n": 144,
+      "top1": 0.8472,
+      "top3": 0.9722,
+      "mrr": 0.9105
+    },
+    "by_dialect": {
+      "Banglish": {
+        "n": 24,
+        "top1": 0.625,
+        "top3": 0.875,
+        "mrr": 0.7584
+      },
+      "Bogura (Varendri)": {
+        "n": 24,
+        "top1": 0.875,
+        "top3": 0.9583,
+        "mrr": 0.9201
+      },
+      "English": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 1.0,
+        "mrr": 0.9792
+      },
+      "Rangpuri": {
+        "n": 24,
+        "top1": 0.8333,
+        "top3": 1.0,
+        "mrr": 0.9167
+      },
+      "Standard Bangla": {
+        "n": 24,
+        "top1": 0.9583,
+        "top3": 1.0,
+        "mrr": 0.9792
+      },
+      "Sylheti": {
+        "n": 24,
+        "top1": 0.8333,
+        "top3": 1.0,
+        "mrr": 0.9097
+      }
+    },
+    "by_kind": {
+      "cross_doc": {
+        "n": 18,
+        "top1": 0.9444,
+        "top3": 1.0,
+        "mrr": 0.9722
+      },
+      "negation": {
+        "n": 18,
+        "top1": 0.7778,
+        "top3": 1.0,
+        "mrr": 0.8704
+      },
+      "paraphrase": {
+        "n": 54,
+        "top1": 0.7593,
+        "top3": 0.9259,
+        "mrr": 0.851
+      },
+      "topical": {
+        "n": 54,
+        "top1": 0.9259,
+        "top3": 1.0,
+        "mrr": 0.963
+      }
+    }
+  },
+  "onnx_int8_top1_agreement_with_checkpoint": 0.875,
+  "onnx_int8_ms_per_question_kaggle_cpu_median": 18.08
+}

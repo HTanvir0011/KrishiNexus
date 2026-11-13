@@ -115,6 +115,12 @@ Download these from the version's Output tab:
 3. Copy the measured numbers from `eval_report.json` into `MEMORY.md`, and never type them into the app (AGENTS.md §2).
 4. Done on 2026-11-09: `lora_adapter_spec` and `LOCAL_MODELS` now describe the 1.5B model (`krishi-bangla-1.5b`), and
    the app grounds its prompts the same way the training data does (`ollama_local.ground_prompt`).
+5. Dialect retriever (`krishi-dialect-e5-small-v1`, TRAINING_PLAN.md §7b): from the output of the private kernel
+   `krishinexus-dialect-retriever-training` (version 2), copy the folder `krishi-dialect-e5-small-v1/`
+   (`model_int8.onnx`, `tokenizer.json`, `krishi_retriever.json`, about 135 MB) to
+   `backend/models/retrieval/krishi-dialect-e5-small-v1/`, and check each file's SHA-256 against the kernel's
+   `run_manifest.json`. It needs `onnxruntime` and `tokenizers`, which `faster-whisper` installs; without them or the
+   folder, retrieval runs as before. `GET /rag/stats` reports `dialect_retriever` when it is loaded.
 
 ### Troubleshooting
 

@@ -1,0 +1,495 @@
+{
+  "generated_at": "2026-11-13T20:25:23.413394+06:00",
+  "duration_ms": 2526.7,
+  "probes": 144,
+  "top1_gold": 0.4931,
+  "top3_gold": 0.7986,
+  "by_kind": {
+    "cross_doc": {
+      "n": 18.0,
+      "top1": 0.2778,
+      "top3": 0.7222
+    },
+    "negation": {
+      "n": 18.0,
+      "top1": 0.6667,
+      "top3": 0.8889
+    },
+    "paraphrase": {
+      "n": 54.0,
+      "top1": 0.3333,
+      "top3": 0.7037
+    },
+    "topical": {
+      "n": 54.0,
+      "top1": 0.6667,
+      "top3": 0.8889
+    }
+  },
+  "by_dialect": {
+    "Banglish": {
+      "n": 24.0,
+      "top1": 0.4167
+    },
+    "Bogura (Varendri)": {
+      "n": 24.0,
+      "top1": 0.5
+    },
+    "English": {
+      "n": 24.0,
+      "top1": 0.7083
+    },
+    "Rangpuri": {
+      "n": 24.0,
+      "top1": 0.3333
+    },
+    "Standard Bangla": {
+      "n": 24.0,
+      "top1": 0.5
+    },
+    "Sylheti": {
+      "n": 24.0,
+      "top1": 0.5
+    }
+  },
+  "misses": [
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-STORE-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "নীলফামারীর ইস্টোরোত এবার আলু থুইনু বাহে। একটা ঘরোত আলুর গাওত পানির ফোঁটা জমি নরম"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BARI-POT-STORE-01",
+      "got": "CPD-SYND-01",
+      "question": "হামার রংপুরোত এবার কোল্ড ইস্টোরের ভাড়া কেজিত ৯ টাকা ধরছে, ফড়িয়াও দাম দেয় না,"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-STORE-02",
+      "got": "DAM-POT-PRICE-01",
+      "question": "মুন্সীগঞ্জের হিমাগার থেকে আলু এনে কাটলাম, বাইরে একদম ঠিক কিন্তু মাঝখানটা কালো। শ"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-POT-STORE-02",
+      "got": "CPD-SYND-01",
+      "question": "লালমনিরহাটের ইস্টোরোত ৫০ কেজির পাটের বস্তা প্যালেটের উপর ক্যাংকা করি সাজাইম বাহে"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-STORE-02",
+      "got": "DAM-POT-PRICE-01",
+      "question": "জৈষ্ঠ মাসর গরমো কারেন্ট গেলে স্টোরর মেশিন বন্ধ থাকে। কয় গণ্টার ভিতরে আবার চালু "
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-STORE-02",
+      "got": "BARI-POT-STORE-01",
+      "question": "store e bosta gula deyal er sathe lagaye ekdom thesh kore uchu kore rakhsi. majh"
+    },
+    {
+      "kind": "negation",
+      "gold": "BARI-POT-STORE-02",
+      "got": "BARI-POT-STORE-01",
+      "question": "কুড়িগ্রামের হামার ছোট ইস্টোরোত জেনারেটর নাই বাহে। কারেন্ট গেইলে আলু কয় ঘণ্টা প"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-BLIGHT-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "জাড়ের দিনোত কুয়াশা পড়ার পর কার্ডিনাল আলুর পাতাত কালা কালা ভিজা দাগ, তলাত সাদা"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-BLIGHT-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "কুন ধরনর আবহাওয়াত আলুর ফাতা ফচা রোগ বেশি ধরে? রাইতর ঠান্ডা কতটুক আর কুয়াশা কয়"
+    },
+    {
+      "kind": "topical",
+      "gold": "DAE-BLIGHT-01",
+      "got": "CPD-SYND-01",
+      "question": "জয়পুরহাটে হামার ডায়মন্ড আলুত নাবি ধসা লাগিচে, ম্যানকোজেবে আর থামিচ্চে না। মেটা"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-BLIGHT-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "Munshiganj e alur pata pocha rog er jonno oshudh spray kortesi, Magh er sheshe t"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "DAE-BLIGHT-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "আলু তো ফাল্গুনে ইস্টোরত যাবি, কিওরিং-টিওরিং পরের কথা। এখন কওতো, রাতের ঠান্ডা কত "
+    },
+    {
+      "kind": "topical",
+      "gold": "BAU-MAP-01",
+      "got": "CPD-SYND-01",
+      "question": "হামরা গাইবান্ধাত বেগুন করোং। MAP প্যাকেট কী জিনিস বাহে? ফুটা ফুটা পলিথিনোত বেগুন"
+    },
+    {
+      "kind": "topical",
+      "gold": "BAU-MAP-01",
+      "got": "FFWC-HAOR-01",
+      "question": "শাকসবজির MAP ব্যাগো ফুটা রাখা লাগে নি? ফুরা মুখ বন্ধ করি দিলে কিতা অয়?"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BAU-MAP-01",
+      "got": "CPD-SYND-01",
+      "question": "গত হাটবারে পলিথিনের ব্যাগের মুখ শক্ত করে বান্দে বাইগন দূরের বাজারত পাঠাছনু। যাওয"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BAU-MAP-01",
+      "got": "CPD-SYND-01",
+      "question": "Narsingdi farmer here. If I pick out the good brinjals by size and pack them in "
+    },
+    {
+      "kind": "negation",
+      "gold": "BAU-MAP-01",
+      "got": "CPD-SYND-01",
+      "question": "নওগাঁয় হামাগেরে গ্রামত কোল্ড ইস্টোর-টিস্টোর কিছুই নাই। বাইগন আর লাউশাক হাটত লিয"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BAU-MAP-01",
+      "got": "CPD-SYND-01",
+      "question": "Karwan Bazar er aratdar ra naki grading e ek poisa o khoroch kore na. tahole amr"
+    },
+    {
+      "kind": "topical",
+      "gold": "BAU-PHL-02",
+      "got": "BARI-POT-STORE-01",
+      "question": "মাঠ থেকে ভোক্তার হাতে পৌঁছাতে দেশে ফল আর সবজির কত শতাংশ নষ্ট হয়? কাঁঠাল, কলা, আ"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BAU-PHL-02",
+      "got": "DAM-TRANS-01",
+      "question": "মুই রংপুরোত কলার ব্যাপারীর সাথোত কাম করোং বাহে। ট্রাকোত তুলি নিয়া যাইতে যাইতে ক"
+    },
+    {
+      "kind": "topical",
+      "gold": "BAU-PHL-02",
+      "got": "BARI-POT-STORE-01",
+      "question": "শ্রীমঙ্গলর আনারস ঢাকাত নিতে নিতে কত ফার্সেন্ট নষ্ট অয়? আনারসর পোস্ট হারভেস্ট লস"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BAU-PHL-02",
+      "got": "CPD-SYND-01",
+      "question": "হামি সান্তাহারের হাটত আম লিয়া যাই, সারাদিন খোলা রোদত বসে থাকা লাগে, ছায়াও নাই।"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BAU-PHL-02",
+      "got": "BARI-POT-STORE-01",
+      "question": "Gazipur theke kathal Dhaka porjonto nite nite kotota poche nosto hoy? amar to mo"
+    },
+    {
+      "kind": "negation",
+      "gold": "BAU-PHL-02",
+      "got": "CPD-SYND-01",
+      "question": "alu ar dhan er kotha bolchi na, shudhu fol ar kacha sobji. haat-arot e poche nos"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BAU-PHL-02",
+      "got": "DAE-SAFE-01",
+      "question": "I know calcium carbide is banned for ripening mangoes. Leaving that aside, what "
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BARI-CHILI-01",
+      "got": "CPD-SYND-01",
+      "question": "শুনছি কাঁচামরিচে পাইকার-আড়তদাররা ১১৬% পর্যন্ত লাভ করে, তাই মানিকগঞ্জ থেকে নিজেই"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-BRINJAL-01",
+      "got": "CPD-SYND-01",
+      "question": "মহাস্থান হাট থেকে বেগুন কিনে গুদামে রাখি, পরে ঢাকায় পাঠাই। বেগুন কত ডিগ্রি তাপম"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-BRINJAL-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "পীরগাছাত মুই বেগুনগুলা ঠান্ডা ঘরত থুছনু। দুইদিন পর বাইর করি দেকং গাওত ছোট ছোট গা"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-BRINJAL-01",
+      "got": "CPD-SYND-01",
+      "question": "মৌলভীবাজারো আমার বেগুন খেতো ফোমোপসিস লাগছে মনে অয়, ফল ফচিয়া যার। ইটা কোন গরমো "
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-BRINJAL-01",
+      "got": "CPD-SYND-01",
+      "question": "Jessore theke begun tule 8-10 din rakhte hoy bechar age. Koto thanda ar koto bha"
+    },
+    {
+      "kind": "negation",
+      "gold": "BARI-BRINJAL-01",
+      "got": "DAE-SAFE-01",
+      "question": "বেগুনের ডগা ও ফল ছিদ্রকারী পোকা মারতে পুরনো অর্গানোফসফেট জাতীয় কড়া বিষ আর দিতে"
+    },
+    {
+      "kind": "topical",
+      "gold": "BRRI-BORO-01",
+      "got": "FFWC-HAOR-01",
+      "question": "সুনামগঞ্জের হাওরে বোরো ধান পুরোপুরি পাকার আগেই কাটতে বলা হয় কেন? ঠিক কতভাগ শিষ "
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BRRI-BORO-01",
+      "got": "FFWC-HAOR-01",
+      "question": "Amar bari Itna, Kishoreganj. Gola te dhan rakhar 2-3 shoptaho por bhitore gorom "
+    },
+    {
+      "kind": "negation",
+      "gold": "BRRI-BORO-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "ধান সাধারণ চটের বস্তাত ভরি মাটিত থুইম না, শুনছুং অ্যাংকা করলে নষ্ট হয়। তা কেমন "
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BRRI-BORO-01",
+      "got": "FFWC-HAOR-01",
+      "question": "উজানো চেরাপুঞ্জিত বেশি বৃষ্টি অইছে হুনিয়া ঢলর ডরে কাঁচা-ফাকা দান তাড়াতাড়ি কাট"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "FFWC-HAOR-01",
+      "got": "BRRI-BORO-01",
+      "question": "হামি কৃষি নিয়া পড়বার লাগছি। ম্যাঘলা আকাশত উপগ্রহের সাধারণ ছবিত জমিন দ্যাখা যায"
+    },
+    {
+      "kind": "topical",
+      "gold": "CPD-SYND-01",
+      "got": "WFP-AGG-01",
+      "question": "কাঁচামরিচ ক্ষেত থেকে খুচরা দোকান পর্যন্ত যেতে দাম শতকরা কত বাড়ে? মাঝখানে কোন কো"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "CPD-SYND-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "মিঠাপুকুরত হামরা কার্ডিনাল আলু খ্যাতত বারো টাকাত ছাড়ি দেই, অথচ ঢাকার মানষি কিনে"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "CPD-SYND-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "ঢাকার মোকামত মালের ডাক ক্যাংকা ওঠে হামরা কিচ্চু জানবার পারি না, মহাজন যা দাম কয়"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "CPD-SYND-01",
+      "got": "DAM-TRANS-01",
+      "question": "Bogura theke Dhaka truck bhara koto seta jani, Jamuna bridge toll o. Kintu Karwa"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "WFP-AGG-01",
+      "got": "CPD-SYND-01",
+      "question": "হুনছি রোহিঙ্গা ক্যাম্পর দোকানর লাগি কুনু সংস্থা কৃষকর থাকি সবজি কিনে। তারা দাম ক"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "WFP-AGG-01",
+      "got": "CPD-SYND-01",
+      "question": "I read the CPD study saying aratdars eat about 62% of the bepari's costs. If our"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BCSA-QUOTA-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "আমাদের মুন্সীগঞ্জে প্রতি বছর যত আলু ওঠে, তার অর্ধেক রাখার মতোও ঠান্ডা ঘর নাকি নে"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BCSA-QUOTA-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "আলু রাখার জাগার অভাবো দেশর বছরে কতো টেকার লোকসান অয়, ইতার কুনু হিসাব আছে নি?"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BCSA-QUOTA-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "Thakurgaon e alu rakhte gele bhara, bosta, labor sob miliye kg proti koto pore j"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAM-POT-PRICE-01",
+      "got": "CPD-SYND-01",
+      "question": "ফাগুন মাসোত আলু তুলি হাটোত নিয়া গেইলে যে দাম পাং, তাতে বীজ-সার-কামলার ট্যাকাও উ"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAM-POT-PRICE-01",
+      "got": "CPD-SYND-01",
+      "question": "আমার খেতর আলু ফাল্গুন মাসো এক্কেবারে হস্তা দামো যায়গি, আর ভাদ্র মাসো হুনি ঢাকাত"
+    },
+    {
+      "kind": "topical",
+      "gold": "DAM-POT-PRICE-01",
+      "got": "CPD-SYND-01",
+      "question": "হামি শিবগঞ্জোত ডায়মন্ড আলু লাগাচি। কেজিপ্রতি উৎপাদন খরচ কত পড়ে, আর আগস্ট-সেপ্ট"
+    },
+    {
+      "kind": "negation",
+      "gold": "DAM-POT-PRICE-01",
+      "got": "CPD-SYND-01",
+      "question": "মুই এইবার আলু হিমাগারোত থুইম না, খ্যাত থাকি তুলিয়াই বেচি দিম। ওই সময় কেজিত কয়"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "DAM-POT-PRICE-01",
+      "got": "CPD-SYND-01",
+      "question": "Everyone's cursing the cold storage rent hike and the Faria syndicate. My questi"
+    },
+    {
+      "kind": "topical",
+      "gold": "BB-WHR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "বাহে, মোর ২০০ বস্তা কার্ডিনাল আলু হিমাগারোত আছে। ওয়্যারহাউস রিসিট দেখাইলে ব্যাং"
+    },
+    {
+      "kind": "topical",
+      "gold": "BB-WHR-01",
+      "got": "AGRI-FIN-01",
+      "question": "ওয়্যারহাউস রিসিট লোন কিতা জিনিস বা? মাল গুদামো থাকলে ব্যাংকে কত টেখা দেয়, আর ট"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BB-WHR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "হামার বোরো ধান লাইসেন্স করা গুদামোত তুলে রাখচি। এখন ধান না বেচেই ঘরের খরচ আর আলু"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BB-WHR-01",
+      "got": "BARI-POT-STORE-01",
+      "question": "My potatoes sit in a cold store till prices rise, but I need cash now for househ"
+    },
+    {
+      "kind": "topical",
+      "gold": "AGRI-FIN-01",
+      "got": "BB-WHR-01",
+      "question": "ইউসিবি আর আইফার্মার কৃষকদের কীভাবে টাকা দেয়? সুদ কত, আর আইফার্মার কি পরে আমাদের"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "AGRI-FIN-01",
+      "got": "BRRI-BORO-01",
+      "question": "বাহে, মুই বর্গা চাষি, নিজের নামোত এক ছটাক জমিও নাই, বন্ধক দিবার কিছুই নাই। তাও ব"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "AGRI-FIN-01",
+      "got": "BARI-CHILI-01",
+      "question": "হামরা কয়জন মরিচ চাষি এমন কাউকে খুঁজিচ্চি যে লাগানোর আগে ট্যাকা দিবি, আবার মরিচ "
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "AGRI-FIN-01",
+      "got": "BB-WHR-01",
+      "question": "boishakh e dhan katar kamla-r majuri dite hat ekdom khali. kichu bondhok na rekh"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "AGRI-FIN-01",
+      "got": "BCSA-QUOTA-01",
+      "question": "হামার আলু হিমাগারের কোটাত জাগা পায় না, ভাড়াও ডবল হচে। এংকা অবস্থাত জমি বন্ধক ন"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-SAFE-01",
+      "got": "CPD-SYND-01",
+      "question": "আড়তে দেখি কাঁচা আম-কলার ঝুড়িতে একটা পাউডারের পুঁটলি রেখে দেয়, রাতারাতি সব হলু"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-SAFE-01",
+      "got": "CPD-SYND-01",
+      "question": "মরিচ খেতো পুকা মারার লাগি বাজার থাকি যেকুনু বিষ আনিয়া মন মতো বেশি করি দেই। কুন "
+    },
+    {
+      "kind": "topical",
+      "gold": "DAE-SAFE-01",
+      "got": "CPD-SYND-01",
+      "question": "endosulfan, heptachlor ar DDT ki ekhono Bangladesh e registered? bazare kichu do"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAE-SAFE-01",
+      "got": "BAU-PHL-02",
+      "question": "A trader wants me to dip my bitter gourd in some chemical water so it looks fres"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "DAE-SAFE-01",
+      "got": "BARI-BRINJAL-01",
+      "question": "বাহে, বেগুন খ্যাতোত ডগা-ফল ছিদ্রকারী পোকা ধরছে। ঘরোত পুরান এন্ডোসালফান আর ডিডিটি"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "DAM-TRANS-01",
+      "got": "CPD-SYND-01",
+      "question": "jessore theke dhaka te begun pathabo. notun boro shetu par hoite majhari maal-er"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "DAM-TRANS-01",
+      "got": "WFP-AGG-01",
+      "question": "কুড়িগ্রামের ডব্লিউএফপি কেন্দ্র একবারে অল্প সবজি নেয়, তাই বাকিটা ঢাকায় পাঠাতে "
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "চিপস কারখানা আর বিদেশে যারা আলু পাঠায়, তারা কোন রঙের খোসার আলু বেশি চায়, লাল ন"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "বস্তাত ভরার আগোত মুই আলু বড়-ছোট বাছি আলাদা করোং। কতো বড় হইলে সবচাইতে ভালো ভাগো"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "কার্ডিনাল আলু কিলা জাত বা? চামড়া লাল নি, ফলন কিলা?"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "হামি এবার ডায়মন্ড জাত লাগামো ভাবিচ্চি। ডায়মন্ড আর কার্ডিনালের মধ্যে কোনটা বেশি"
+    },
+    {
+      "kind": "topical",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAM-POT-PRICE-01",
+      "question": "alu grade A, B er size koto mm dhore?"
+    },
+    {
+      "kind": "paraphrase",
+      "gold": "BARI-POT-VAR-01",
+      "got": "CPD-SYND-01",
+      "question": "My red-skinned potatoes give a big yield, but a trader says the yellow ones keep"
+    },
+    {
+      "kind": "cross_doc",
+      "gold": "BARI-POT-VAR-01",
+      "got": "DAE-BLIGHT-01",
+      "question": "late blight er jonno 7 din por por mancozeb diye fosol bachaisi. ekhon porer boc"
+    }
+  ]
+}

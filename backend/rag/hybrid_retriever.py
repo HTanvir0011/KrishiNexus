@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel
 
+from rag.dialect_encoder import get_dialect_encoder
 from rag.knowledge_seed import KNOWLEDGE_DOCS, KnowledgeDoc
 from rag.lexicon import tokenize
 
@@ -31,6 +32,9 @@ logger = logging.getLogger("krishinexus.rag")
 EMBEDDING_DIM = 384
 RRF_K = 60
 CANDIDATE_POOL = 20
+# Share of the final score given to the trained dialect retriever when it is installed; 0.5 was chosen on dev. On 13 Nov
+# 2026 the project owner switched it on despite its missed curated-eval target (TRAINING_PLAN.md 7b); 0 turns it off.
+DIALECT_WEIGHT = 0.5
 
 STOPWORDS = frozenset(
     "a an and are as at be by for from in into is it its of on or that the this to with was were will can "
@@ -288,11 +292,16 @@ class HybridRetriever:
         self.chunker = SemanticChunker(self.embedder)
         self.chunks: list[ContextualChunk] = [c for doc in docs for c in self.chunker.chunk(doc)]
         self.reranker = BGEReranker()
+        self.dialect = get_dialect_encoder() if DIALECT_WEIGHT > 0 else None
         self._build_indexes()
 
     def _build_indexes(self) -> None:
         self.bm25 = BM25Index([content_terms(c.indexed_text) for c in self.chunks])
         self.vectors = VectorIndex(self.embedder.embed([c.indexed_text for c in self.chunks]))
+        if self.dialect:  # the model scores whole documents, as it was trained
+            docs = {c.doc.doc_id: c.doc for c in self.chunks}
+            self.doc_ids = list(docs)
+            self.doc_passages = self.dialect.embed([f"{d.contextual_header()}\n{d.text}" for d in docs.values()], query=False)
 
     def upsert_documents(self, docs: list[KnowledgeDoc]) -> int:
         """Replace (by doc_id) or add documents and rebuild both indexes; returns the new chunk count."""
@@ -310,12 +319,16 @@ class HybridRetriever:
             "embedding_backend": self.embedder.backend,
             "embedding_dim": int(self.vectors.matrix.shape[1]),
             "reranker_backend": self.reranker.backend,
+            "dialect_retriever": self.dialect.backend if self.dialect else None,
             "fusion": f"reciprocal rank fusion (k={RRF_K}) + metadata boost",
         }
 
     def search(self, query: str, top_k: int = 5, crop: str | None = None, district: str | None = None,
-               dense_query: str | None = None) -> list[RetrievedChunk]:
-        """BM25 on ``query``; dense search on ``dense_query`` (e.g. a HyDE document) or ``query``."""
+               dense_query: str | None = None, question: str | None = None) -> list[RetrievedChunk]:
+        """BM25 on ``query``; dense search on ``dense_query`` (e.g. a HyDE document) or ``query``; the trained dialect
+        retriever, when installed, reads ``question`` (the farmer's own words) and is blended into the rerank score."""
+        dialect_p = (dict(zip(self.doc_ids, self.dialect.doc_probabilities(question, self.doc_passages)))
+                     if question and self.dialect else None)
         bm25 = self.bm25.scores(content_terms(query))
         dense = self.vectors.scores(self.embedder.embed([dense_query or query])[0])
         bm25_order = [int(i) for i in np.argsort(-bm25, kind="stable")]
@@ -336,9 +349,12 @@ class HybridRetriever:
         hybrid_order = sorted(fused, key=lambda i: -fused[i])
         bm25_max = float(bm25.max()) or 1.0
 
+        def final(i: int) -> float:
+            score = self.reranker.score(query, self.chunks[i], bm25[i] / bm25_max, float(dense[i]), crop, district)
+            return score if dialect_p is None else (1 - DIALECT_WEIGHT) * score + DIALECT_WEIGHT * float(dialect_p[self.chunks[i].doc.doc_id])
+
         reranked = sorted(
-            ((i, self.reranker.score(query, self.chunks[i], bm25[i] / bm25_max, float(dense[i]), crop, district))
-             for i in hybrid_order),
+            ((i, final(i)) for i in hybrid_order),
             key=lambda pair: (-pair[1], -fused[pair[0]]),
         )
         results: list[RetrievedChunk] = []
