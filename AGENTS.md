@@ -93,10 +93,10 @@ folder; default `backend/models/retrieval/krishi-dialect-e5-small-v1`, loaded on
 `GEMINI_API_KEY`.
 All times are BDT (UTC+06:00, `config.BDT`, `now_bdt()`); no `zoneinfo`/`tzdata` dependency.
 
-Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /health` and `/ws`
+Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /market /health /auth` and `/ws`
 (ws: true) to `KNX_BACKEND_URL` (default `http://localhost:8000`; set it when the backend runs on another port). A new
 backend prefix **must** be added to `BACKEND_PREFIXES` in `frontend/vite.config.ts` **and** to the API `location` regex
-in `frontend/nginx.conf`. A new frontend route needs no nginx change. Regenerate `backend/requirements.lock`
+in `frontend/nginx.conf` **and** to `API_PATH` in `deploy/cloudrun/serve.py`. A new frontend route needs no nginx change. Regenerate `backend/requirements.lock`
 (`pip freeze`) after any dependency change.
 
 ---
@@ -109,6 +109,7 @@ krishinexus-os/
 ├── MEMORY.md                           # live state + handover log
 ├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
 ├── TRAINING_PLAN.md                    # Phase 9: SFT data (prompts v4, v5), training recipe, honest eval design + measured runs (§6)
+├── deploy/cloudrun/                    # hosted demo: Dockerfile (builds GitHub main), serve.py (SPA + API on one origin, write limit), check_serve.py, DEPLOY.md
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm; profile data: pgvector, Neo4j, Redis, n8n
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG, data-profile ports and passwords
 ├── .github/workflows/docker-smoke.yml  # CI: builds the images and smoke-tests the default stack and profile data on Linux
@@ -170,6 +171,7 @@ krishinexus-os/
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
 │   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/, retrieval/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
+│   ├── auth.py · check_auth.py          # demo accounts: password login (PBKDF2 hashes) + quick login, HMAC session tokens, admin API (/auth, .state/users.json); self-check
 │   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)
 │   ├── data_seed.py                    # seed files for the compose data profile: pgvector SQL, Neo4j Cypher, n8n workflows
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
@@ -200,7 +202,9 @@ krishinexus-os/
         │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
         │   ├── BuyerBidsPanel.tsx              # market seat: ranked buyer bids for a lot and the 1-tap bKash/Nagad escrow lock
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx
-        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx
+        ├── lib/roles.ts                        # which seats each role opens (ROLE_VIEWS) and where it lands (homeOf)
+        ├── admin/AdminPage.tsx · AccountsSection.tsx · OperationsSections.tsx · useAdmin.ts   # /admin console: sidebar + six pages
+        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx · LoginPage.tsx
 ```
 
 ---
@@ -273,6 +277,10 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /evals/metrics?refresh` | → `RagasReport` (cached 10 min) | 6 |
 | `POST /evals/run-regression` | `RegressionRequest` (`sample_size` 1–20 per category) → `RegressionReport` | 6 |
 | `GET /evals/holdout?refresh` | → `HoldoutReport` (frozen 66-probe blind retrieval test; cached 10 min) | 9 |
+| `GET /auth/demo-users` | → active `User` accounts for the quick-login screen | 11 |
+| `POST /auth/login` | `{user_id, password?}` → `Session` (`token` = `user_id.expiry.HMAC`, 12 h). The id is matched in any case. With a password it must match the account's PBKDF2 hash (401 otherwise; seeded accounts use `DEMO_PASSWORD` `krishi2026`, shown on the login page); without one it is the demo quick login. 403 if unknown or disabled | 11 |
+| `GET /auth/me` | `Authorization: Bearer` → `User`; 401 for a forged, expired, disabled or deleted account | 11 |
+| `GET/POST /auth/admin/users` (optional `password`), `PATCH/DELETE /auth/admin/users/{id}` (`password` resets it), `POST /auth/admin/users/reset`, `GET /auth/admin/escrows`, `GET /auth/admin/overview` | admin role only (403 otherwise); the last active admin cannot be demoted, disabled or deleted (409); other API routes stay open | 11 |
 
 LangGraph node order (`agents/supervisor.py`): `pii_guardrail → token_compression → crag_retrieval → vision_grading →
 syndicate_bypass → coldchain_arbitrage → climate_credit → supervisor_review →(re-plan, max 2)→ coldchain_arbitrage |
@@ -413,7 +421,12 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
 
 - **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
   - `/` is the product overview: hero with live metrics, the live decision card, bento cards and the LangGraph pipeline.
+  - `/login` is a centred sign-in form (account ID + password) with the quick demo login below it: one click per account, grouped by role.
   - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/market` are the other seats.
+    The workspace needs a login and shows only the role's seats (`lib/roles.ts`): farmer → field, coop → coop,
+    buyer and bank → market, judge and admin → all four.
+  - `/admin` (admin role) is a console with a sidebar (a scrolling strip on phones) and one page per route: `/admin` overview,
+    `/admin/accounts`, `/admin/pools`, `/admin/escrows`, `/admin/anomalies` (inject and clear), `/admin/activity` (agent trace).
   - `/docs` (with `#section` anchors) is the whitepaper. Only `/os` loads Three.js: the cold-storage twin is
     `React.lazy` in `pages/CommandCenter.tsx`, so it arrives in its own chunk after the OS paints.
 - **Navbar** (`components/Navbar.tsx`) is rendered once in `App.tsx`. Its toggles write the store:

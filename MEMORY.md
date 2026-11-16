@@ -1662,6 +1662,45 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   non-root containers, where two timings and the checksums came from).
 - **Honest ticks:** the runtime calls no cloud LLM (Claude, Gemini and DeepSeek are only in the router's catalogue),
   so the draft ticks Claude (build tool) and Qwen (runtime) only; modelled telemetry and radar inputs stay unticked.
-- **Pushed:** the dialect-retriever code, scripts, notebook and run records; TRAINING_PLAN §7b; AGENTS/CLAUDE;
+- **Pushed** as `17a07bb` (30 files, secret scan clean; CI run 43465814118 passed every step, with the model absent
+  from the image, so retrieval there runs as before): the dialect-retriever code, scripts,
+  notebook and run records; TRAINING_PLAN §7b; AGENTS/CLAUDE;
   MEMORY; the memory graph; the DepthMatrix n8n note; the mirror README. A hosted-demo session was started in this
   folder at the same time; none of its files are in this push.
+
+### 2026-11-15 · Role-based demo login and admin panel (the user asked for it)
+- **Repo:** work moved to `C:\ai-congress\KrishiNexus` (a clone of GitHub `main` at `17a07bb`). The trained models
+  (`backend/models/`, 4.6 GB) and `training/data/` were copied in locally; `training/data/` is ignored through
+  `.git/info/exclude`, not `.gitignore`. `deploy/cloudrun/` (the Cloud Run demo) was added from the side session.
+- **Backend:** `auth.py` with eight seeded accounts (three farmers, co-op, buyer, bank, judge, admin) in
+  `.state/users.json`; quick login returns an HMAC token signed with `KNX_RECEIPT_SIGNING_KEY`; the admin API
+  creates, edits, disables, deletes and re-seeds accounts and reports overview counts. Only `/auth/admin/*` checks a
+  role; every other route stays open, as before. `check_auth.py` passes (forged, tampered and expired tokens, the
+  role guard, a disabled account's session ending, the last-admin rule).
+- **Frontend:** `/login` (quick login cards), the role gate on `/os/*` with a welcome bar and only the role's seats,
+  `/admin` (overview, accounts table with role, enable/disable and delete, add-account form, reset pools and
+  anomalies), and a login-aware navbar. `/auth` added to the Vite proxy, `nginx.conf` and `serve.py`.
+- **Verified in the browser** (backend :8020, Vite :5180): logged out, `/os/coop` shows the login; Rahim lands on
+  `/os/field` with one seat, is refused `/os/coop` and `/admin`, and stays logged in after a reload; the admin lands on
+  `/admin`, sees live counts and adds an account; accounts were re-seeded after the test. `tsc --noEmit` passes.
+- **Farmer identity:** a logged-in farmer's id goes with every voice request and sample scan (it overrides the
+  preset's own id), their own spoken or typed questions are placed in their district, their district's sample comes
+  first and the phone header shows their name. Checked live: Abdul Karim's Bogura question came back with
+  `farmer_id` FARM-BOG-104 in the agent state and the quality certificate (the preset alone gives FARM-BOG-318).
+- **Not done:** buyer and bank share the market seat.
+
+### 2026-11-15 · Admin console with a sidebar; password login form
+- **Admin:** `/admin` is now a console with a sidebar menu and six pages, each its own route (`frontend/src/admin/`):
+  overview (counts that link to each page), accounts (table, add form with an optional password, restore seeds),
+  truck pools (fill, smallholders, buyer; reset), escrows (simulated, newest first, from the new admin-only
+  `GET /auth/admin/escrows`), anomalies (inject a power cut or flood, clear one or all) and agent activity (the latest
+  150 trace events). On phones the sidebar becomes a horizontal strip.
+- **Login:** `/login` is a centred form (account ID in any case, password) with the quick-login cards below it.
+  Passwords are PBKDF2-SHA256 hashes with a per-account salt in `.state/users.json`, never returned by the API; seeded
+  accounts use the published demo password `krishi2026`; a users file written before passwords existed gets it on load.
+  Quick login still needs no password, so this remains a demo login.
+- **Verified:** `check_auth.py` passes (password login, wrong password 401, admin password reset, no plain-text
+  password on disk, escrow list admin-only); `tsc --noEmit` passes; in the browser a wrong password shows the error,
+  the right one lands on `/admin`, and every admin page loaded; an injected flood was cleared again; no horizontal
+  overflow at 375 px.
+
