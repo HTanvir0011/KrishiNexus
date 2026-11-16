@@ -1704,3 +1704,15 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   the right one lands on `/admin`, and every admin page loaded; an injected flood was cleared again; no horizontal
   overflow at 375 px.
 
+
+### 2026-11-16 · Login, admin and Cloud Run pushed; README rewritten (the user said "Yes, commit and push", then "Yes, start README")
+- **Pushed** `0442065` (login + admin), `c831597` (Cloud Run), `cb78acf` (docs). Checks before the push: `check_auth.py`
+  passes, `tsc --noEmit` clean, regression 100/100, AGENTS = CLAUDE, secret scan clean. CI run 43833194354 passed.
+- **Decisions** (in `PRESENTATION_PLAN.md`): Md Rifat stays as an advisor; the deck is for the AI Battle round,
+  follows the five judging criteria, 15 minutes, English, as a `.pptx`.
+- **README:** a problem-and-answer table (116%, 77.32%, the 2017 Boro loss, all from `knowledge_seed`), the demo
+  accounts and password, a Team section, 51 routes (50 HTTP + WebSocket, counted from the OpenAPI schema), the Auth
+  row, `auth.py`, `admin/` and `deploy/cloudrun/` in the layout, the demo login under "simulated", "Recent changes"
+  cut to 15 Nov, Phase 10 and the trained models; the blind-probe figures moved to Evaluation.
+- **Team image:** Md Rifat's card now reads "Advisor, Network Engineering".
+- **Not done:** the hosted demo isn't deployed, so the README has no live link yet. README and image are uncommitted.

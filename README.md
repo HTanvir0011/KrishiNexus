@@ -7,12 +7,34 @@ A farmer speaks in their own dialect (Rangpuri, Bogura/Varendri, Sylheti, Standa
 the crop, expose the middleman markup, price cold storage against a pooled truck sale, check 72-hour flash-flood risk
 and underwrite credit, then reply in spoken Bangla, online or offline at a union kiosk.
 
+| The problem (figures cited from the project brief) | What KrishiNexus does |
+|---|---|
+| Five tiers of middlemen mark produce up by as much as **116%** (green chili), and a farmer short of cash sells below cost | The ΔΠ circuit breaker blocks a sale below the cost floor when storing or a pooled 5-ton truck pays more, and shows the working |
+| Traders and plant owners hold **77.32%** of cold-storage quota, so smallholders can't store and wait | Live quota and tariff lookup, cold-chain arbitrage, and 1-tap escrow to the best buyer (simulated) |
+| Haor flash floods destroy whole harvests (about **65%** of Sunamganj's Boro in April 2017), and farmers have no collateral for credit | A 72-hour flood check that reads Sentinel-1 radar through monsoon cloud, and a 300–850 credit score with HMAC-signed quality certificates |
+
+**Try it.** Run `docker compose up --build` ([Quickstart](#quickstart)) and open http://localhost:5173/login. The hosted
+demo link will be added here once it is deployed (`deploy/cloudrun/DEPLOY.md`).
+
+| Demo account | Role |
+|---|---|
+| `FARM-RAN-001` | Rahim Mia, potato farmer, Rangpur |
+| `COOP-BOG-01` | Shibganj Union Co-op |
+| `BUY-DHK-01` | Dhaka Fresh DC (buyer) |
+| `BANK-UCB-01` | UCB Agri Desk (bank) |
+| `JUDGE-01` | Judge: every seat in split-screen |
+| `ADMIN-01` | Admin console |
+
+Every demo account uses the password `krishi2026`, or one click on the quick-login cards. This is a demo login, not
+production security.
+
 ![Team Roster](assets/team_animation.svg)
 
 ---
 
 ## Contents
 
+- [Team](#team)
 - [Project overview](#project-overview)
 - [Recent changes](#recent-changes)
 - [Quickstart](#quickstart)
@@ -24,16 +46,32 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 
 ---
 
+## Team
+
+Team Heat Wave.
+
+| Name | Role |
+|---|---|
+| Tanvir Hossin | Team Lead |
+| Md. Omar Faruk | AI/ML Engineer |
+| Md. Abdur Rahman | Full-Stack & Backend Developer |
+| Mohammed Mahmud Parvez | Full-Stack Developer |
+| Md. Morsalin | Full-Stack & Backend Developer |
+| Md Rifat | Advisor: Domain Expert (Network Engineering), USA |
+
+---
+
 ## Project overview
 
 | Layer | What it does |
 |---|---|
-| **FastAPI backend** (`backend/`, port `8000`) | 41 routes; Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
+| **FastAPI backend** (`backend/`, port `8000`) | 51 routes (50 HTTP, 1 WebSocket); Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
 | **3 MCP servers, 13 tools** | DAM market & syndicate anomaly (4), Open-Meteo weather + Sentinel-1 SAR flood (5), BCSA cold-storage quota & IoT telemetry (4); HTTP, SSE and stdio transports |
 | **CRAG pipeline with intent routing** | PII scrub → HyDE dialect rewrite → intent detection → hybrid BM25 + vector retrieval with RRF and reranking → GraphRAG multi-hop facts → Corrective-RAG grading → live MCP augmentation |
 | **LangGraph supervisor + 4 agents** | Vision grading, syndicate bypass (5-ton pooled trucks), cold-chain arbitrage (ΔΠ circuit-breaker), climate credit (SAR flood shield + 300–850 score) |
 | **Offline edge node** | Bangla voice pipeline, optical grader with signed certificates, local LLM manager for **Ollama** / llama.cpp / vLLM with automatic fallback when no runtime is reachable |
 | **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | A product overview at `/` with one-click live farmer decisions and live MCP cards; the live OS at `/os` (farmer zero-UI app, co-op command center with a Three.js cold-storage twin, market and bank desk); the `/docs` whitepaper with a 13-tool MCP inspector |
+| **Demo login and admin console** | Seeded accounts for six roles (farmer, co-op, buyer, bank, judge, admin), password or quick login, HMAC-signed session tokens; `/admin` manages accounts and demo state |
 | **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models; optional `data` profile adds PostgreSQL + pgvector, Neo4j, Redis and n8n, loaded with the app's own data |
 
 The system runs end to end with **no paid API keys and no GPU**: every agent has deterministic logic seeded with
@@ -42,6 +80,16 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 ---
 
 ## Recent changes
+
+### Demo login and admin console (15 November 2026)
+
+- `/login`: a sign-in form (account ID and password) with one-click quick-login cards, grouped by role.
+- `/admin`: an admin console with a sidebar for accounts (add, edit, disable, delete, restore the seeds), escrows and
+  overview counts. The last active admin can't be removed.
+- Passwords are stored as salted PBKDF2 hashes and never returned by the API. Session tokens are HMAC-signed and last
+  12 hours. `backend/check_auth.py` checks forged, tampered and expired tokens.
+- `deploy/cloudrun/` packages the frontend and API in one container for a hosted demo, with per-visitor limits on
+  writes that every visitor would see.
 
 ### Buyer bids, 1-tap escrow, truck reroute and data services (Phase 10, 10 November 2026)
 
@@ -98,77 +146,8 @@ and §8c. The weights are not in this repository; without them, the app says so 
   months, rent, rot rates, rain and radar readings in many phrasings. It routes 212 of the 239 held-out-wording test
   questions correctly.
 
-### Datasets, honest evaluation and a leaner OS (Phase 9, 29 October 2026)
-
-- **A frozen blind retrieval test.** `backend/evals/holdout_probe.py` holds 66 farmer questions written blind to the
-  retrieval rules — six dialects and surface forms, plus paraphrase, negation and cross-document traps. It is served live
-  at `GET /evals/holdout` (cached 10 minutes) and runnable from the whitepaper. Measured 29 October 2026: top-1 **0.500**,
-  top-3 **0.848**, against **1.00** on the curated 19-question set — the honest generalisation number. With the trained dialect retriever (13 November 2026) it reads top-1 **0.833** and top-3 **0.970**. The set is frozen:
-  the rules are never tuned against it.
-- **A family-aware SFT split.** The generated fine-tuning dataset now has a deterministic train/val/test split (2,301 /
-  239 / 660) in which negotiation cells, dialect, timing and region holdouts never straddle splits, with leakage
-  assertions on every export. Served through `GET /edge/lora-dataset` and `GET /edge/local-models`.
-- **Training plan, not training.** `TRAINING_PLAN.md` documents the 4 GB-GPU QLoRA recipe, the merge-to-GGUF deployment
-  route and the adapter eval design. No model is trained yet; the adapter stays labelled `dataset_ready_not_trained`.
-- **Leaner OS chunk.** The Three.js cold-storage twin is lazy-loaded, cutting the `/os` entry chunk from 627 kB to 72 kB.
-- **Full Bangla OS panels.** The trace, command centre, bank desk, truck map and twin chrome all follow the বাং/EN
-  toggle; identifiers, units and technical tokens stay in English.
-
-### Institutional interface (Phase 8, 24 October 2026)
-
-The site is now a daylight, high-trust product interface. It replaces the earlier 3D scroll story, which hijacked the
-scroll wheel. Every figure on it comes from a live call to the running backend.
-
-- **Overview (`/`)**
-  - A one-click live decision for Rahim Mia (400 kg potato, Rangpur) or Abdul (Boro rice, Sunamganj haor): the circuit
-    breaker blocks the Tk 12/kg Faria offer below the Tk 15/kg cost floor, and the card compares the Faria sale, cold
-    storage and the pooled 5-ton truck.
-  - Three live cards: the five-tier syndicate markup waterfall, the cold-storage quota held by traders and plant owners,
-    and a Sentinel-1 haor flood shield that compares today with the simulated April 2017 surge.
-  - The LangGraph pipeline: click a node to see the state it reads and writes, the MCP tools it calls and its timing.
-  - The metric pills (RAG faithfulness, the 100-case regression) are computed on load, not typed in.
-- **Live OS (`/os`)**
-  - A 12-column judge mode: the farmer's phone beside the co-op command centre.
-  - The agent trace has a plain-language view for judges and a raw JSON-RPC view.
-  - The bank desk shows the loan-to-value maths and verifies HMAC-signed quality certificates.
-- **Whitepaper (`/docs`)**: a docs layout with the ΔΠ, Aratdar-take and haor-breach formulas, the 13-tool MCP
-  playground, live evaluations and the unit-economics simulator.
-- **Navbar on every page**: the backend status, a বাং/EN language toggle and an Online / Offline edge switch that
-  sends every farmer request in blackout mode.
-
-The Bangla fonts (Anek Bangla, Tiro Bangla) ship with the site. Typed English questions with plural crop names
-("potatoes", "chillies") are recognised.
-
-### Dialect rewriter and cold-storage / quota intents: context precision 1.00
-
-Questions that only *mentioned* cold storage, such as "a loan against potatoes in cold storage" or "the cold storage
-rent went up", were being rewritten as questions about storage temperature. The rewriter then searched with the
-temperature/humidity query, so the BARI storage-protocol passage outranked the right answer.
-
-- Intents are now detected from the question's own English words as well as the Bangla/Banglish concept lexicon.
-  "pre-harvest", "post-harvest" and "after harvest" no longer trigger the harvest-timing intent.
-- "Cold storage" names a place. On its own it no longer triggers `STORAGE_CONDITIONS`, which now needs a condition
-  word such as temperature, humidity, rot or ventilation.
-- New `STORAGE_ACCESS` intent for quota, tariff, rent, cost and space. It fires only when cold storage is mentioned,
-  so truck rent stays a transport question. It has its own formal query, HyDE passage and live BCSA quota lookup.
-- The Bangla word জায়গা (space) is now part of the concept lexicon.
-
-| Metric (19-question labelled set) | Before | After |
-|---|---|---|
-| Context precision | 0.9211 | **1.00** |
-| Context recall | 1.00 | 1.00 |
-| Faithfulness / answer relevancy | 1.00 / 1.00 | 1.00 / 1.00 |
-| 100-case regression suite | 100/100 | 100/100 |
-
-A probe of 10 paraphrases outside the eval set puts the right passage first in 9 cases. The remaining miss is
-"loan *without* collateral": keyword and hashing retrieval cannot handle negation.
-
-### Also in this round
-
-- The syndicate tool now itemises the Bepari's marketing cost; the Aratdar takes 62.35% of it and spends Tk 0 on grading.
-- 66 WFP aggregation centres are seeded as 62 in Cox's Bazar and 4 in Kurigram.
-- The distress farm-gate price range is Tk 5–14/kg.
-- Brief figures are now in the knowledge base and on `/docs`: crop losses, the cold-storage gap and tariff hike, SAR detection, and the credit partners.
+Earlier phases (the frozen blind retrieval probe, the institutional interface, the dialect rewriter and more) are
+recorded in [`MEMORY.md`](MEMORY.md).
 
 ---
 
@@ -286,6 +265,7 @@ The full contracts are in [`AGENTS.md`](AGENTS.md).
 | Market | `GET /market/bids`, `POST /market/bids/lock` (simulated escrow), `GET /market/price-monitor` |
 | Edge | `POST /edge/voice-interact`, `POST /edge/grade-crop`, `POST /edge/verify-certificate`, `GET /edge/local-models`, `POST /edge/local-inference`, `GET /edge/lora-dataset` |
 | Evals | `GET /evals/metrics`, `POST /evals/run-regression`, `GET /evals/holdout` |
+| Auth (demo) | `GET /auth/demo-users`, `POST /auth/login`, `GET /auth/me`; admin only: `/auth/admin/users` (list, create, update, delete, reset), `GET /auth/admin/escrows`, `GET /auth/admin/overview` |
 
 ---
 
@@ -303,6 +283,11 @@ Metrics are **computed live** by `backend/evals/regression_suite.py`; none are h
 | PII redaction recall (12 entities) | 100% | 100% |
 | Regression suite (5 categories × 20 seeded cases) | 100/100 | — |
 
+**Blind retrieval probe.** `backend/evals/holdout_probe.py` holds 66 farmer questions written blind to the retrieval
+rules (six dialects and surface forms, plus paraphrase, negation and cross-document traps), served at
+`GET /evals/holdout`. On 29 October 2026 it read top-1 **0.500** and top-3 **0.848**; with the trained dialect retriever
+(13 November 2026) it reads top-1 **0.833** and top-3 **0.970**. The set is frozen: nothing is tuned against it.
+
 These scores come from deterministic token and intent checks plus a rubric judge, not an LLM judge. The labelled RAG
 set has 19 questions, so treat the retrieval scores as measured on a small set.
 
@@ -317,6 +302,7 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 ├── assets/team_animation.svg   animated team roster
 ├── backend/
 │   ├── main.py  config.py      FastAPI app, settings, multi-LLM router
+│   ├── auth.py  check_auth.py  demo accounts, login, signed session tokens, admin API, and its self-check
 │   ├── market_bids.py          buyer bids and the simulated 1-tap escrow
 │   ├── data_seed.py            seed files for the compose data profile (pgvector SQL, Neo4j Cypher, n8n workflows)
 │   ├── mcp_servers/            3 MCP servers + JSON-RPC hub
@@ -330,10 +316,11 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
 ├── training/                   SFT data export (prepare_data.py), Kaggle notebooks (kaggle/), measured run reports (runs/)
 ├── TRAINING_PLAN.md            recipes, split rules, pre-registered targets and measured results for every model
+├── deploy/cloudrun/            one-container hosted demo for Google Cloud Run, with per-visitor write limits
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
-    └── src/                    story/ (overview and its live cards), os/ (live OS), pages, components, typed API client
+    └── src/                    story/ (overview and its live cards), os/ (live OS), admin/ (admin console), pages (incl. login), components, typed API client
 ```
 
 ---
@@ -354,6 +341,7 @@ Simulated or modelled, and labelled as such in the UI and API:
 - DAM, BCSA and IoT figures are seeded data, not live feeds;
 - buyer bids are modelled from DAM hub prices, not offers from named buyers;
 - the bKash / Nagad escrow is simulated: no money moves and no wallet API is called;
+- the login is a demo: seeded accounts share a published password and quick login needs none;
 - potato grading without the trained YOLO weights (they are not in the repo) falls back to classical CV, labelled `classical-cv`;
 - local-LLM telemetry when no runtime is running;
 - the fine-tuned Bangla model needs Ollama and its GGUF; without them the kiosk answers from a labelled deterministic fallback;

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" role="img" aria-labelledby="title desc">
   <title id="title">KrishiNexus OS team</title>
-  <desc id="desc">Tanvir Hossin, Team Lead, Bangladesh. Md. Omar Faruk, AI/ML Engineer, Bangladesh. Md. Abdur Rahman, Full-Stack and Backend Developer, Bangladesh. Mohammed Mahmud Parvez, Full-Stack Developer, Bangladesh. Md. Morsalin, Full-Stack and Backend Developer, Bangladesh. Md Rifat, Domain Expert (Network Engineering), USA.</desc>
+  <desc id="desc">Tanvir Hossin, Team Lead, Bangladesh. Md. Omar Faruk, AI/ML Engineer, Bangladesh. Md. Abdur Rahman, Full-Stack and Backend Developer, Bangladesh. Mohammed Mahmud Parvez, Full-Stack Developer, Bangladesh. Md. Morsalin, Full-Stack and Backend Developer, Bangladesh. Md Rifat, Advisor, Domain Expert (Network Engineering), USA.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -155,7 +155,7 @@
       <rect class="frame" width="300" height="140" rx="14"/>
       <rect class="accent" x="0" y="18" width="4" height="104" rx="2"/>
       <text class="name" x="24" y="44">Md Rifat</text>
-      <text class="role" x="24" y="72">Domain Expert (Network Engineering)</text>
+      <text class="role" x="24" y="72">Advisor, Network Engineering</text>
       <use href="#flag-us" x="24" y="96" width="30" height="18"/>
       <text class="country" x="64" y="110">USA</text>
     </g>
