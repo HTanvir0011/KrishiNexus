@@ -1,25 +1,31 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 
 import { api, connectAgentTrace } from "./api/client";
 import { Navbar } from "./components/Navbar";
 import { Alerts } from "./components/shell/Alerts";
-import { routeOf, useLocation, type Route } from "./lib/router";
-import { pushTraces, refreshPools, refreshQuota, refreshTelemetry, setState, useAppState } from "./state/store";
+import { homeOf } from "./lib/roles";
+import { Link, routeOf, useLocation, type Route } from "./lib/router";
+import { pushTraces, refreshPools, refreshQuota, refreshTelemetry, restoreSession, setState, useAppState } from "./state/store";
 
 // Each page is its own chunk: only the live OS loads Three.js (the cold-storage twin).
 const StoryPage = lazy(() => import("./story/StoryPage"));
 const OsPage = lazy(() => import("./os/OsPage"));
 const DocsShell = lazy(() => import("./os/DocsShell"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const AdminPage = lazy(() => import("./admin/AdminPage"));
 
 const TITLES: Record<Route["page"], string> = {
   story: "KrishiNexus OS: fair prices, open cold storage and flood alerts for Bangladeshi farmers",
   os: "KrishiNexus OS · live operations workspace",
   docs: "KrishiNexus OS · technical whitepaper",
+  login: "KrishiNexus OS · log in",
+  admin: "KrishiNexus OS · admin panel",
 };
 
 /** Health and the live agent trace everywhere; the OS also polls pools, chambers and quota. */
 function useBackendBootstrap(page: Route["page"]) {
   useEffect(() => {
+    void restoreSession();
     const stopTrace = connectAgentTrace(pushTraces, (traceStatus) => setState({ traceStatus }));
     const health = () =>
       api.health()
@@ -50,6 +56,23 @@ function PageLoading() {
   return <div className="grid min-h-[60vh] place-items-center text-[15px] text-slate-500" role="status">Loading…</div>;
 }
 
+/** The workspace and the admin panel need a logged-in account; the admin panel needs the admin role. */
+function Gate({ adminOnly = false, children }: { adminOnly?: boolean; children: ReactNode }) {
+  const user = useAppState((s) => s.user);
+  const authChecked = useAppState((s) => s.authChecked);
+  if (!authChecked) return <PageLoading />;
+  if (!user) return <LoginPage />;
+  if (adminOnly && user.role !== "admin") {
+    return (
+      <main className="mx-auto max-w-[640px] px-4 pt-16 text-center">
+        <p className="m-0 text-[15px] text-slate-700">The admin panel is for admin accounts.</p>
+        <Link to={homeOf(user.role)} className="mt-3 inline-block text-[14px] font-semibold text-emerald-700">Go to my workspace</Link>
+      </main>
+    );
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   const route = routeOf(useLocation());
   const lang = useAppState((s) => s.lang);
@@ -68,7 +91,9 @@ export default function App() {
       <Navbar />
       <Suspense fallback={<PageLoading />}>
         {route.page === "story" && <StoryPage />}
-        {route.page === "os" && <OsPage view={route.view} />}
+        {route.page === "login" && <LoginPage />}
+        {route.page === "os" && <Gate><OsPage view={route.view} /></Gate>}
+        {route.page === "admin" && <Gate adminOnly><AdminPage section={route.section} /></Gate>}
         {route.page === "docs" && <DocsShell />}
       </Suspense>
       <Alerts />

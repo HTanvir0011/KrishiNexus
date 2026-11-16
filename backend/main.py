@@ -39,6 +39,10 @@ POST   /market/bids/lock             Lock a bid in one tap: simulated bKash/Naga
 GET    /evals/metrics                Measured RAGAS-style metrics, MCP schema validity, PII recall
 GET    /evals/holdout               Frozen 66-probe blind retrieval test (cached 10 min)
 POST   /evals/run-regression         Seeded 5-category regression suite (20 per category = 100 cases)
+GET    /auth/demo-users              Demo accounts for the quick-login screen (auth.py)
+POST   /auth/login                   Quick login by account id -> signed session token (no password: demo)
+GET    /auth/me                      The account behind a Bearer token
+*      /auth/admin/...               Admin only: accounts (list, create, update, delete, reset), escrow list, overview counts
 
 Run:  uvicorn main:app --reload --port 8000
 """
@@ -57,6 +61,7 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, WebS
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
+import auth
 from agents.state import AgentTraceEvent
 from agents.supervisor import (
     OrchestrateRequest,
@@ -154,6 +159,8 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Mcp-Protocol-Version"],
 )
+app.include_router(auth.router)
+app.include_router(auth.admin)
 
 _RPC_EXAMPLES: dict[str, dict[str, Any]] = {
     "syndicate_anomaly": {

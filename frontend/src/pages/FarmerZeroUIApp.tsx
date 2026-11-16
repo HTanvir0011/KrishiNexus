@@ -49,7 +49,11 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const result = useAppState((s) => s.lastVoice);
   const grade = useAppState((s) => s.lastGrade);
   const pools = useAppState((s) => s.pools);
-  const [selected, setSelected] = useState<FarmerPreset>(PRESETS[0]);
+  // A logged-in farmer asks as themself: their id goes with every request and their district's question comes first.
+  const user = useAppState((s) => s.user);
+  const me = user?.role === "farmer" ? user : null;
+  const homePreset = PRESETS.find((p) => p.district === me?.district);
+  const [selected, setSelected] = useState<FarmerPreset>(homePreset ?? PRESETS[0]);
   const [heard, setHeard] = useState<string | null>(null);
   const [busy, setBusy] = useState<"voice" | "scan" | "photo" | "join" | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -81,12 +85,16 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     setNotice(null);
     const sessionId = `KNX-UI-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     setState({ activeSessionId: sessionId });
+    // A farmer's own words are placed in their home district (with the upazila when a preset covers it).
+    const place = me?.district
+      ? { district: me.district, upazila: homePreset?.upazila }
+      : { district: preset.district, upazila: preset.upazila };
     const body: VoiceInteractBody = audio
-      ? { audio_base64: audio, district: preset.district, upazila: preset.upazila }
+      ? { audio_base64: audio, ...place }
       : spoken
-        ? { text: spoken, district: preset.district, upazila: preset.upazila }
+        ? { text: spoken, ...place }
         : { preset_id: preset.id };
-    Object.assign(body, { offline_mode: getState().offlineMode, session_id: sessionId });
+    Object.assign(body, { offline_mode: getState().offlineMode, session_id: sessionId, farmer_id: me?.user_id });
     if (grade && grade.crop === preset.crop && scanDone) {
       if (grade.source === "uploaded_image") body.edge_certificate_id = grade.digital_certificate.cert_id;   // the photo's own grade
       else body.grade_sample_preset = scanQuality;
@@ -126,7 +134,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     setBusy("scan");
     setScanDone(false);
     try {
-      const response = await api.gradeCrop(scanCrop, scanQuality, selected.district);
+      const response = await api.gradeCrop(scanCrop, scanQuality, me?.district || selected.district, me?.user_id);
       setState({ lastGrade: response.data });
       setScanStartedAt(performance.now());
       window.setTimeout(() => setScanDone(true), SCAN_DURATION_MS);
@@ -147,7 +155,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(file);
       });
-      const result = await api.gradePhoto(scanCrop, dataUrl, selected.district, photoWidthMm);
+      const result = await api.gradePhoto(scanCrop, dataUrl, me?.district || selected.district, photoWidthMm);
       setPhoto((old) => {
         if (old) URL.revokeObjectURL(old);
         return URL.createObjectURL(file);
@@ -214,7 +222,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
         <div className="flex items-center justify-between bg-emerald-700 px-4 py-3 text-white">
           <div>
             <div lang="bn" className="text-[17px] font-semibold">কৃষিনেক্সাস কৃষক</div>
-            <div className="text-[12px] text-emerald-100">Farmer companion · voice and camera</div>
+            <div className="text-[12px] text-emerald-100">{me ? `${me.name}${me.district ? ` · ${me.district}` : ""}` : "Farmer companion · voice and camera"}</div>
           </div>
           {offline
             ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[12px] font-medium text-amber-800"><WifiOff className="size-3" /> Offline kiosk</span>

@@ -7,6 +7,9 @@ import { useSyncExternalStore } from "react";
 
 import {
   api,
+  hasSessionToken,
+  setSessionToken,
+  type AuthUser,
   type ChamberTelemetry,
   type GradeCropResult,
   type PoolView,
@@ -39,6 +42,9 @@ export interface AppState {
   /** Counts from GET /health for the navbar status pill. */
   health: { mcpServers: number; tools: number } | null;
   lang: Lang;
+  /** The logged-in demo account; authChecked turns true once a stored session has been confirmed or dropped. */
+  user: AuthUser | null;
+  authChecked: boolean;
   traceStatus: TraceConnection;
   offlineMode: boolean;
   traces: TraceEvent[];
@@ -63,6 +69,8 @@ let state: AppState = {
   backendLive: null,
   health: null,
   lang: "en",
+  user: null,
+  authChecked: !hasSessionToken(),
   traceStatus: "connecting",
   offlineMode: false,
   traces: [],
@@ -120,6 +128,29 @@ export function pushAlert(tone: AlertTone, title: string, detail?: string): void
   const id = ++alertSeq;
   setState((s) => ({ alerts: [...s.alerts, { id, tone, title, detail }].slice(-5) }));
   window.setTimeout(() => setState((s) => ({ alerts: s.alerts.filter((a) => a.id !== id) })), 7_000);
+}
+
+/** Log in with a password, or without one for the demo quick login. */
+export async function loginAs(userId: string, password?: string): Promise<AuthUser> {
+  const session = await api.login(userId, password);
+  setSessionToken(session.token);
+  setState({ user: session.user, authChecked: true });
+  return session.user;
+}
+
+export function logout(): void {
+  setSessionToken(null);
+  setState({ user: null, authChecked: true });
+}
+
+/** Confirm a stored session with the backend; an expired, disabled or unreachable one logs out. */
+export async function restoreSession(): Promise<void> {
+  if (!hasSessionToken()) return setState({ authChecked: true });
+  try {
+    setState({ user: await api.me(), authChecked: true });
+  } catch {
+    logout();
+  }
 }
 
 export async function refreshPools(): Promise<void> {

@@ -1,27 +1,30 @@
-import { ArrowRight, Wifi, WifiOff } from "lucide-react";
+import { ArrowRight, LogOut, Wifi, WifiOff } from "lucide-react";
 
 import { useCopy } from "../lib/i18n";
 import { cn } from "../lib/format";
-import { Link, routeOf, useLocation } from "../lib/router";
-import { setState, useAppState } from "../state/store";
+import { homeOf } from "../lib/roles";
+import { Link, navigate, routeOf, useLocation } from "../lib/router";
+import { logout, setState, useAppState } from "../state/store";
 import { Segmented } from "./ui";
 
 const COPY = {
   en: {
-    links: { story: "Overview", os: "Live OS", docs: "Whitepaper" },
+    links: { story: "Overview", os: "My workspace", docs: "Whitepaper", login: "Log in" },
     online: "Online",
     offline: "Offline edge",
-    cta: "Launch judge split-screen",
+    cta: "Log in",
+    logout: "Log out",
     connecting: "Connecting to the backend",
     down: "Backend offline · cached demo",
     status: (servers: number, tools: number) => `${servers} MCP servers online · ${tools} tools · BDT UTC+6`,
     network: "Network",
   },
   bn: {
-    links: { story: "সারসংক্ষেপ", os: "লাইভ ওএস", docs: "শ্বেতপত্র" },
+    links: { story: "সারসংক্ষেপ", os: "আমার কাজের জায়গা", docs: "শ্বেতপত্র", login: "লগইন" },
     online: "অনলাইন",
     offline: "অফলাইন এজ",
-    cta: "বিচারক স্প্লিট-স্ক্রিন",
+    cta: "লগইন",
+    logout: "লগআউট",
     connecting: "ব্যাকএন্ডে সংযোগ হচ্ছে",
     down: "ব্যাকএন্ড বন্ধ · সংরক্ষিত ডেমো",
     status: (servers: number, tools: number) => `${servers}টি এমসিপি সার্ভার চালু · ${tools}টি টুল · BDT UTC+6`,
@@ -29,11 +32,6 @@ const COPY = {
   },
 };
 
-const LINKS = [
-  { to: "/", page: "story" },
-  { to: "/os", page: "os" },
-  { to: "/docs", page: "docs" },
-] as const;
 
 export function Wordmark() {
   return (
@@ -70,14 +68,23 @@ export function Navbar() {
   const lang = useAppState((s) => s.lang);
   const offline = useAppState((s) => s.offlineMode);
   const live = useAppState((s) => s.backendLive);
+  const user = useAppState((s) => s.user);
+  // The middle link is the account's own workspace once logged in, the login page before.
+  const links = [
+    { to: "/", label: c.links.story, current: route.page === "story" },
+    user
+      ? { to: homeOf(user.role), label: c.links.os, current: route.page === "os" || route.page === "admin" }
+      : { to: "/login", label: c.links.login, current: route.page === "login" },
+    { to: "/docs", label: c.links.docs, current: route.page === "docs" },
+  ];
 
   const switcher = (className: string) => (
     <nav aria-label="Main" className={cn("rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200", className)}>
-      {LINKS.map((link) => (
-        <Link key={link.to} to={link.to} aria-current={route.page === link.page ? "page" : undefined}
+      {links.map((link) => (
+        <Link key={link.label} to={link.to} aria-current={link.current ? "page" : undefined}
           className={cn("flex min-h-8 items-center justify-center rounded-md px-3.5 text-[14px] font-medium whitespace-nowrap no-underline transition-colors max-sm:min-h-10",
-            route.page === link.page ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900")}>
-          {c.links[link.page]}
+            link.current ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900")}>
+          {link.label}
         </Link>
       ))}
     </nav>
@@ -99,9 +106,17 @@ export function Navbar() {
               { value: "online", label: <><Wifi className="size-3.5" aria-hidden /><span className="hidden md:inline">{c.online}</span></> },
               { value: "offline", label: <><WifiOff className="size-3.5" aria-hidden /><span className="hidden md:inline">{c.offline}</span></> },
             ]} />
-          <Link to="/os" className="hidden min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-[14px] font-semibold text-white no-underline shadow-sm transition-colors hover:bg-emerald-800 lg:inline-flex">
-            {c.cta} <ArrowRight className="size-4" aria-hidden />
-          </Link>
+          {user ? (
+            <button type="button" onClick={() => { logout(); navigate("/"); }} title={user.name}
+              className="hidden min-h-9 items-center gap-1.5 rounded-lg px-3 text-[14px] font-medium text-slate-700 ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 lg:inline-flex">
+              <span className="max-w-[10rem] truncate">{user.name}</span> <LogOut className="size-4" aria-hidden />
+              <span className="sr-only">{c.logout}</span>
+            </button>
+          ) : (
+            <Link to="/login" className="hidden min-h-9 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-[14px] font-semibold text-white no-underline shadow-sm transition-colors hover:bg-emerald-800 lg:inline-flex">
+              {c.cta} <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          )}
         </div>
       </div>
       <div className="px-4 pb-2.5 sm:hidden">{switcher("grid grid-cols-3")}</div>

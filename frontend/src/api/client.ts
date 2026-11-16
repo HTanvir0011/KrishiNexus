@@ -532,10 +532,36 @@ export interface Result<T> {
   error?: string;
 }
 
+// The demo session token (auth.py), kept across reloads; storage can throw in private windows, so it is optional.
+const TOKEN_KEY = "knx.session";
+let sessionToken: string | null = (() => {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+})();
+
+export function setSessionToken(token: string | null): void {
+  sessionToken = token;
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Not persisted: the session lasts until the tab closes.
+  }
+}
+
+export const hasSessionToken = () => sessionToken !== null;
+
 async function request<T>(path: string, init?: RequestInit, timeoutMs = 120_000): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+      ...(init?.headers ?? {}),
+    },
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
@@ -681,7 +707,59 @@ export const api = {
   evalMetrics: (refresh = false) => request<RagasReport>(`/evals/metrics${refresh ? "?refresh=true" : ""}`),
   holdoutProbe: () => request<HoldoutReport>("/evals/holdout?refresh=true"),
   runRegression: (sampleSize: number) => post<RegressionReport>("/evals/run-regression", { sample_size: sampleSize }),
+
+  demoUsers: () => request<AuthUser[]>("/auth/demo-users", undefined, 8_000),
+  login: (userId: string, password?: string) => post<AuthSession>("/auth/login", { user_id: userId, password }),
+  me: () => request<AuthUser>("/auth/me", undefined, 8_000),
+  adminUsers: () => request<AuthUser[]>("/auth/admin/users"),
+  adminOverview: () => request<AdminOverview>("/auth/admin/overview"),
+  adminCreateUser: (body: Pick<AuthUser, "name" | "role" | "district" | "title"> & { password?: string }) => post<AuthUser>("/auth/admin/users", body),
+  adminUpdateUser: (userId: string, patch: Partial<Omit<AuthUser, "user_id">> & { password?: string }) =>
+    request<AuthUser>(`/auth/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  adminDeleteUser: (userId: string) => request<{ deleted: string }>(`/auth/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" }),
+  adminResetUsers: () => post<AuthUser[]>("/auth/admin/users/reset", {}),
+  adminEscrows: () => request<(EscrowReceipt & { farmer_id: string })[]>("/auth/admin/escrows"),
+  anomalies: () => request<ActiveAnomaly[]>("/mcp/anomalies"),
+  clearAnomaly: (anomalyId: string) => request<{ cleared: string }>(`/mcp/anomalies/${encodeURIComponent(anomalyId)}`, { method: "DELETE" }),
+  traceHistory: (limit = 150) => request<TraceEvent[]>(`/agents/trace-history?limit=${limit}`),
 };
+
+export interface ActiveAnomaly {
+  anomaly_id: string;
+  anomaly_type: "cold_chamber_power_cut" | "haor_flash_flood";
+  target: string;
+  params: Record<string, unknown>;
+  activated_at: string;
+  expires_at: string;
+}
+
+export type Role = "farmer" | "coop" | "buyer" | "bank" | "judge" | "admin";
+
+export interface AuthUser {
+  user_id: string;
+  name: string;
+  role: Role;
+  district: string;
+  title: string;
+  active: boolean;
+}
+
+export interface AuthSession {
+  token: string;
+  expires_in_s: number;
+  user: AuthUser;
+}
+
+export interface AdminOverview {
+  users_by_role: Record<Role, number>;
+  active_users: number;
+  truck_pools: number;
+  lots_in_pools: number;
+  escrows_locked: number;
+  active_anomalies: number;
+  trace_events: number;
+  time: string;
+}
 
 /** Raw JSON-RPC 2.0 round trip for the MCP inspector: returns HTTP status, latency and the untouched body. */
 export async function rawJsonRpc(payload: unknown): Promise<{ status: number; latencyMs: number; body: unknown }> {

@@ -1,0 +1,27 @@
+import type { Role } from "../api/client";
+import type { OsView } from "./router";
+
+/** Which workspace seats each demo role may open, and where it lands after login. */
+export const ROLE_VIEWS: Record<Role, OsView[]> = {
+  farmer: ["field"],
+  coop: ["coop"],
+  buyer: ["market"],
+  bank: ["market"],
+  judge: ["judge", "field", "coop", "market"],
+  admin: ["judge", "field", "coop", "market"],
+};
+
+export function homeOf(role: Role): string {
+  if (role === "admin") return "/admin";
+  const first = ROLE_VIEWS[role][0];
+  return first === "judge" ? "/os" : `/os/${first}`;
+}
+
+export const ROLE_LABEL: Record<"en" | "bn", Record<Role, string>> = {
+  en: { farmer: "Farmer", coop: "Co-op / cold chain", buyer: "Buyer", bank: "Bank", judge: "Judge", admin: "Admin" },
+  bn: { farmer: "কৃষক", coop: "সমবায় / কোল্ড চেইন", buyer: "ক্রেতা", bank: "ব্যাংক", judge: "বিচারক", admin: "অ্যাডমিন" },
+};
+
+export const ROLE_TONE: Record<Role, "emerald" | "sky" | "amber" | "violet" | "slate" | "red"> = {
+  farmer: "emerald", coop: "sky", buyer: "amber", bank: "violet", judge: "slate", admin: "red",
+};
