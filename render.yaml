@@ -11,7 +11,8 @@ services:
     dockerContext: ./deploy/cloudrun # the Dockerfile downloads the repository itself, so the context stays small
     healthCheckPath: /health
     domains:
-      - tanvir.health # Render adds www.tanvir.health too and redirects it here; DNS is set at the registrar
+      - tanvir.health # DNS at Porkbun: ALIAS tanvir.health and CNAME www, both to krishinexus-os.onrender.com
+      - www.tanvir.health
     autoDeployTrigger: commit # every push to main redeploys
     envVars:
       # A stable random key, so session tokens and signed receipts survive the free service sleeping and waking.
