@@ -13,9 +13,8 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 | Traders and plant owners hold **77.32%** of cold-storage quota, so smallholders can't store and wait | Live quota and tariff lookup, cold-chain arbitrage, and 1-tap escrow to the best buyer (simulated) |
 | Haor flash floods destroy whole harvests (about **65%** of Sunamganj's Boro in April 2017), and farmers have no collateral for credit | A 72-hour flood check that reads Sentinel-1 radar through monsoon cloud, and a 300–850 credit score with HMAC-signed quality certificates |
 
-**Try it.** Run `docker compose up --build` ([Quickstart](#quickstart)) and open http://localhost:5173/login. The hosted
-demo runs on Render's free plan from `render.yaml`; its link will be added here once it is deployed
-(`deploy/cloudrun/DEPLOY.md`).
+**Try it.** Run `docker compose up --build` ([Quickstart](#quickstart)) and open http://localhost:5173/login. **Live demo: https://tanvir.health** (Render free plan, from `render.yaml`;
+it sleeps after 15 minutes without visitors and takes about a minute to wake). Demo password: `krishi2026`.
 
 | Demo account | Role |
 |---|---|

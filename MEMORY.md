@@ -1783,3 +1783,21 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   ALIAS to the service's onrender.com name (or A 216.24.57.1), `www` a CNAME to it, Porkbun's default pixie.porkbun.com
   records and any AAAA records removed.
 
+### 2026-11-17 · Live at https://tanvir.health (the user signed in to Render and Porkbun and said "continue publishing")
+- **Pushed** `9a83e1b` (Himagar OS, consent and retention, feedback, economics, Render files; 33 files, secret scan clean,
+  regression 100/100, all self-checks) and `3973f50` (`www.tanvir.health` in `render.yaml`). `PRESENTATION_PLAN.md` was
+  left out on purpose.
+- **Render:** Blueprint `krishinexus-os` created from the public repository URL (no GitHub app granted), so pushes do
+  not auto-deploy: use Blueprint → Manual sync or the service's Manual Deploy. Service `srv-dbtvoeoae00c73c8icg0`,
+  free, Docker, Singapore, `https://krishinexus-os.onrender.com`. Build took about 1.5 minutes.
+- **Porkbun DNS** (Cloudflare-backed), the two parking records edited in place: ALIAS `tanvir.health` and CNAME `www`
+  (was `*`), both to `krishinexus-os.onrender.com`. Porkbun's delete button needs a browser confirm the automated
+  browser can't answer; editing avoided it.
+- **Live checks on https://tanvir.health:** HTTP redirects to HTTPS; `/`, `/login`, `/os/himagar`, `/admin`, `/docs`
+  200; `/api/docs` Swagger; gzip on; MCP endpoints report https; 9 seeded accounts incl. `HIMAGAR-BOG-05`; password
+  login works; one orchestration 1.1 s; 31 writes then 429, and a forged X-Forwarded-For stays blocked (Render's
+  proxies give one visitor more than one bucket, so the limit is slightly looser than 30 a minute). Browser pass as
+  the Himagar manager: one seat, 6 chambers, 3D twin, no console errors.
+- **Pending:** the certificate for `www.tanvir.health` (handshake failed in the first minutes; Render lists the domain).
+- **Local:** a fresh `.state/users.json` was re-seeded (it held exactly the 8 old seeds) so `HIMAGAR-BOG-05` logs in.
+
