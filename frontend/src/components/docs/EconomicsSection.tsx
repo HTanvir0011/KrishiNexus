@@ -1,4 +1,4 @@
-import { Calculator } from "lucide-react";
+import { Calculator, CalendarRange, Scale } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { cn } from "../../lib/format";
@@ -22,6 +22,30 @@ const ASSUMPTIONS = {
   baselineSpreadPct: 116,
   platformSpreadPct: 34,
 };
+
+/** One pooled truck's economics. The pooling fee is the backend's (dam_market_mcp.POOLING_FEE_TK_PER_KG); the rest are
+ *  planning assumptions for the pilot to test, not measured costs. */
+const UNIT = {
+  poolingFeeTkPerKg: 0.10,
+  paymentRailsPct: 1.0,
+  coordinationTkPerTruck: 800,
+  cloudAndSmsTkPerTruck: 200,
+  coordinatorTkPerMonth: 30_000,
+  kiosksPerDistrict: 2,
+  kioskTk: 45_000,
+  kioskLifeMonths: 24,
+  connectivityTkPerMonth: 4_000,
+  farmerGainTkPerKg: 5,
+};
+
+const PILOT = [
+  { when: "Dec 2026", what: "Field validation in Shibganj, Bogura: 5 farmers and a DAE agriculture officer use the app on a phone and the kiosk (FIELD_TEST_KIT.md); every answer is rated in the app." },
+  { when: "Jan–Mar 2027", what: "Potato-harvest pilot in one union: one kiosk, one co-op, one cold storage and one buyer. Target: break-even truck volume by March." },
+  { when: "Apr–May 2027", what: "Boro harvest in the Sunamganj haor: flood alerts and early-harvest windows for the same co-op model." },
+  { when: "From Jul 2027", what: "A second district only if the pilot meets its targets: farmers net at least Tk 5/kg more, 70% of answers rated useful, and break-even reached." },
+];
+
+const tkFmt = (v: number) => `Tk ${Math.round(v).toLocaleString("en-IN")}`;
 
 function usd(value: number): string {
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
@@ -70,6 +94,19 @@ export function EconomicsSection() {
       spread: a.baselineSpreadPct * (1 - share) + a.platformSpreadPct * share,
     };
   }, [trucks, takeRate, storages, profiles]);
+
+  // Per pooled truck, at the take-rate on the slider: revenue, variable cost, contribution and a district's break-even.
+  const unit = useMemo(() => {
+    const u = UNIT;
+    const contract = ASSUMPTIONS.truckKg * ASSUMPTIONS.avgPriceTkPerKg;
+    const revenue = contract * (takeRate / 100) + ASSUMPTIONS.truckKg * u.poolingFeeTkPerKg;
+    const variable = contract * (u.paymentRailsPct / 100) + u.coordinationTkPerTruck + u.cloudAndSmsTkPerTruck;
+    const contribution = revenue - variable;
+    const fixed = u.coordinatorTkPerMonth + (u.kiosksPerDistrict * u.kioskTk) / u.kioskLifeMonths + u.connectivityTkPerMonth;
+    const breakEvenTrucks = contribution > 0 ? Math.ceil(fixed / contribution) : Infinity;
+    const farmerGain = ASSUMPTIONS.truckKg * u.farmerGainTkPerKg;
+    return { contract, revenue, variable, contribution, fixed, breakEvenTrucks, farmerGain };
+  }, [takeRate]);
 
   // The take-rate floor (2.5%) and minimum 10 trucks keep marketplace revenue, and so ARR, above zero.
   const parts = [
@@ -156,6 +193,45 @@ export function EconomicsSection() {
               combined value: farmer uplift plus platform ARR.
             </p>
           </figure>
+        </div>
+
+        <div className="surface p-4 sm:p-5">
+          <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Scale className="size-4 text-emerald-700" aria-hidden /> One pooled truck, and when a district breaks even</h3>
+          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-2">
+            {[
+              ["Truck contract (5,000 kg × Tk 40)", tkFmt(unit.contract)],
+              [`Platform revenue (${takeRate.toFixed(1)}% take-rate + Tk 0.10/kg pooling fee)`, tkFmt(unit.revenue)],
+              [`Variable cost (payment rails ${UNIT.paymentRailsPct}%, coordination, cloud and SMS)`, tkFmt(unit.variable)],
+              ["Contribution per truck", tkFmt(unit.contribution)],
+              ["District fixed cost per month (coordinator, 2 kiosks over 24 months, connectivity)", tkFmt(unit.fixed)],
+              ["Break-even per district", Number.isFinite(unit.breakEvenTrucks)
+                ? `${unit.breakEvenTrucks} trucks/month (${(unit.breakEvenTrucks * 5).toLocaleString()} t, about ${Math.round((unit.breakEvenTrucks * ASSUMPTIONS.truckKg) / ASSUMPTIONS.avgLotKg)} lots of 400 kg)`
+                : "not at this take-rate"],
+              [`Farmers' extra income per truck (at Tk ${UNIT.farmerGainTkPerKg}/kg)`, tkFmt(unit.farmerGain)],
+              ["Farmers gain per Tk 1 the platform earns", `Tk ${(unit.farmerGain / unit.revenue).toFixed(1)}`],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-1.5">
+                <dt className="text-slate-600">{label}</dt>
+                <dd className="num m-0 shrink-0 font-semibold text-slate-900">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="m-0 mt-3 text-[12.5px] leading-relaxed text-slate-500">
+            Planning assumptions for the pilot to test, not measured costs. The Tk 5/kg farmer gain is deliberately below the
+            demo&apos;s own modelled cases (Tk 10–18/kg over the Faria offer); the pooling fee is the backend&apos;s Tk 0.10/kg.
+          </p>
+        </div>
+
+        <div className="surface p-4 sm:p-5">
+          <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><CalendarRange className="size-4 text-emerald-700" aria-hidden /> Pilot plan (proposed, not started)</h3>
+          <ol className="m-0 mt-3 grid list-none gap-3 p-0">
+            {PILOT.map((step, i) => (
+              <li key={step.when} className="grid grid-cols-[28px_minmax(0,1fr)] gap-2 text-[13.5px]">
+                <span className="num grid size-6 place-items-center rounded-full bg-emerald-50 text-[12px] font-semibold text-emerald-800 ring-1 ring-emerald-700/20 ring-inset">{i + 1}</span>
+                <span className="min-w-0"><span className="font-semibold text-slate-900">{step.when}.</span> <span className="text-slate-700">{step.what}</span></span>
+              </li>
+            ))}
+          </ol>
         </div>
 
         <div className="rounded-lg bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-600 ring-1 ring-slate-200 ring-inset">

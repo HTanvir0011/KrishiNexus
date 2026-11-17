@@ -1,6 +1,7 @@
-import { BarChart3, BookOpen, ExternalLink, FlaskConical, LayoutGrid, Plug, Sprout } from "lucide-react";
+import { BarChart3, BookOpen, ExternalLink, FlaskConical, LayoutGrid, Plug, ShieldCheck, Sprout } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import { DataSafetySection } from "../components/docs/DataSafetySection";
 import { DepthMatrixSection } from "../components/docs/DepthMatrixSection";
 import { EconomicsSection } from "../components/docs/EconomicsSection";
 import { EvalsSection } from "../components/docs/EvalsSection";
@@ -15,9 +16,11 @@ const SECTIONS: { id: string; nav: string; title: string; icon: ReactNode; body:
   { id: "matrix", nav: "AI depth matrix", title: "AI depth verification matrix (110-point rubric)", icon: <LayoutGrid className="size-4" />, body: <DepthMatrixSection /> },
   { id: "evals", nav: "Evaluation and regression", title: "Live computed evaluation and the 100-case regression runner", icon: <FlaskConical className="size-4" />, body: <EvalsSection /> },
   { id: "economics", nav: "Unit economics", title: "B2B unit economics and national impact simulator", icon: <BarChart3 className="size-4" />, body: <EconomicsSection /> },
+  { id: "data", nav: "Data, consent and safety", title: "Data, consent and safety: what the node keeps and why", icon: <ShieldCheck className="size-4" />, body: <DataSafetySection /> },
 ];
 
-const BACKEND_DOCS = `${import.meta.env.VITE_API_BASE ?? "http://localhost:8000"}/docs`;
+// Same origin in dev (Vite proxy), compose (nginx) and the hosted demo (serve.py) all rewrite /api to the backend.
+const BACKEND_DOCS = import.meta.env.VITE_API_BASE ? `${import.meta.env.VITE_API_BASE}/docs` : "/api/docs";
 
 export function DocsPage() {
   const [active, setActive] = useState(SECTIONS[0].id);

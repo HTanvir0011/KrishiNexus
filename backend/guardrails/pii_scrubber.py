@@ -14,7 +14,8 @@ apply to the original string unchanged.
 
 Original values never leave the process: they are kept in an in-memory
 ``PIIVault`` keyed by a vault id so a local settlement service can restore the
-text (tokens are replaced in order of appearance).
+text (tokens are replaced in order of appearance). Entries expire after
+``VAULT_TTL_SECONDS`` (24 h) and nothing is written to disk.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import re
 import threading
+import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
@@ -100,22 +102,39 @@ def _fingerprint(entity_type: str, value: str) -> str:
     return hashlib.sha256(f"{entity_type}:{normalised}".encode()).hexdigest()[:16]
 
 
+VAULT_TTL_SECONDS = 24 * 3600
+
+
 class PIIVault:
-    """In-memory reversible mapping from redaction tokens back to original values."""
+    """In-memory reversible mapping from redaction tokens back to original values, kept for 24 hours at most."""
 
-    def __init__(self) -> None:
+    def __init__(self, ttl_seconds: float = VAULT_TTL_SECONDS) -> None:
         self._lock = threading.Lock()
-        self._entries: dict[str, list[tuple[str, str]]] = {}
+        self._ttl = ttl_seconds
+        self._entries: dict[str, tuple[float, list[tuple[str, str]]]] = {}
 
-    def store(self, entries: list[tuple[str, str]]) -> str:
+    def _expire(self, now: float) -> None:
+        # Insertion order is age order, so the expired entries are at the front.
+        for vault_id, (stored_at, _) in list(self._entries.items()):
+            if now - stored_at < self._ttl:
+                break
+            del self._entries[vault_id]
+
+    def store(self, entries: list[tuple[str, str]], now: float | None = None) -> str:
         vault_id = f"VLT-{uuid.uuid4().hex[:12].upper()}"
+        now = time.time() if now is None else now
         with self._lock:
-            self._entries[vault_id] = entries
+            self._expire(now)
+            self._entries[vault_id] = (now, entries)
         return vault_id
 
-    def restore(self, vault_id: str, anonymized_text: str) -> str:
+    def __len__(self) -> int:
+        return len(self._entries)
+
+    def restore(self, vault_id: str, anonymized_text: str, now: float | None = None) -> str:
         with self._lock:
-            entries = self._entries.get(vault_id)
+            self._expire(time.time() if now is None else now)
+            entries = self._entries.get(vault_id, (0.0, None))[1]
         if entries is None:
             raise KeyError(f"unknown vault id {vault_id}")
         restored = anonymized_text

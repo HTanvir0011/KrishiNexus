@@ -1,0 +1,23 @@
+# Keeps the free Render demo awake during judging. Render sleeps a free service after 15 minutes without traffic, and
+# the next visitor then waits about a minute. Does nothing until the repository variable DEMO_URL is set
+# (Settings > Secrets and variables > Actions > Variables), e.g. https://krishinexus-os.onrender.com.
+# Delete the variable to stop it. See deploy/cloudrun/DEPLOY.md.
+name: Keep the demo awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.DEMO_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /health
+        env:
+          DEMO_URL: ${{ vars.DEMO_URL }}
+        run: curl --fail --silent --show-error --max-time 120 --retry 3 --retry-delay 20 "${DEMO_URL%/}/health"

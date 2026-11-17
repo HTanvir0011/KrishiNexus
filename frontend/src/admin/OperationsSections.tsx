@@ -1,8 +1,8 @@
-import { Activity, CloudRain, RefreshCw, RotateCcw, Truck, Wallet, X, Zap } from "lucide-react";
+import { Activity, CloudRain, MessageSquare, RefreshCw, RotateCcw, ThumbsDown, ThumbsUp, Truck, Wallet, X, Zap } from "lucide-react";
 import { useCallback } from "react";
 
 import { api } from "../api/client";
-import { Badge, Button, Panel, ProgressBar, Spinner } from "../components/ui";
+import { Badge, Button, Panel, ProgressBar, Spinner, Stat } from "../components/ui";
 import { kg, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
 import { setState } from "../state/store";
@@ -187,6 +187,62 @@ export function ActivitySection() {
             </tbody>
           </table>
         </div>
+      )}
+    </Panel>
+  );
+}
+
+const FEEDBACK_COPY = {
+  en: {
+    title: "Feedback", total: "Answers rated", useful: "Rated useful", byRole: "By role", none: "No feedback yet. Farmers rate each decision in the farmer app.",
+    headers: ["When", "Rating", "Comment", "Who", "Session"], yes: "Useful", no: "Not useful", hidden: (n: number) => `${n} personal detail hidden`,
+  },
+  bn: {
+    title: "মতামত", total: "মোট মতামত", useful: "কাজে লেগেছে", byRole: "ভূমিকা অনুযায়ী", none: "এখনও কোনো মতামত নেই। কৃষক অ্যাপে প্রতিটি সিদ্ধান্তে মতামত দেন।",
+    headers: ["সময়", "মত", "মন্তব্য", "কে", "সেশন"], yes: "কাজে লেগেছে", no: "কাজে লাগেনি", hidden: (n: number) => `${n}টি ব্যক্তিগত তথ্য লুকানো`,
+  },
+};
+
+export function FeedbackSection() {
+  const c = useCopy(FEEDBACK_COPY);
+  const { data, busy, reload, run } = useAdmin(api.adminFeedback);
+  return (
+    <Panel title={c.title} icon={<MessageSquare className="size-4 text-emerald-700" aria-hidden />}
+      actions={<Button variant="quiet" disabled={busy !== null} onClick={() => void run("refresh", reload, "Refreshed")}><RefreshCw className="size-4" aria-hidden /></Button>}>
+      {!data ? <Spinner /> : (
+        <>
+          <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+            <Stat label={c.total} value={data.total} />
+            <Stat label={c.useful} value={data.useful_pct === null ? "—" : `${data.useful_pct}%`} tone="emerald" hint={`${data.useful} / ${data.total}`} />
+            <Stat label={c.byRole} value={Object.keys(data.by_role).length} hint={Object.entries(data.by_role).map(([role, n]) => `${role} ${n}`).join(" · ")} />
+          </div>
+          {data.items.length === 0 ? <p className="m-0 text-[14px] text-slate-600">{c.none}</p> : (
+            <div className="scroll-thin -mx-1 overflow-x-auto">
+              <table className={TABLE}>
+                <thead><tr className="border-b border-slate-200">{c.headers.map((h) => <th key={h} scope="col" className={TH}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {data.items.map((f) => (
+                    <tr key={f.feedback_id} className="border-b border-slate-100">
+                      <td className={`${TD} whitespace-nowrap text-[12px]`}>{when(f.at)}</td>
+                      <td className={TD}>
+                        <Badge tone={f.useful ? "emerald" : "red"}>
+                          {f.useful ? <ThumbsUp className="mr-1 inline size-3" aria-hidden /> : <ThumbsDown className="mr-1 inline size-3" aria-hidden />}
+                          {f.useful ? c.yes : c.no}
+                        </Badge>
+                      </td>
+                      <td className={`${TD} max-w-[380px] text-[13px] text-slate-700`}>
+                        {f.comment || "—"}
+                        {f.pii_hidden > 0 && <div className="text-[11.5px] text-amber-700">{c.hidden(f.pii_hidden)}</div>}
+                      </td>
+                      <td className={`${TD} text-[12.5px]`}>{f.user_id ? <span className="font-mono">{f.user_id}</span> : "visitor"}{f.role ? ` · ${f.role}` : ""}</td>
+                      <td className={`${TD} font-mono text-[11.5px] text-slate-500`}>{f.session_id ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </Panel>
   );

@@ -43,6 +43,12 @@ with TestClient(serve.app) as client:
     assert client.post("/market/bids/lock", json={}, headers={"X-Forwarded-For": "5.6.7.9"}).status_code == 422
     assert client.get("/mcp/anomalies", headers=visitor).status_code == 200  # reads stay open
 
+    # Polled JSON is gzipped; a server-sent event stream is not.
+    assert client.get("/automation/truck-pools", headers={"Accept-Encoding": "gzip"}).headers.get("content-encoding") == "gzip"
+    stream = client.post("/mcp/servers/dam-market-mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+                         headers={"Accept": "text/event-stream", "Accept-Encoding": "gzip"})
+    assert stream.headers["content-type"].startswith("text/event-stream") and "content-encoding" not in stream.headers
+
     with client.websocket_connect("/ws/agent-trace") as ws:
         assert ws.receive_json()["type"] == "hello"
 

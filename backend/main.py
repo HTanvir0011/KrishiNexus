@@ -42,7 +42,8 @@ POST   /evals/run-regression         Seeded 5-category regression suite (20 per 
 GET    /auth/demo-users              Demo accounts for the quick-login screen (auth.py)
 POST   /auth/login                   Quick login by account id -> signed session token (no password: demo)
 GET    /auth/me                      The account behind a Bearer token
-*      /auth/admin/...               Admin only: accounts (list, create, update, delete, reset), escrow list, overview counts
+*      /auth/admin/...               Admin only: accounts (list, create, update, delete, reset), escrow list, feedback, overview counts
+POST   /feedback                     Was this advice useful? (comment PII-scrubbed; feedback.py)
 
 Run:  uvicorn main:app --reload --port 8000
 """
@@ -62,6 +63,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 import auth
+import feedback
 from agents.state import AgentTraceEvent
 from agents.supervisor import (
     OrchestrateRequest,
@@ -161,6 +163,8 @@ app.add_middleware(
 )
 app.include_router(auth.router)
 app.include_router(auth.admin)
+app.include_router(feedback.router)
+app.include_router(feedback.admin)
 
 _RPC_EXAMPLES: dict[str, dict[str, Any]] = {
     "syndicate_anomaly": {

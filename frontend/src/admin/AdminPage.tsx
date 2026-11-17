@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, LayoutDashboard, LogOut, MonitorPlay, ShieldCheck, Truck, Users, Wallet, Zap, type LucideIcon } from "lucide-react";
+import { Activity, ArrowRight, LayoutDashboard, LogOut, MessageSquare, MonitorPlay, ShieldCheck, Truck, Users, Wallet, Zap, type LucideIcon } from "lucide-react";
 
 import { api } from "../api/client";
 import { Panel, Spinner, Stat } from "../components/ui";
@@ -8,7 +8,7 @@ import { ROLE_LABEL } from "../lib/roles";
 import { Link, navigate, type AdminSection } from "../lib/router";
 import { logout, useAppState } from "../state/store";
 import { AccountsSection, ROLES } from "./AccountsSection";
-import { ActivitySection, AnomaliesSection, EscrowsSection, PoolsSection } from "./OperationsSections";
+import { ActivitySection, AnomaliesSection, EscrowsSection, FeedbackSection, PoolsSection } from "./OperationsSections";
 import { useAdmin } from "./useAdmin";
 
 const MENU: { id: AdminSection; to: string; icon: LucideIcon }[] = [
@@ -18,12 +18,13 @@ const MENU: { id: AdminSection; to: string; icon: LucideIcon }[] = [
   { id: "escrows", to: "/admin/escrows", icon: Wallet },
   { id: "anomalies", to: "/admin/anomalies", icon: Zap },
   { id: "activity", to: "/admin/activity", icon: Activity },
+  { id: "feedback", to: "/admin/feedback", icon: MessageSquare },
 ];
 
 const COPY = {
   en: {
     title: "Admin panel",
-    menu: { overview: "Overview", accounts: "Accounts", pools: "Truck pools", escrows: "Escrows", anomalies: "Anomalies", activity: "Agent activity" },
+    menu: { overview: "Overview", accounts: "Accounts", pools: "Truck pools", escrows: "Escrows", anomalies: "Anomalies", activity: "Agent activity", feedback: "Feedback" },
     lede: {
       overview: "The platform at a glance. Changes made here apply to every visitor.",
       accounts: "Add, edit, disable and delete demo accounts, or restore the seeded ones.",
@@ -31,6 +32,7 @@ const COPY = {
       escrows: "Bids farmers have locked in one tap, newest first.",
       anomalies: "Power cuts and flash floods injected for the demo; clear them when you are done.",
       activity: "What the agents have been doing.",
+      feedback: "How users rate the advice: the evidence a field test collects. Comments are stored with personal details removed.",
     },
     seats: "Open the workspace",
     logout: "Log out",
@@ -44,7 +46,7 @@ const COPY = {
   },
   bn: {
     title: "অ্যাডমিন প্যানেল",
-    menu: { overview: "সারসংক্ষেপ", accounts: "অ্যাকাউন্ট", pools: "ট্রাক পুল", escrows: "এসক্রো", anomalies: "দুর্ঘটনা", activity: "এজেন্ট কার্যক্রম" },
+    menu: { overview: "সারসংক্ষেপ", accounts: "অ্যাকাউন্ট", pools: "ট্রাক পুল", escrows: "এসক্রো", anomalies: "দুর্ঘটনা", activity: "এজেন্ট কার্যক্রম", feedback: "মতামত" },
     lede: {
       overview: "এক নজরে প্ল্যাটফর্ম। এখানের পরিবর্তন সব দর্শকের জন্য।",
       accounts: "ডেমো অ্যাকাউন্ট যোগ, সম্পাদনা, বন্ধ ও মুছুন, বা মূলগুলো ফিরিয়ে আনুন।",
@@ -52,6 +54,7 @@ const COPY = {
       escrows: "কৃষকদের এক ট্যাপে লক করা দর, নতুনটি আগে।",
       anomalies: "ডেমোর জন্য চালু করা বিদ্যুৎ বিভ্রাট ও বন্যা; শেষে মুছে দিন।",
       activity: "এজেন্টরা কী করছে।",
+      feedback: "ব্যবহারকারীরা পরামর্শকে কেমন বলছেন; ব্যক্তিগত তথ্য বাদ দিয়ে মন্তব্য রাখা হয়।",
     },
     seats: "কাজের জায়গা খুলুন",
     logout: "লগআউট",
@@ -142,6 +145,7 @@ export function AdminPage({ section }: { section: AdminSection }) {
         {section === "escrows" && <EscrowsSection />}
         {section === "anomalies" && <AnomaliesSection />}
         {section === "activity" && <ActivitySection />}
+        {section === "feedback" && <FeedbackSection />}
       </section>
     </main>
   );

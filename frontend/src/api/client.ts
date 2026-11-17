@@ -393,6 +393,8 @@ export interface ChamberTelemetry {
 export interface QuotaFacility {
   facility_id: string;
   name: string;
+  district: string;
+  chambers: number;
   total_capacity_mt: number;
   trader_quota_mt: number;
   owner_quota_mt: number;
@@ -718,11 +720,74 @@ export const api = {
     request<AuthUser>(`/auth/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
   adminDeleteUser: (userId: string) => request<{ deleted: string }>(`/auth/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" }),
   adminResetUsers: () => post<AuthUser[]>("/auth/admin/users/reset", {}),
+  sendFeedback: (body: { useful: boolean; comment?: string; session_id?: string; lang: "bn" | "en"; context?: "farmer_decision" | "general" }) =>
+    post<FeedbackItem>("/feedback", body),
+  adminFeedback: () => request<FeedbackSummary>("/auth/admin/feedback"),
+  /** Cold-storage desk (Himagar OS): a facility's chambers, a signed pooled slot booking, and remaining shelf life. */
+  facilityQuota: (district: string) =>
+    mcpCall<QuotaResult>("query_cold_storage_quota", { district, radius_km: 60, tons_needed: 1 }),
+  reserveStorage: (body: { cluster_id: string; facility_id: string; tons: number; farmer_count: number }) =>
+    mcpCall<StorageReservation>("reserve_collective_storage_slot", body),
+  shelfLife: (body: { crop: Crop; grade: "A" | "B" | "C"; transit_temp_c: number; rh_pct: number }) =>
+    mcpCall<ShelfLifeResult>("calculate_dynamic_shelf_life", body),
   adminEscrows: () => request<(EscrowReceipt & { farmer_id: string })[]>("/auth/admin/escrows"),
   anomalies: () => request<ActiveAnomaly[]>("/mcp/anomalies"),
   clearAnomaly: (anomalyId: string) => request<{ cleared: string }>(`/mcp/anomalies/${encodeURIComponent(anomalyId)}`, { method: "DELETE" }),
   traceHistory: (limit = 150) => request<TraceEvent[]>(`/agents/trace-history?limit=${limit}`),
 };
+
+export interface StorageReservation {
+  status: "CONFIRMED" | "PARTIAL" | "REJECTED";
+  receipt_id: string | null;
+  cluster_id: string;
+  facility_id: string;
+  facility_name: string;
+  requested_tons: number;
+  reserved_tons: number;
+  waitlisted_tons: number;
+  farmer_count: number;
+  bags_50kg: number;
+  tariff_tk_per_kg: number;
+  total_charge_tk: number;
+  per_farmer_charge_tk: number;
+  valid_from: string | null;
+  valid_until: string | null;
+  remaining_open_quota_mt: number;
+  receipt_signature: string | null;
+}
+
+export interface ShelfLifeResult {
+  crop: Crop;
+  grade: "A" | "B" | "C";
+  transit_temp_c: number;
+  rh_pct: number;
+  remaining_shelf_life_days: number;
+  remaining_shelf_life_hours: number;
+  lambda_rot: number;
+  chilling_injury_risk: boolean;
+  storage_advice: string[];
+}
+
+export interface FeedbackItem {
+  feedback_id: string;
+  at: string;
+  useful: boolean;
+  comment: string;
+  context: "farmer_decision" | "general";
+  session_id: string | null;
+  lang: "bn" | "en";
+  user_id: string | null;
+  role: string | null;
+  pii_hidden: number;
+}
+
+export interface FeedbackSummary {
+  total: number;
+  useful: number;
+  useful_pct: number | null;
+  by_role: Record<string, number>;
+  items: FeedbackItem[];
+}
 
 export interface ActiveAnomaly {
   anomaly_id: string;
@@ -733,7 +798,7 @@ export interface ActiveAnomaly {
   expires_at: string;
 }
 
-export type Role = "farmer" | "coop" | "buyer" | "bank" | "judge" | "admin";
+export type Role = "farmer" | "coop" | "storage" | "buyer" | "bank" | "judge" | "admin";
 
 export interface AuthUser {
   user_id: string;

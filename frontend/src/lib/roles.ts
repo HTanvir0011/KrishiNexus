@@ -5,10 +5,11 @@ import type { OsView } from "./router";
 export const ROLE_VIEWS: Record<Role, OsView[]> = {
   farmer: ["field"],
   coop: ["coop"],
+  storage: ["himagar"],
   buyer: ["market"],
   bank: ["market"],
-  judge: ["judge", "field", "coop", "market"],
-  admin: ["judge", "field", "coop", "market"],
+  judge: ["judge", "field", "coop", "himagar", "market"],
+  admin: ["judge", "field", "coop", "himagar", "market"],
 };
 
 export function homeOf(role: Role): string {
@@ -18,10 +19,10 @@ export function homeOf(role: Role): string {
 }
 
 export const ROLE_LABEL: Record<"en" | "bn", Record<Role, string>> = {
-  en: { farmer: "Farmer", coop: "Co-op / cold chain", buyer: "Buyer", bank: "Bank", judge: "Judge", admin: "Admin" },
-  bn: { farmer: "কৃষক", coop: "সমবায় / কোল্ড চেইন", buyer: "ক্রেতা", bank: "ব্যাংক", judge: "বিচারক", admin: "অ্যাডমিন" },
+  en: { farmer: "Farmer", coop: "Co-op / cold chain", storage: "Himagar (cold storage)", buyer: "Buyer", bank: "Bank", judge: "Judge", admin: "Admin" },
+  bn: { farmer: "কৃষক", coop: "সমবায় / কোল্ড চেইন", storage: "হিমাগার", buyer: "ক্রেতা", bank: "ব্যাংক", judge: "বিচারক", admin: "অ্যাডমিন" },
 };
 
 export const ROLE_TONE: Record<Role, "emerald" | "sky" | "amber" | "violet" | "slate" | "red"> = {
-  farmer: "emerald", coop: "sky", buyer: "amber", bank: "violet", judge: "slate", admin: "red",
+  farmer: "emerald", coop: "sky", storage: "sky", buyer: "amber", bank: "violet", judge: "slate", admin: "red",
 };

@@ -119,7 +119,7 @@ export function fallbackQuota(district: string): QuotaResult {
     district,
     total_open_smallholder_quota_mt: 2929,
     facilities: [{
-      facility_id: "BCSA-BOG-05", name: "Shajahanpur Himagar", total_capacity_mt: 10200, trader_quota_mt: 4590, owner_quota_mt: 3296.6,
+      facility_id: "BCSA-BOG-05", name: "Shajahanpur Himagar", district: "Bogura", chambers: 6, total_capacity_mt: 10200, trader_quota_mt: 4590, owner_quota_mt: 3296.6,
       farmer_quota_mt: 2313.4, farmer_quota_booked_mt: 1556.9, open_smallholder_quota_mt: 756.5, tariff_tk_per_kg: 8.5, power_status: "GRID",
     }],
   };

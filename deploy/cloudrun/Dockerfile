@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
-# KrishiNexus OS public demo for Google Cloud Run: one container that serves the built frontend and the API on one
-# origin (deploy/cloudrun/serve.py) on $PORT. `gcloud run deploy --source deploy/cloudrun` builds it on Google's side,
-# so no local Docker is needed. It downloads the public GitHub repository at KNX_REF (default: the main branch).
+# KrishiNexus OS public demo for Render (render.yaml at the repo root) or Google Cloud Run: one container that serves
+# the built frontend and the API on one origin (deploy/cloudrun/serve.py) on $PORT. Render, or
+# `gcloud run deploy --source deploy/cloudrun`, builds it on their side, so no local Docker is needed.
+# It downloads the public GitHub repository at KNX_REF (default: the main branch).
 # Trained models are git-ignored, so the demo runs the labelled fallbacks (classical CV, modelled and offline paths).
 
 FROM python:3.14-slim AS source

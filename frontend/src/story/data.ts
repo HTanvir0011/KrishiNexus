@@ -155,13 +155,13 @@ export const RANGPUR_QUOTA_SNAPSHOT: QuotaResult = {
   district: "Rangpur",
   total_open_smallholder_quota_mt: 2045.5,
   facilities: [
-    { facility_id: "BCSA-RAN-02", name: "Mithapukur Cold Storage", total_capacity_mt: 9000, trader_quota_mt: 4050, owner_quota_mt: 2908.8,
+    { facility_id: "BCSA-RAN-02", district: "Rangpur", chambers: 5, name: "Mithapukur Cold Storage", total_capacity_mt: 9000, trader_quota_mt: 4050, owner_quota_mt: 2908.8,
       farmer_quota_mt: 2041.2, farmer_quota_booked_mt: 1506.4, open_smallholder_quota_mt: 534.8, tariff_tk_per_kg: 8.25, power_status: "GRID" },
-    { facility_id: "BCSA-RAN-03", name: "Badarganj Agro Himagar", total_capacity_mt: 8200, trader_quota_mt: 3690, owner_quota_mt: 2650.2,
+    { facility_id: "BCSA-RAN-03", district: "Rangpur", chambers: 5, name: "Badarganj Agro Himagar", total_capacity_mt: 8200, trader_quota_mt: 3690, owner_quota_mt: 2650.2,
       farmer_quota_mt: 1859.8, farmer_quota_booked_mt: 1171.6, open_smallholder_quota_mt: 688.1, tariff_tk_per_kg: 8.25, power_status: "GRID" },
-    { facility_id: "BCSA-RAN-01", name: "Rangpur Uttara Himagar Ltd.", total_capacity_mt: 10500, trader_quota_mt: 4725, owner_quota_mt: 3393.6,
+    { facility_id: "BCSA-RAN-01", district: "Rangpur", chambers: 6, name: "Rangpur Uttara Himagar Ltd.", total_capacity_mt: 10500, trader_quota_mt: 4725, owner_quota_mt: 3393.6,
       farmer_quota_mt: 2381.4, farmer_quota_booked_mt: 1883.7, open_smallholder_quota_mt: 497.7, tariff_tk_per_kg: 9.25, power_status: "GRID" },
-    { facility_id: "BCSA-RAN-04", name: "Kaunia Teesta Cold Storage", total_capacity_mt: 7500, trader_quota_mt: 3375, owner_quota_mt: 2424,
+    { facility_id: "BCSA-RAN-04", district: "Rangpur", chambers: 4, name: "Kaunia Teesta Cold Storage", total_capacity_mt: 7500, trader_quota_mt: 3375, owner_quota_mt: 2424,
       farmer_quota_mt: 1701, farmer_quota_booked_mt: 1376.1, open_smallholder_quota_mt: 324.9, tariff_tk_per_kg: 9.25, power_status: "GRID" },
   ],
 };

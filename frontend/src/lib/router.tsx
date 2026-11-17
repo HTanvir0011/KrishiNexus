@@ -1,9 +1,9 @@
-/** Minimal history router: `/` story, `/login`, `/os[/field|/coop|/market]` live OS, `/admin[/section]`, `/docs` whitepaper. */
+/** Minimal history router: `/` story, `/login`, `/os[/field|/coop|/himagar|/market]` live OS, `/admin[/section]`, `/docs` whitepaper. */
 
 import { useSyncExternalStore, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
-export type OsView = "judge" | "field" | "coop" | "market";
-export type AdminSection = "overview" | "accounts" | "pools" | "escrows" | "anomalies" | "activity";
+export type OsView = "judge" | "field" | "coop" | "himagar" | "market";
+export type AdminSection = "overview" | "accounts" | "pools" | "escrows" | "anomalies" | "activity" | "feedback";
 export type Route = { page: "story" } | { page: "login" } | { page: "admin"; section: AdminSection } | { page: "os"; view: OsView } | { page: "docs" };
 
 const listeners = new Set<() => void>();
@@ -29,10 +29,10 @@ export function routeOf(locationText: string): Route {
   if (path === "/docs" || hash === "docs") return { page: "docs" };
   if (path === "/login") return { page: "login" };
   if (path === "/admin") return { page: "admin", section: "overview" };
-  const admin = /^\/admin\/(accounts|pools|escrows|anomalies|activity)$/.exec(path);
+  const admin = /^\/admin\/(accounts|pools|escrows|anomalies|activity|feedback)$/.exec(path);
   if (admin) return { page: "admin", section: admin[1] as AdminSection };
   if (path === "/os") return { page: "os", view: "judge" };
-  const os = /^\/os\/(field|coop|market)$/.exec(path);
+  const os = /^\/os\/(field|coop|himagar|market)$/.exec(path);
   if (os) return { page: "os", view: os[1] as OsView };
   return { page: "story" };
 }

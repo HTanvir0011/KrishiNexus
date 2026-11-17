@@ -9,7 +9,7 @@ import { ROLE_LABEL, ROLE_TONE } from "../lib/roles";
 import { useAppState } from "../state/store";
 import { TABLE, TD, TH, useAdmin } from "./useAdmin";
 
-export const ROLES: Role[] = ["farmer", "coop", "buyer", "bank", "judge", "admin"];
+export const ROLES: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "judge", "admin"];
 const FIELD = "min-h-10 w-full rounded-lg bg-white px-3 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none";
 
 const COPY = {
@@ -31,8 +31,8 @@ const COPY = {
     remove: "Delete",
     you: "you",
     confirmDelete: (name: string) => `Delete the account "${name}"? This cannot be undone.`,
-    resetUsers: "Restore the 8 seeded accounts",
-    confirmReset: "Replace every account with the 8 seeded demo accounts?",
+    resetUsers: "Restore the seeded accounts",
+    confirmReset: "Replace every account with the seeded demo accounts?",
     saved: "Account saved",
     deleted: "Account deleted",
     restored: "Seeded accounts restored",
@@ -55,8 +55,8 @@ const COPY = {
     remove: "মুছুন",
     you: "আপনি",
     confirmDelete: (name: string) => `"${name}" অ্যাকাউন্ট মুছবেন? এটি ফেরানো যাবে না।`,
-    resetUsers: "৮টি মূল অ্যাকাউন্ট ফিরিয়ে আনুন",
-    confirmReset: "সব অ্যাকাউন্ট বদলে ৮টি মূল ডেমো অ্যাকাউন্ট ফিরিয়ে আনবেন?",
+    resetUsers: "মূল অ্যাকাউন্টগুলো ফিরিয়ে আনুন",
+    confirmReset: "সব অ্যাকাউন্ট বদলে মূল ডেমো অ্যাকাউন্টগুলো ফিরিয়ে আনবেন?",
     saved: "অ্যাকাউন্ট সংরক্ষিত",
     deleted: "অ্যাকাউন্ট মুছে ফেলা হয়েছে",
     restored: "মূল অ্যাকাউন্ট ফিরেছে",

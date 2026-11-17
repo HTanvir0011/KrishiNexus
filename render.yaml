@@ -1,0 +1,19 @@
+# Render Blueprint: the KrishiNexus OS hosted demo as one free web service, built from deploy/cloudrun/Dockerfile
+# (frontend + API on one origin, serve.py). Render dashboard: New > Blueprint > connect this repository > Deploy Blueprint.
+# Steps, limits and checks: deploy/cloudrun/DEPLOY.md.
+services:
+  - type: web
+    name: krishinexus-os
+    runtime: docker
+    plan: free
+    region: singapore # nearest Render region to Dhaka
+    dockerfilePath: ./deploy/cloudrun/Dockerfile
+    dockerContext: ./deploy/cloudrun # the Dockerfile downloads the repository itself, so the context stays small
+    healthCheckPath: /health
+    domains:
+      - tanvir.health # Render adds www.tanvir.health too and redirects it here; DNS is set at the registrar
+    autoDeployTrigger: commit # every push to main redeploys
+    envVars:
+      # A stable random key, so session tokens and signed receipts survive the free service sleeping and waking.
+      - key: KNX_RECEIPT_SIGNING_KEY
+        generateValue: true

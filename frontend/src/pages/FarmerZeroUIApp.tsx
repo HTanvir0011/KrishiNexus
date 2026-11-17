@@ -1,4 +1,4 @@
-import { Ban, Camera, Check, CloudRain, ImageUp, Landmark, Mic, Snowflake, Truck, Volume2, WifiOff } from "lucide-react";
+import { Ban, Camera, Check, CloudRain, ImageUp, Landmark, Mic, ShieldCheck, Snowflake, ThumbsDown, ThumbsUp, Truck, Volume2, WifiOff } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type VoiceInteractBody } from "../api/client";
@@ -42,6 +42,16 @@ const PHOTO_WIDTHS = [
   { mm: 600, label: "Crate, 60 cm" },
   { mm: 1500, label: "Heap, 1.5 m" },
 ];
+// The farmer's consent before their own voice or photo is used (recorded samples need none); kept on this device.
+const CONSENT_KEY = "knx.consent.v1";
+function storedConsent(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 const SELECT_CLASS = "min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-[13.5px] text-slate-900";
 
 export function FarmerZeroUIApp({ className }: { className?: string }) {
@@ -67,6 +77,21 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const [joined, setJoined] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const stopListening = useRef<() => void>(() => undefined);
+  const [consented, setConsented] = useState(storedConsent);
+  const [askConsent, setAskConsent] = useState<(() => void) | null>(null);
+  /** Run an action that uses the farmer's own voice or photo, asking for consent the first time. */
+  const withConsent = (action: () => void) => (consented ? action() : setAskConsent(() => action));
+  const agree = () => {
+    try {
+      localStorage.setItem(CONSENT_KEY, new Date().toISOString());
+    } catch {
+      // Not persisted: consent lasts for this visit only.
+    }
+    setConsented(true);
+    const action = askConsent;
+    setAskConsent(null);
+    action?.();   // still inside the tap, so the microphone or file picker may open
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
   const decisionRef = useRef<HTMLElement>(null);
 
@@ -122,6 +147,10 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
       stopListening.current();
       return;
     }
+    withConsent(startListening);
+  };
+
+  const startListening = () => {
     setListening(true);
     const warn = (message: string) => pushAlert("warn", "Microphone", message);
     // Offline, or without Web Speech (which streams audio to a cloud service), the kiosk transcribes with its own Whisper.
@@ -232,6 +261,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
         <div ref={scrollRef} className="scroll-thin relative min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           <section aria-labelledby="farmer-step-1">
             <StepTitle id="farmer-step-1" n={1} bn="প্রশ্ন বলুন" en="Ask your question" />
+            {askConsent && <ConsentCard onAgree={agree} onDecline={() => setAskConsent(null)} />}
             <div className="grid gap-2">
               {PRESETS.map((p) => (
                 <button key={p.id} type="button" onClick={() => void runVoice(p)} disabled={busy !== null}
@@ -298,7 +328,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
               <Button variant="ghost" className="min-h-11" onClick={() => void scan()} disabled={busy !== null}>
                 {busy === "scan" ? <Spinner /> : <Camera className="size-4" aria-hidden />} Scan sample lot
               </Button>
-              <Button variant="ghost" className="min-h-11" onClick={() => photoInput.current?.click()} disabled={busy !== null}>
+              <Button variant="ghost" className="min-h-11" onClick={() => withConsent(() => photoInput.current?.click())} disabled={busy !== null}>
                 {busy === "photo" ? <Spinner /> : <ImageUp className="size-4" aria-hidden />} Grade a photo
               </Button>
             </div>
@@ -367,6 +397,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
                 </div>
                 {notice && <p className="m-0 mt-1 text-[12.5px] text-slate-600" role="status">{notice}</p>}
               </div>
+              <AdviceFeedback key={state.session_id} sessionId={state.session_id} />
             </section>
           )}
         </div>
@@ -456,6 +487,81 @@ function RecommendedTruck({ value, perKg, hub, freight, pool, dispatched, busy, 
           </button>
           {joined && <p className="m-0 mt-2 text-[12.5px] text-emerald-50">{joined}</p>}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** What the farmer agrees to, in plain Bangla and English; every claim here matches what the backend does (see /docs#data). */
+function ConsentCard({ onAgree, onDecline }: { onAgree: () => void; onDecline: () => void }) {
+  return (
+    <div role="dialog" aria-labelledby="consent-title" className="mb-3 rounded-xl bg-sky-50 p-3.5 ring-1 ring-inset ring-sky-600/25">
+      <div id="consent-title" className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+        <ShieldCheck className="size-4 text-sky-700" aria-hidden /> <span lang="bn">আপনার অনুমতি</span> · Your consent
+      </div>
+      <p lang="bn" className="voice m-0 mt-2 text-[15px] leading-relaxed text-slate-800">
+        আপনার কথা ও ছবি শুধু এই পরামর্শের জন্য ব্যবহার হবে। নাম, ফোন ও এনআইডি নম্বর লুকানো থাকে এবং ২৪ ঘণ্টার মধ্যে মুছে যায়;
+        কণ্ঠস্বর বা ছবি জমা রাখা হয় না। সিদ্ধান্ত আপনার।
+      </p>
+      <p className="m-0 mt-2 text-[12.5px] leading-relaxed text-slate-600">
+        Your words and photo are used only for this advice. Names, phone and NID numbers are hidden and erased within
+        24 hours; voice and photos are not saved. Online, your browser's speech service hears the question; offline, the
+        kiosk transcribes it itself. The decision stays yours.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button variant="primary" className="min-h-11" onClick={onAgree}><span lang="bn">রাজি</span> · I agree</Button>
+        <Button variant="ghost" className="min-h-11" onClick={onDecline}><span lang="bn">এখন না</span> · Not now</Button>
+      </div>
+    </div>
+  );
+}
+
+/** "Was this advice useful?": one tap, an optional comment, sent once per decision (backend feedback.py). */
+function AdviceFeedback({ sessionId }: { sessionId: string }) {
+  const lang = useAppState((s) => s.lang);
+  const [useful, setUseful] = useState<boolean | null>(null);
+  const [comment, setComment] = useState("");
+  const [state, setFeedbackState] = useState<"idle" | "sending" | "sent">("idle");
+
+  const send = async () => {
+    if (useful === null) return;
+    setFeedbackState("sending");
+    try {
+      await api.sendFeedback({ useful, comment: comment.trim() || undefined, session_id: sessionId, lang, context: "farmer_decision" });
+      setFeedbackState("sent");
+    } catch (error) {
+      setFeedbackState("idle");
+      pushAlert("danger", "Feedback not sent", error instanceof ApiError ? error.message : String(error));
+    }
+  };
+
+  if (state === "sent") {
+    return <p className="m-0 rounded-xl bg-slate-50 p-3 text-[13.5px] text-slate-700 ring-1 ring-inset ring-slate-200" role="status"><span lang="bn">ধন্যবাদ!</span> Thank you, your answer helps us improve.</p>;
+  }
+  return (
+    <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
+      <div className="text-[14px] font-semibold text-slate-900"><span lang="bn">পরামর্শটি কি কাজে লাগল?</span> <span className="font-normal text-slate-600">Was this advice useful?</span></div>
+      <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label="Was this advice useful?">
+        {([true, false] as const).map((value) => (
+          <button key={String(value)} type="button" aria-pressed={useful === value} onClick={() => setUseful(value)}
+            className={cn("flex min-h-11 items-center justify-center gap-2 rounded-lg text-[14px] font-medium ring-1 ring-inset transition-colors",
+              useful === value ? (value ? "bg-emerald-700 text-white ring-emerald-700" : "bg-rose-600 text-white ring-rose-600") : "bg-white text-slate-800 ring-slate-300 hover:bg-slate-100")}>
+            {value ? <ThumbsUp className="size-4" aria-hidden /> : <ThumbsDown className="size-4" aria-hidden />}
+            <span lang="bn">{value ? "হ্যাঁ" : "না"}</span> · {value ? "Yes" : "No"}
+          </button>
+        ))}
+      </div>
+      {useful !== null && (
+        <>
+          <label className="mt-2 grid gap-1 text-[12.5px] text-slate-600">
+            <span><span lang="bn">কিছু বলতে চাইলে লিখুন</span> · Anything to add? (optional, personal details are removed)</span>
+            <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} rows={2}
+              className="rounded-lg bg-white px-3 py-2 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none" />
+          </label>
+          <Button variant="primary" className="mt-2 min-h-11 w-full" onClick={() => void send()} disabled={state === "sending"}>
+            {state === "sending" ? <Spinner /> : null} <span lang="bn">পাঠান</span> · Send
+          </Button>
+        </>
       )}
     </div>
   );

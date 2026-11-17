@@ -49,7 +49,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Component | Command (from repo root) | Port / route |
 |---|---|---|
 | Backend (FastAPI) | `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000` | `http://localhost:8000`, OpenAPI at `/docs` |
-| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/market`), whitepaper `/docs` |
+| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/himagar`, `/os/market`), whitepaper `/docs` |
 | Live agent trace | WebSocket | `ws://localhost:8000/ws/agent-trace?session_id=...` (proxied as `/ws`) |
 | MCP stdio servers | `cd backend && python -m mcp_servers.<server_module>` | newline-delimited JSON-RPC on stdin/stdout |
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
@@ -93,7 +93,7 @@ folder; default `backend/models/retrieval/krishi-dialect-e5-small-v1`, loaded on
 `GEMINI_API_KEY`.
 All times are BDT (UTC+06:00, `config.BDT`, `now_bdt()`); no `zoneinfo`/`tzdata` dependency.
 
-Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /market /health /auth` and `/ws`
+Vite proxies `/mcp /rag /edge /agents /automation /guardrails /optimization /prompts /evals /market /health /auth /feedback` and `/ws`
 (ws: true) to `KNX_BACKEND_URL` (default `http://localhost:8000`; set it when the backend runs on another port). A new
 backend prefix **must** be added to `BACKEND_PREFIXES` in `frontend/vite.config.ts` **and** to the API `location` regex
 in `frontend/nginx.conf` **and** to `API_PATH` in `deploy/cloudrun/serve.py`. A new frontend route needs no nginx change. Regenerate `backend/requirements.lock`
@@ -108,8 +108,11 @@ krishinexus-os/
 ├── AGENTS.md / CLAUDE.md               # this contract (identical copies)
 ├── MEMORY.md                           # live state + handover log
 ├── memory-graph.jsonl                  # project knowledge graph (MCP memory-server JSONL)
+├── FIELD_TEST_KIT.md                   # plan for the first study with farmers: consent script, tasks, score sheet, success bar set in advance
 ├── TRAINING_PLAN.md                    # Phase 9: SFT data (prompts v4, v5), training recipe, honest eval design + measured runs (§6)
-├── deploy/cloudrun/                    # hosted demo: Dockerfile (builds GitHub main), serve.py (SPA + API on one origin, write limit), check_serve.py, DEPLOY.md
+├── render.yaml                         # Render Blueprint: one free Docker web service (Singapore) from deploy/cloudrun/Dockerfile, stable generated signing key, custom domain tanvir.health
+├── .github/workflows/keep-demo-awake.yml  # optional: calls the hosted demo's /health every 10 min once the repo variable DEMO_URL is set
+├── deploy/cloudrun/                    # hosted demo for Render or Cloud Run: Dockerfile (builds GitHub main, listens on $PORT), serve.py (SPA + API on one origin, write limit, gzip), check_serve.py, DEPLOY.md
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm; profile data: pgvector, Neo4j, Redis, n8n
 ├── .env.example                        # compose host ports, KNX_OLLAMA_HOST, OLLAMA_IMAGE_TAG, data-profile ports and passwords
 ├── .github/workflows/docker-smoke.yml  # CI: builds the images and smoke-tests the default stack and profile data on Linux
@@ -143,7 +146,7 @@ krishinexus-os/
 │   │   ├── agri_weather_sar_mcp.py     # Server 2 agri-weather-sar-mcp (5 tools), NETWORK_BLACKOUT ContextVar
 │   │   └── coldchain_iot_mcp.py        # Server 3 coldchain-iot-mcp (4 tools), 18 BCSA facilities
 │   ├── guardrails/
-│   │   ├── pii_scrubber.py             # BanglaPIIScrubber + PIIVault (PII_SCRUBBER)
+│   │   ├── pii_scrubber.py             # BanglaPIIScrubber + PIIVault (PII_SCRUBBER); vault entries expire after 24 h (VAULT_TTL_SECONDS)
 │   │   └── financial_circuit.py        # FinancialCircuitBreaker: dPi + DAE dosage (CIRCUIT_BREAKER)
 │   ├── optimization/token_compressor.py# TokenOptimizer, RollingSummaryMemory, estimate_tokens (TOKEN_OPTIMIZER)
 │   ├── rag/
@@ -171,6 +174,7 @@ krishinexus-os/
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
 │   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/, retrieval/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
+│   ├── feedback.py · check_privacy.py   # 'Was this advice useful?' (comments PII-scrubbed, .state/feedback.json, latest 5,000); privacy self-check
 │   ├── auth.py · check_auth.py          # demo accounts: password login (PBKDF2 hashes) + quick login, HMAC session tokens, admin API (/auth, .state/users.json); self-check
 │   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)
 │   ├── data_seed.py                    # seed files for the compose data profile: pgvector SQL, Neo4j Cypher, n8n workflows
@@ -201,10 +205,10 @@ krishinexus-os/
         │   ├── ui.tsx · gauges.tsx             # Badge Panel Button Stat ProgressBar Spinner SourceChip Segmented LiveDot; dials
         │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
         │   ├── BuyerBidsPanel.tsx              # market seat: ranked buyer bids for a lot and the 1-tap bKash/Nagad escrow lock
-        │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx
+        │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx (+ per-truck unit economics, break-even, pilot plan) · DataSafetySection.tsx
         ├── lib/roles.ts                        # which seats each role opens (ROLE_VIEWS) and where it lands (homeOf)
         ├── admin/AdminPage.tsx · AccountsSection.tsx · OperationsSections.tsx · useAdmin.ts   # /admin console: sidebar + six pages
-        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · BuyerBankPortal.tsx · DocsPage.tsx · LoginPage.tsx
+        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · HimagarConsole.tsx · BuyerBankPortal.tsx · DocsPage.tsx · LoginPage.tsx
 ```
 
 ---
@@ -277,10 +281,11 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /evals/metrics?refresh` | → `RagasReport` (cached 10 min) | 6 |
 | `POST /evals/run-regression` | `RegressionRequest` (`sample_size` 1–20 per category) → `RegressionReport` | 6 |
 | `GET /evals/holdout?refresh` | → `HoldoutReport` (frozen 66-probe blind retrieval test; cached 10 min) | 9 |
+| `POST /feedback` | `{useful, comment?, session_id?, lang, context}` → `Feedback` (201); a valid session token attaches the account; the comment is PII-scrubbed before storing; rate-limited on the hosted demo | 12 |
 | `GET /auth/demo-users` | → active `User` accounts for the quick-login screen | 11 |
 | `POST /auth/login` | `{user_id, password?}` → `Session` (`token` = `user_id.expiry.HMAC`, 12 h). The id is matched in any case. With a password it must match the account's PBKDF2 hash (401 otherwise; seeded accounts use `DEMO_PASSWORD` `krishi2026`, shown on the login page); without one it is the demo quick login. 403 if unknown or disabled | 11 |
 | `GET /auth/me` | `Authorization: Bearer` → `User`; 401 for a forged, expired, disabled or deleted account | 11 |
-| `GET/POST /auth/admin/users` (optional `password`), `PATCH/DELETE /auth/admin/users/{id}` (`password` resets it), `POST /auth/admin/users/reset`, `GET /auth/admin/escrows`, `GET /auth/admin/overview` | admin role only (403 otherwise); the last active admin cannot be demoted, disabled or deleted (409); other API routes stay open | 11 |
+| `GET/POST /auth/admin/users` (optional `password`), `PATCH/DELETE /auth/admin/users/{id}` (`password` resets it), `POST /auth/admin/users/reset`, `GET /auth/admin/escrows`, `GET /auth/admin/feedback`, `GET /auth/admin/overview` | admin role only (403 otherwise); the last active admin cannot be demoted, disabled or deleted (409); other API routes stay open | 11 |
 
 LangGraph node order (`agents/supervisor.py`): `pii_guardrail → token_compression → crag_retrieval → vision_grading →
 syndicate_bypass → coldchain_arbitrage → climate_credit → supervisor_review →(re-plan, max 2)→ coldchain_arbitrage |
@@ -422,11 +427,18 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
 - **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
   - `/` is the product overview: hero with live metrics, the live decision card, bento cards and the LangGraph pipeline.
   - `/login` is a centred sign-in form (account ID + password) with the quick demo login below it: one click per account, grouped by role.
-  - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/market` are the other seats.
+  - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/himagar`, `/os/market` are the other seats.
     The workspace needs a login and shows only the role's seats (`lib/roles.ts`): farmer → field, coop → coop,
-    buyer and bank → market, judge and admin → all four.
+    storage → himagar, buyer and bank → market, judge and admin → all five.
+  - `/os/himagar` (Himagar OS, `pages/HimagarConsole.tsx`) is the cold-storage manager's seat: district and facility pickers,
+    the quota split (traders slate, owners sky, farmers amber), every chamber's reading (the focused one polled live, the
+    others read once per facility), the 3D twin, a pooled slot booking that returns the HMAC-signed warehouse receipt
+    (`reserve_collective_storage_slot`, 50 t at most from this form) and a Q10 shelf-life check (`calculate_dynamic_shelf_life`).
   - `/admin` (admin role) is a console with a sidebar (a scrolling strip on phones) and one page per route: `/admin` overview,
-    `/admin/accounts`, `/admin/pools`, `/admin/escrows`, `/admin/anomalies` (inject and clear), `/admin/activity` (agent trace).
+    `/admin/accounts`, `/admin/pools`, `/admin/escrows`, `/admin/anomalies` (inject and clear), `/admin/activity` (agent trace), `/admin/feedback` (ratings and comments).
+  - The farmer app asks for consent (Bangla and English) before the farmer's own voice or photo is used, stored only on
+    the device (`knx.consent.v1`); recorded samples need none. Each decision ends with "Was this advice useful?".
+  - `/docs#data` ("Data, consent and safety") lists what the node keeps, where and for how long; keep it true to the code.
   - `/docs` (with `#section` anchors) is the whitepaper. Only `/os` loads Three.js: the cold-storage twin is
     `React.lazy` in `pages/CommandCenter.tsx`, so it arrives in its own chunk after the OS paints.
 - **Navbar** (`components/Navbar.tsx`) is rendered once in `App.tsx`. Its toggles write the store:

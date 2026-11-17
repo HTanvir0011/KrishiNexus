@@ -1,11 +1,12 @@
 """KrishiNexus OS public demo server: the built frontend and the API on one origin, in one process.
 
 It serves what frontend/nginx.conf serves in the compose stack, for a host that runs one container on one port
-(Cloud Run sends requests to $PORT, 8080 by default):
+(Cloud Run and Render send requests to $PORT):
 - the API prefixes and /ws go to the FastAPI app in main.py;
 - /api/* goes to it with the prefix stripped, so the API docs are at /api/docs;
 - every other path is the built SPA, with index.html for the client routes (/, /os/*, /docs).
 Writes that change what every visitor sees (escrows, truck pools, n8n jobs, injected anomalies) are limited per visitor.
+Responses are gzipped, which keeps a free host's bandwidth allowance (Render: 5 GB a month) far from its limit.
 
 Run from the folder that holds main.py:  uvicorn serve:app --port 8080
 (The image also sets FORWARDED_ALLOW_IPS=* so uvicorn trusts the host's proxy headers.)
@@ -29,6 +30,7 @@ os.environ.setdefault("KNX_RECEIPT_SIGNING_KEY", secrets.token_hex(32))
 # Imported after the defaults above, because config reads the environment on import.
 from starlette.applications import Starlette  # noqa: E402
 from starlette.exceptions import HTTPException  # noqa: E402
+from starlette.middleware.gzip import GZipMiddleware  # noqa: E402
 from starlette.responses import JSONResponse, Response  # noqa: E402
 from starlette.routing import Mount  # noqa: E402
 from starlette.staticfiles import StaticFiles  # noqa: E402
@@ -38,8 +40,8 @@ from main import app as api  # noqa: E402
 
 STATIC_DIR = Path(os.getenv("KNX_STATIC_DIR", Path(__file__).with_name("static")))
 # The API location of frontend/nginx.conf plus /ws; keep the two lists in step.
-API_PATH = re.compile(r"/(mcp|rag|edge|agents|automation|guardrails|optimization|prompts|evals|market|health|auth|openapi\.json|ws)(/|$)")
-WRITE = re.compile(r"POST /market/bids/lock|POST /automation/|POST /mcp/simulate-anomaly|DELETE /mcp/anomalies")
+API_PATH = re.compile(r"/(mcp|rag|edge|agents|automation|guardrails|optimization|prompts|evals|market|health|auth|feedback|openapi\.json|ws)(/|$)")
+WRITE = re.compile(r"POST /market/bids/lock|POST /automation/|POST /mcp/simulate-anomaly|DELETE /mcp/anomalies|POST /feedback")
 WRITES_PER_MINUTE = 30
 
 # shortcut: counters live in this process, which is right while the demo runs one instance (its state is in memory too).
@@ -96,7 +98,7 @@ def over_write_limit(scope: Scope, now: float) -> bool:
     return False
 
 
-async def app(scope: Scope, receive: Receive, send: Send) -> None:
+async def route(scope: Scope, receive: Receive, send: Send) -> None:
     if scope["type"] in ("http", "websocket"):
         if scope["path"].startswith("/api/"):
             scope = {**scope, "path": scope["path"][4:]}
@@ -108,3 +110,8 @@ async def app(scope: Scope, receive: Receive, send: Send) -> None:
                                    status_code=429, headers={"Retry-After": "60"})
             return await limited(scope, receive, send)
     await api(scope, receive, send)
+
+
+# An open /os tab polls pools and telemetry every few seconds: about 5.8 MB an hour raw, 1.1 MB gzipped.
+# Server-sent events (MCP streaming) are left uncompressed by the middleware.
+app = GZipMiddleware(route, minimum_size=1_000, compresslevel=6)

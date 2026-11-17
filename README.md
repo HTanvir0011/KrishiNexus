@@ -14,12 +14,14 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 | Haor flash floods destroy whole harvests (about **65%** of Sunamganj's Boro in April 2017), and farmers have no collateral for credit | A 72-hour flood check that reads Sentinel-1 radar through monsoon cloud, and a 300–850 credit score with HMAC-signed quality certificates |
 
 **Try it.** Run `docker compose up --build` ([Quickstart](#quickstart)) and open http://localhost:5173/login. The hosted
-demo link will be added here once it is deployed (`deploy/cloudrun/DEPLOY.md`).
+demo runs on Render's free plan from `render.yaml`; its link will be added here once it is deployed
+(`deploy/cloudrun/DEPLOY.md`).
 
 | Demo account | Role |
 |---|---|
 | `FARM-RAN-001` | Rahim Mia, potato farmer, Rangpur |
 | `COOP-BOG-01` | Shibganj Union Co-op |
+| `HIMAGAR-BOG-05` | Shajahanpur Himagar, cold-storage manager (Himagar OS) |
 | `BUY-DHK-01` | Dhaka Fresh DC (buyer) |
 | `BANK-UCB-01` | UCB Agri Desk (bank) |
 | `JUDGE-01` | Judge: every seat in split-screen |
@@ -43,6 +45,7 @@ production security.
 - [Evaluation](#evaluation)
 - [Repository layout](#repository-layout)
 - [What is real and what is simulated](#what-is-real-and-what-is-simulated)
+- [Data, consent and field testing](#data-consent-and-field-testing)
 
 ---
 
@@ -80,6 +83,24 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 ---
 
 ## Recent changes
+
+### Himagar OS, cold-storage seat (17 November 2026)
+
+- `/os/himagar` gives a cold-storage manager one facility at a time: who holds the space (traders, plant owners,
+  farmers), every chamber's temperature, humidity and rot risk beside the 3D twin, a pooled slot booking that returns an
+  HMAC-signed warehouse receipt, and a shelf-life check at the chamber's live reading.
+- New role `storage` with the demo account `HIMAGAR-BOG-05`; judges and admins see the seat too.
+
+### Consent, data retention, feedback and the pilot plan (17 November 2026)
+
+- The farmer app asks for consent, in Bangla and English, before the farmer's own voice or photo is used.
+- Hidden names and phone numbers now leave the PII vault after 24 hours; nothing personal is written to disk.
+- Every decision ends with "Was this advice useful?"; comments are PII-scrubbed, and admins read them at `/admin/feedback`.
+- The whitepaper adds per-truck unit economics, a district break-even point and a dated pilot plan (`/docs#economics`),
+  and a data, consent and safety section (`/docs#data`).
+- `FIELD_TEST_KIT.md` is the plan for the first study with farmers. No study has been run yet.
+- `render.yaml` deploys the hosted demo on Render's free plan, with gzipped responses and an optional keep-awake
+  workflow (`DEMO_URL`). Deploying it is a dashboard step for the repository owner.
 
 ### Demo login and admin console (15 November 2026)
 
@@ -316,7 +337,8 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
 ├── training/                   SFT data export (prepare_data.py), Kaggle notebooks (kaggle/), measured run reports (runs/)
 ├── TRAINING_PLAN.md            recipes, split rules, pre-registered targets and measured results for every model
-├── deploy/cloudrun/            one-container hosted demo for Google Cloud Run, with per-visitor write limits
+├── render.yaml                 Render Blueprint for the free hosted demo (one Docker web service)
+├── deploy/cloudrun/            one-container hosted demo for Render or Google Cloud Run, with per-visitor write limits
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
@@ -348,3 +370,16 @@ Simulated or modelled, and labelled as such in the UI and API:
 - agent replies are deterministic; no cloud LLM calls are made.
 
 Figures quoted from the project brief, such as the CPD July 2026 study and partner terms, are attributed as cited.
+
+## Data, consent and field testing
+
+- **Consent:** the farmer app asks before the farmer's own voice or photo is used; recorded samples need none.
+- **What is kept:** names, phone, NID, wallet and bank numbers are hidden before any agent reads the text. The hidden
+  originals stay in memory for 24 hours at most. Voice and photos are not saved. Wallet numbers are masked before storing.
+  The full table is in the whitepaper at `/docs#data`.
+- **Online voice** uses the browser's own speech service; offline, the kiosk transcribes with its own Whisper model.
+- **Feedback:** every decision can be rated; comments are PII-scrubbed and kept in `backend/.state/feedback.json`.
+- **Field testing:** no study with farmers has been run yet. `FIELD_TEST_KIT.md` sets out the first one: five farmers
+  and an extension officer in Shibganj, Bogura, with the success bar fixed before the test.
+- **Self-checks:** `backend/check_privacy.py` (vault expiry, scrubbed feedback, admin-only summary) and
+  `backend/check_auth.py`.
