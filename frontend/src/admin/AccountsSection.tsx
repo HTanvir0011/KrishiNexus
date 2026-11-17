@@ -9,7 +9,7 @@ import { ROLE_LABEL, ROLE_TONE } from "../lib/roles";
 import { useAppState } from "../state/store";
 import { TABLE, TD, TH, useAdmin } from "./useAdmin";
 
-export const ROLES: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "judge", "admin"];
+export const ROLES: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "driver", "judge", "admin"];
 const FIELD = "min-h-10 w-full rounded-lg bg-white px-3 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none";
 
 const COPY = {

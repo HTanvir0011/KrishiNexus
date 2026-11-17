@@ -49,7 +49,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Component | Command (from repo root) | Port / route |
 |---|---|---|
 | Backend (FastAPI) | `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000` | `http://localhost:8000`, OpenAPI at `/docs` |
-| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/himagar`, `/os/market`), whitepaper `/docs` |
+| Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/himagar`, `/os/trade`, `/os/driver`, `/os/market`), whitepaper `/docs` |
 | Live agent trace | WebSocket | `ws://localhost:8000/ws/agent-trace?session_id=...` (proxied as `/ws`) |
 | MCP stdio servers | `cd backend && python -m mcp_servers.<server_module>` | newline-delimited JSON-RPC on stdin/stdout |
 | Local LLM runtimes (optional) | Ollama / llama.cpp / vLLM | `11434` / `8080` / `8001` |
@@ -174,6 +174,7 @@ krishinexus-os/
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
 │   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/, retrieval/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
+│   ├── marketplace.py · check_marketplace.py  # direct marketplace: lots, open buyer bids, accept -> signed escrow + delivery job, driver claim/pickup/temperature/deliver -> escrow released (.state/marketplace.json, 3 seeded lots)
 │   ├── feedback.py · check_privacy.py   # 'Was this advice useful?' (comments PII-scrubbed, .state/feedback.json, latest 5,000); privacy self-check
 │   ├── auth.py · check_auth.py          # demo accounts: password login (PBKDF2 hashes) + quick login, HMAC session tokens, admin API (/auth, .state/users.json); self-check
 │   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)
@@ -208,7 +209,7 @@ krishinexus-os/
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx (+ per-truck unit economics, break-even, pilot plan) · DataSafetySection.tsx
         ├── lib/roles.ts                        # which seats each role opens (ROLE_VIEWS) and where it lands (homeOf)
         ├── admin/AdminPage.tsx · AccountsSection.tsx · OperationsSections.tsx · useAdmin.ts   # /admin console: sidebar + six pages
-        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · HimagarConsole.tsx · BuyerBankPortal.tsx · DocsPage.tsx · LoginPage.tsx
+        └── pages/FarmerZeroUIApp.tsx · CommandCenter.tsx · HimagarConsole.tsx · MarketplaceSeat.tsx · DriverSeat.tsx · BuyerBankPortal.tsx · DocsPage.tsx · LoginPage.tsx
 ```
 
 ---
@@ -281,6 +282,8 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /evals/metrics?refresh` | → `RagasReport` (cached 10 min) | 6 |
 | `POST /evals/run-regression` | `RegressionRequest` (`sample_size` 1–20 per category) → `RegressionReport` | 6 |
 | `GET /evals/holdout?refresh` | → `HoldoutReport` (frozen 66-probe blind retrieval test; cached 10 min) | 9 |
+| `GET/POST /market/lots`, `POST /market/lots/{id}/bids`, `.../accept`, `.../cancel` | logged-in only; farmer lists, accepts (`{bid_id, wallet, wallet_number, accept_below_floor}`; below the crop's production-cost floor needs `accept_below_floor`, else 409) and cancels own open lots; buyer bids Tk/kg; bids are public; notes PII-scrubbed; escrow HMAC-signed, wallet masked, simulated | 13 |
+| `GET /market/deliveries`, `POST /market/deliveries/{lot_id}/claim`, `/pickup`, `/temperature`, `/deliver`, `POST /market/reset` | driver (and admin): open jobs and own; status order AWAITING_DRIVER → ASSIGNED → PICKED_UP → DELIVERED (409 out of order, 403 another driver's); temperature runs `calculate_dynamic_shelf_life` and flags `at_risk` by the pools' 25% arrival reserve; deliver releases the escrow; reset (admin) restores the seeded lots | 13 |
 | `POST /feedback` | `{useful, comment?, session_id?, lang, context}` → `Feedback` (201); a valid session token attaches the account; the comment is PII-scrubbed before storing; rate-limited on the hosted demo | 12 |
 | `GET /auth/demo-users` | → active `User` accounts for the quick-login screen | 11 |
 | `POST /auth/login` | `{user_id, password?}` → `Session` (`token` = `user_id.expiry.HMAC`, 12 h). The id is matched in any case. With a password it must match the account's PBKDF2 hash (401 otherwise; seeded accounts use `DEMO_PASSWORD` `krishi2026`, shown on the login page); without one it is the demo quick login. 403 if unknown or disabled | 11 |
@@ -427,9 +430,13 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
 - **Routes** (`lib/router.tsx`, History API; use `Link` / `navigate`, not `<a href>` reloads):
   - `/` is the product overview: hero with live metrics, the live decision card, bento cards and the LangGraph pipeline.
   - `/login` is a centred sign-in form (account ID + password) with the quick demo login below it: one click per account, grouped by role.
-  - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/himagar`, `/os/market` are the other seats.
-    The workspace needs a login and shows only the role's seats (`lib/roles.ts`): farmer → field, coop → coop,
-    storage → himagar, buyer and bank → market, judge and admin → all five.
+  - `/os` is judge mode (12 columns: farmer phone + command centre); `/os/field`, `/os/coop`, `/os/himagar`, `/os/trade`, `/os/driver`, `/os/market` are the other seats.
+    The workspace needs a login and shows only the role's seats (`lib/roles.ts`): farmer → field + trade, coop → coop,
+    storage → himagar, buyer → trade + market, bank → market, driver → driver, judge and admin → all seven.
+  - `/os/trade` (`pages/MarketplaceSeat.tsx`) is the direct marketplace: a farmer lists a lot (pre-filled from the last
+    decision and photo grade) and accepts a bid with a wallet; a buyer bids in the open (a new bid replaces his old one);
+    judges and admins see every lot read-only. `/os/driver` (`pages/DriverSeat.tsx`) is the truck driver's seat: claim,
+    pick up, report the load temperature (shelf-life check), deliver, which releases the escrow. Both poll every 8 s.
   - `/os/himagar` (Himagar OS, `pages/HimagarConsole.tsx`) is the cold-storage manager's seat: district and facility pickers,
     the quota split (traders slate, owners sky, farmers amber), every chamber's reading (the focused one polled live, the
     others read once per facility), the 3D twin, a pooled slot booking that returns the HMAC-signed warehouse receipt

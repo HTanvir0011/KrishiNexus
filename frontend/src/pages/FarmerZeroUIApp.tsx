@@ -8,6 +8,7 @@ import { bnDigits, cn, kg, tk } from "../lib/format";
 import { hasBanglaVoice, listenOnce, recordOnce, speak, speechRecognitionSupported } from "../lib/speech";
 import { englishSummary } from "../lib/summary";
 import { getState, pushAlert, refreshPools, refreshQuota, refreshTelemetry, setState, useAppState } from "../state/store";
+import { Link } from "../lib/router";
 import { STORY_PRESETS } from "../story/presets";
 
 interface FarmerPreset {
@@ -79,6 +80,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const stopListening = useRef<() => void>(() => undefined);
   const [consented, setConsented] = useState(storedConsent);
   const [askConsent, setAskConsent] = useState<(() => void) | null>(null);
+  const [typed, setTyped] = useState("");
   /** Run an action that uses the farmer's own voice or photo, asking for consent the first time. */
   const withConsent = (action: () => void) => (consented ? action() : setAskConsent(() => action));
   const agree = () => {
@@ -151,10 +153,18 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   };
 
   const startListening = () => {
-    setListening(true);
     const warn = (message: string) => pushAlert("warn", "Microphone", message);
     // Offline, or without Web Speech (which streams audio to a cloud service), the kiosk transcribes with its own Whisper.
-    stopListening.current = offline || !speechRecognitionSupported()
+    // A node without Whisper (the hosted demo) falls back to the browser's speech service, or to typing.
+    const kioskWhisper = getState().health?.speechToText ?? true;
+    const webSpeech = speechRecognitionSupported();
+    if (!kioskWhisper && !webSpeech) {
+      warn("This server has no speech model and this browser has no speech recognition. Type your question instead.");
+      return;
+    }
+    if (offline && !kioskWhisper) pushAlert("info", "Microphone", "This server has no kiosk speech model, so your browser's speech service will listen.");
+    setListening(true);
+    stopListening.current = (offline || !webSpeech) && kioskWhisper
       ? recordOnce((audio) => void runVoice(selected, undefined, audio), warn, () => setListening(false))
       : listenOnce("bn-BD", (text) => text && void runVoice(selected, text), warn, () => setListening(false));
   };
@@ -293,6 +303,19 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
                 ))}
               </span>
             </button>
+            <form className="mt-2 flex gap-2" onSubmit={(e) => {
+              e.preventDefault();
+              const text = typed.trim();
+              if (text) withConsent(() => { setTyped(""); void runVoice(selected, text); });
+            }}>
+              <label className="sr-only" htmlFor="farmer-typed">Type your question</label>
+              <input id="farmer-typed" value={typed} onChange={(e) => setTyped(e.target.value)} maxLength={600} lang="bn"
+                placeholder="অথবা লিখুন · or type your question"
+                className="min-h-11 min-w-0 flex-1 rounded-xl bg-white px-3 text-[15px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none" />
+              <Button variant="primary" type="submit" className="min-h-11" disabled={busy !== null || !typed.trim()}>
+                <span lang="bn">পাঠান</span>
+              </Button>
+            </form>
             <div className="mt-2 rounded-xl bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
               {transcript === null
                 ? <span lang="bn" className="flex items-center gap-2 text-[14px] text-emerald-800"><Spinner /> এজেন্টরা বিশ্লেষণ করছে…</span>
@@ -397,6 +420,11 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
                 </div>
                 {notice && <p className="m-0 mt-1 text-[12.5px] text-slate-600" role="status">{notice}</p>}
               </div>
+              {me && (
+                <Link to="/os/trade" className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-600 px-3 text-[15px] font-semibold text-white no-underline shadow-sm hover:bg-amber-700">
+                  <span lang="bn">সরাসরি ক্রেতাদের কাছে বেচুন</span> · Sell directly to buyers →
+                </Link>
+              )}
               <AdviceFeedback key={state.session_id} sessionId={state.session_id} />
             </section>
           )}

@@ -38,11 +38,12 @@ class Role(StrEnum):
     STORAGE = "storage"
     BUYER = "buyer"
     BANK = "bank"
+    DRIVER = "driver"
     JUDGE = "judge"
     ADMIN = "admin"
 
 
-ID_PREFIX = {Role.FARMER: "FARM", Role.COOP: "COOP", Role.STORAGE: "HIMAGAR", Role.BUYER: "BUY", Role.BANK: "BANK", Role.JUDGE: "JUDGE", Role.ADMIN: "ADMIN"}
+ID_PREFIX = {Role.FARMER: "FARM", Role.COOP: "COOP", Role.STORAGE: "HIMAGAR", Role.BUYER: "BUY", Role.BANK: "BANK", Role.DRIVER: "DRIVER", Role.JUDGE: "JUDGE", Role.ADMIN: "ADMIN"}
 
 
 class User(BaseModel):
@@ -100,6 +101,8 @@ SEED_USERS = [
     User(user_id="COOP-BOG-01", name="Shibganj Union Co-op", role=Role.COOP, district="Bogura", title="Co-op and cold-chain desk"),
     User(user_id="HIMAGAR-BOG-05", name="Shajahanpur Himagar", role=Role.STORAGE, district="Bogura", title="Cold-storage manager, BCSA-BOG-05"),
     User(user_id="BUY-DHK-01", name="Dhaka Fresh DC", role=Role.BUYER, district="Dhaka", title="Supermarket distribution centre"),
+    User(user_id="BUY-BOG-02", name="Bogura Agro Traders", role=Role.BUYER, district="Bogura", title="Wholesale trader buying direct from farmers"),
+    User(user_id="DRIVER-BOG-01", name="Jalal Uddin", role=Role.DRIVER, district="Bogura", title="5-ton truck driver, Bogura"),
     User(user_id="BANK-UCB-01", name="UCB Agri Desk", role=Role.BANK, district="Dhaka", title="Collateral-free agri-credit officer"),
     User(user_id="JUDGE-01", name="Congress Judge", role=Role.JUDGE, title="Sees every seat in split-screen"),
     User(user_id="ADMIN-01", name="Platform Admin", role=Role.ADMIN, title="Manages accounts and demo state"),

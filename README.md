@@ -21,6 +21,8 @@ it sleeps after 15 minutes without visitors and takes about a minute to wake). D
 | `FARM-RAN-001` | Rahim Mia, potato farmer, Rangpur |
 | `COOP-BOG-01` | Shibganj Union Co-op |
 | `HIMAGAR-BOG-05` | Shajahanpur Himagar, cold-storage manager (Himagar OS) |
+| `BUY-BOG-02` | Bogura Agro Traders, a trader who bids directly on farmers' lots |
+| `DRIVER-BOG-01` | Jalal Uddin, 5-ton truck driver |
 | `BUY-DHK-01` | Dhaka Fresh DC (buyer) |
 | `BANK-UCB-01` | UCB Agri Desk (bank) |
 | `JUDGE-01` | Judge: every seat in split-screen |
@@ -82,6 +84,15 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 ---
 
 ## Recent changes
+
+### Direct marketplace, truck driver seat and a voice fix (17 November 2026)
+
+- `/os/trade`: farmers list a lot and buyers bid in the open; the farmer accepts one bid, the payment is held in a
+  (simulated) escrow, and a delivery job opens. A bid under the production cost needs the farmer's confirmation.
+- `/os/driver`: a truck driver takes the job, reports the load's temperature on the road (shelf-life check), and
+  confirms delivery, which releases the escrow to the farmer.
+- Voice: Whisper now skips non-speech (a silent clip took about 2 minutes, now under a second); the farmer app has a
+  typed-question box, and falls back to the browser's speech service where the server has no speech model.
 
 ### Himagar OS, cold-storage seat (17 November 2026)
 

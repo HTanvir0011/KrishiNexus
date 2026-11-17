@@ -1,4 +1,4 @@
-import { ArrowRight, Eye, EyeOff, Gavel, KeyRound, Landmark, LogIn, LogOut, ShieldCheck, ShoppingCart, Snowflake, Sprout, Warehouse, type LucideIcon } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Gavel, KeyRound, Landmark, LogIn, LogOut, ShieldCheck, ShoppingCart, Snowflake, Sprout, Truck, Warehouse, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { api, ApiError, type AuthUser, type Role } from "../api/client";
@@ -10,9 +10,9 @@ import { homeOf, ROLE_LABEL, ROLE_TONE } from "../lib/roles";
 import { navigate } from "../lib/router";
 import { loginAs, logout, pushAlert, useAppState } from "../state/store";
 
-const ROLE_ORDER: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "judge", "admin"];
+const ROLE_ORDER: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "driver", "judge", "admin"];
 const ROLE_ICON: Record<Role, LucideIcon> = {
-  farmer: Sprout, coop: Warehouse, storage: Snowflake, buyer: ShoppingCart, bank: Landmark, judge: Gavel, admin: ShieldCheck,
+  farmer: Sprout, coop: Warehouse, storage: Snowflake, buyer: ShoppingCart, bank: Landmark, driver: Truck, judge: Gavel, admin: ShieldCheck,
 };
 const DEMO_PASSWORD = "krishi2026"; // backend/auth.py DEMO_PASSWORD
 const FIELD = "min-h-11 w-full rounded-lg bg-white px-3 text-[15px] text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-700 focus:outline-none";
@@ -34,7 +34,8 @@ const COPY = {
       farmer: "Ask in your own dialect, grade a crop, get a store-or-sell decision, join a truck pool.",
       coop: "Watch cold chambers, quota and truck pools; run the live agent trace.",
       storage: "Run your himagar: chamber health, smallholder quota, signed slot bookings and shelf life.",
-      buyer: "See graded lots and bids, verify quality certificates.",
+      buyer: "Bid directly on farmers' lots, see graded loads, verify quality certificates.",
+      driver: "Take a delivery, report the load's temperature on the road, confirm delivery to release the farmer's money.",
       bank: "Verify certificates and underwrite warehouse-receipt credit.",
       judge: "Every seat side by side, with the anomaly buttons.",
       admin: "Manage accounts and the demo state.",
@@ -63,7 +64,8 @@ const COPY = {
       farmer: "নিজের ভাষায় প্রশ্ন, ফসল গ্রেডিং, রাখবেন না বেচবেন সিদ্ধান্ত, ট্রাক পুলে যোগ।",
       coop: "হিমাগার চেম্বার, কোটা ও ট্রাক পুল দেখুন; লাইভ এজেন্ট ট্রেস চালান।",
       storage: "আপনার হিমাগার চালান: চেম্বারের অবস্থা, কৃষকের কোটা, স্বাক্ষরিত বুকিং ও সংরক্ষণকাল।",
-      buyer: "গ্রেড করা লট ও দর দেখুন, মান সনদ যাচাই করুন।",
+      buyer: "কৃষকের লটে সরাসরি দর দিন, গ্রেড করা লট দেখুন, মান সনদ যাচাই করুন।",
+      driver: "ডেলিভারি নিন, পথে মালের তাপমাত্রা জানান, পৌঁছে দিয়ে কৃষকের টাকা ছাড় করুন।",
       bank: "সনদ যাচাই করে গুদাম-রসিদ ঋণ দিন।",
       judge: "সব আসন পাশাপাশি, অস্বাভাবিক ঘটনার বোতাম সহ।",
       admin: "অ্যাকাউন্ট ও ডেমো অবস্থা পরিচালনা।",

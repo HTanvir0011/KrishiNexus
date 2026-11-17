@@ -1801,3 +1801,21 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - **Pending:** the certificate for `www.tanvir.health` (handshake failed in the first minutes; Render lists the domain).
 - **Local:** a fresh `.state/users.json` was re-seeded (it held exactly the 8 old seeds) so `HIMAGAR-BOG-05` logs in.
 
+### 2026-11-17 · Direct marketplace, truck driver seat, voice recheck (the user asked for all three)
+- **Voice recheck** against the local backend: 5 presets (dialect, crop and district right), typed Bangla, Banglish and
+  English, a vague question (asks for clarification), offline mode (local model, about 11–14 s), a broken clip (422).
+  - **Bug found and fixed:** Whisper on a non-speech clip (tone or silence) generated junk for about 2 minutes. Now
+    `vad_filter=True` (faster-whisper's Silero VAD): non-speech 0.1–2.3 s, and a 10 s speech clip (Windows TTS) keeps its
+    full transcript (113 vs 114 chars). A token cap was tried and dropped: it halved the speech transcript.
+  - `/health` reports `speech_to_text`; the farmer app falls back to the browser's speech service where the node has no
+    Whisper (the hosted demo), or tells the farmer to type. New typed-question box (consent applies).
+- **Marketplace** (`marketplace.py`, `/market/lots…`, `/market/deliveries…`): roles `buyer` and new `driver`; accounts
+  `BUY-BOG-02` (Bogura Agro Traders) and `DRIVER-BOG-01` (Jalal Uddin); 3 seeded lots (two open with bids, one sold
+  awaiting a driver). `check_marketplace.py` covers the chain and every role check; a found bug (pickup before claim
+  answered "another driver's") was fixed by checking status before ownership.
+- **Browser, local:** trader raised to Tk 18.75 on Rahim's lot; Rahim accepted (Tk 7,500 held, wallet masked, Rangpur →
+  Bogura 132 km, 5.3 h); Jalal claimed, loaded, reported 34 °C (659 h shelf life, safe), delivered; the lot reads
+  DELIVERED with the payment released. Typed Banglish question → consent → decision with "Sell directly to buyers".
+  Local marketplace reset to the seeds afterwards; local accounts re-seeded (11).
+- Checks: auth, privacy, marketplace and serve self-checks pass; regression 100/100; `tsc` clean.
+

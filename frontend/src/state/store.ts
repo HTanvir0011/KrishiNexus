@@ -40,7 +40,7 @@ export type Lang = "en" | "bn";
 export interface AppState {
   backendLive: boolean | null;
   /** Counts from GET /health for the navbar status pill. */
-  health: { mcpServers: number; tools: number } | null;
+  health: { mcpServers: number; tools: number; speechToText: boolean } | null;
   lang: Lang;
   /** The logged-in demo account; authChecked turns true once a stored session has been confirmed or dropped. */
   user: AuthUser | null;

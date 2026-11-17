@@ -266,9 +266,18 @@ def _decode_16k_mono(raw: bytes) -> Any:
     return np.concatenate(chunks, axis=None).astype(np.float32) / 32768.0
 
 
+def _whisper_model_name() -> str | None:
+    return os.getenv("KNX_WHISPER_MODEL") or (str(WHISPER_DIR) if WHISPER_DIR.is_dir() else None)
+
+
+def speech_to_text_available() -> bool:
+    """Whether this node can transcribe recorded audio itself (the hosted demo has no Whisper model)."""
+    return _whisper_model_name() is not None and importlib.util.find_spec("faster_whisper") is not None
+
+
 def _transcribe_audio(audio_base64: str) -> tuple[str, str, float, float | None]:
-    model_name = os.getenv("KNX_WHISPER_MODEL") or (str(WHISPER_DIR) if WHISPER_DIR.is_dir() else None)
-    if not model_name or importlib.util.find_spec("faster_whisper") is None:
+    model_name = _whisper_model_name()
+    if not speech_to_text_available():
         raise ToolExecutionError(
             "Audio transcription needs an on-device Whisper model: pip install faster-whisper, and put the int8 CTranslate2 "
             "model in backend/models/whisper/krishi-whisper-bn-v1-ct2-int8 or set KNX_WHISPER_MODEL. Send 'text' or "
@@ -284,7 +293,8 @@ def _transcribe_audio(audio_base64: str) -> tuple[str, str, float, float | None]
 
     if _WHISPER is None:
         _WHISPER = WhisperModel(model_name, device="cpu", compute_type="int8")
-    segments, info = _WHISPER.transcribe(_decode_16k_mono(raw), language="bn", beam_size=5)
+    # vad_filter skips non-speech: without it a silent or noisy clip made Whisper generate junk for about 2 minutes.
+    segments, info = _WHISPER.transcribe(_decode_16k_mono(raw), language="bn", beam_size=5, vad_filter=True)
     text = " ".join(segment.text.strip() for segment in segments)
     return text, f"faster-whisper:{Path(model_name).name} (int8, CPU)", float(info.language_probability), float(info.duration)
 

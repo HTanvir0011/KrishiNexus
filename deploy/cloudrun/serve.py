@@ -41,7 +41,7 @@ from main import app as api  # noqa: E402
 STATIC_DIR = Path(os.getenv("KNX_STATIC_DIR", Path(__file__).with_name("static")))
 # The API location of frontend/nginx.conf plus /ws; keep the two lists in step.
 API_PATH = re.compile(r"/(mcp|rag|edge|agents|automation|guardrails|optimization|prompts|evals|market|health|auth|feedback|openapi\.json|ws)(/|$)")
-WRITE = re.compile(r"POST /market/bids/lock|POST /automation/|POST /mcp/simulate-anomaly|DELETE /mcp/anomalies|POST /feedback")
+WRITE = re.compile(r"POST /market/|POST /automation/|POST /mcp/simulate-anomaly|DELETE /mcp/anomalies|POST /feedback")
 WRITES_PER_MINUTE = 30
 
 # shortcut: counters live in this process, which is right while the demo runs one instance (its state is in memory too).

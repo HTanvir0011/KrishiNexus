@@ -3,13 +3,14 @@ import type { OsView } from "./router";
 
 /** Which workspace seats each demo role may open, and where it lands after login. */
 export const ROLE_VIEWS: Record<Role, OsView[]> = {
-  farmer: ["field"],
+  farmer: ["field", "trade"],
   coop: ["coop"],
   storage: ["himagar"],
-  buyer: ["market"],
+  buyer: ["trade", "market"],
   bank: ["market"],
-  judge: ["judge", "field", "coop", "himagar", "market"],
-  admin: ["judge", "field", "coop", "himagar", "market"],
+  driver: ["driver"],
+  judge: ["judge", "field", "coop", "himagar", "trade", "driver", "market"],
+  admin: ["judge", "field", "coop", "himagar", "trade", "driver", "market"],
 };
 
 export function homeOf(role: Role): string {
@@ -19,10 +20,10 @@ export function homeOf(role: Role): string {
 }
 
 export const ROLE_LABEL: Record<"en" | "bn", Record<Role, string>> = {
-  en: { farmer: "Farmer", coop: "Co-op / cold chain", storage: "Himagar (cold storage)", buyer: "Buyer", bank: "Bank", judge: "Judge", admin: "Admin" },
-  bn: { farmer: "কৃষক", coop: "সমবায় / কোল্ড চেইন", storage: "হিমাগার", buyer: "ক্রেতা", bank: "ব্যাংক", judge: "বিচারক", admin: "অ্যাডমিন" },
+  en: { farmer: "Farmer", coop: "Co-op / cold chain", storage: "Himagar (cold storage)", buyer: "Buyer / trader", bank: "Bank", driver: "Truck driver", judge: "Judge", admin: "Admin" },
+  bn: { farmer: "কৃষক", coop: "সমবায় / কোল্ড চেইন", storage: "হিমাগার", buyer: "ক্রেতা / ব্যবসায়ী", bank: "ব্যাংক", driver: "ট্রাক চালক", judge: "বিচারক", admin: "অ্যাডমিন" },
 };
 
 export const ROLE_TONE: Record<Role, "emerald" | "sky" | "amber" | "violet" | "slate" | "red"> = {
-  farmer: "emerald", coop: "sky", storage: "sky", buyer: "amber", bank: "violet", judge: "slate", admin: "red",
+  farmer: "emerald", coop: "sky", storage: "sky", buyer: "amber", bank: "violet", driver: "amber", judge: "slate", admin: "red",
 };

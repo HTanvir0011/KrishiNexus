@@ -29,7 +29,7 @@ function useBackendBootstrap(page: Route["page"]) {
     const stopTrace = connectAgentTrace(pushTraces, (traceStatus) => setState({ traceStatus }));
     const health = () =>
       api.health()
-        .then((h) => setState({ backendLive: true, health: { mcpServers: h.mcp_servers, tools: h.tools } }))
+        .then((h) => setState({ backendLive: true, health: { mcpServers: h.mcp_servers, tools: h.tools, speechToText: h.speech_to_text ?? true } }))
         .catch(() => setState({ backendLive: false }));
     void health();
     const timer = window.setInterval(health, 10_000);

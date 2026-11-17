@@ -628,7 +628,7 @@ export interface VoiceInteractBody {
 }
 
 export const api = {
-  health: () => request<{ status: string; mcp_servers: number; tools: number; active_anomalies: number }>("/health", undefined, 4_000),
+  health: () => request<{ status: string; mcp_servers: number; tools: number; active_anomalies: number; speech_to_text?: boolean }>("/health", undefined, 4_000),
 
   verifyCertificate: (certId: string) =>
     post<{ cert_id: string; known: boolean; payload_hash_valid: boolean; signature_valid: boolean; tampered: boolean; warnings: string[] }>("/edge/verify-certificate", { cert_id: certId }),
@@ -730,11 +730,69 @@ export const api = {
     mcpCall<StorageReservation>("reserve_collective_storage_slot", body),
   shelfLife: (body: { crop: Crop; grade: "A" | "B" | "C"; transit_temp_c: number; rh_pct: number }) =>
     mcpCall<ShelfLifeResult>("calculate_dynamic_shelf_life", body),
+  /** Direct marketplace (backend marketplace.py): every call needs a session; the backend checks the role. */
+  marketLots: () => request<MarketLot[]>("/market/lots"),
+  listLot: (body: { crop: Crop; grade: "A" | "B" | "C"; weight_kg: number; district: string; upazila?: string; asking_price_tk_per_kg?: number; note?: string }) =>
+    post<MarketLot>("/market/lots", body),
+  placeBid: (lotId: string, price: number, note?: string) => post<MarketLot>(`/market/lots/${encodeURIComponent(lotId)}/bids`, { price_tk_per_kg: price, note }),
+  acceptBid: (lotId: string, body: { bid_id: string; wallet: Wallet; wallet_number: string; accept_below_floor?: boolean }) =>
+    post<MarketLot>(`/market/lots/${encodeURIComponent(lotId)}/accept`, body),
+  cancelLot: (lotId: string) => post<MarketLot>(`/market/lots/${encodeURIComponent(lotId)}/cancel`, {}),
+  deliveries: () => request<MarketLot[]>("/market/deliveries"),
+  deliveryStep: (lotId: string, step: "claim" | "pickup" | "deliver") => post<MarketLot>(`/market/deliveries/${encodeURIComponent(lotId)}/${step}`, {}),
+  reportTemperature: (lotId: string, temp_c: number, rh_pct: number) =>
+    post<MarketLot>(`/market/deliveries/${encodeURIComponent(lotId)}/temperature`, { temp_c, rh_pct }),
+  resetMarket: () => post<MarketLot[]>("/market/reset", {}),
   adminEscrows: () => request<(EscrowReceipt & { farmer_id: string })[]>("/auth/admin/escrows"),
   anomalies: () => request<ActiveAnomaly[]>("/mcp/anomalies"),
   clearAnomaly: (anomalyId: string) => request<{ cleared: string }>(`/mcp/anomalies/${encodeURIComponent(anomalyId)}`, { method: "DELETE" }),
   traceHistory: (limit = 150) => request<TraceEvent[]>(`/agents/trace-history?limit=${limit}`),
 };
+
+export interface MarketBid {
+  bid_id: string;
+  buyer_id: string;
+  buyer_name: string;
+  buyer_district: string;
+  price_tk_per_kg: number;
+  note: string;
+  placed_at: string;
+  status: "ACTIVE" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+}
+
+export interface MarketLot {
+  lot_id: string;
+  farmer_id: string;
+  farmer_name: string;
+  crop: Crop;
+  grade: "A" | "B" | "C";
+  weight_kg: number;
+  district: string;
+  upazila: string;
+  asking_price_tk_per_kg: number | null;
+  floor_tk_per_kg: number;
+  certificate_id: string | null;
+  note: string;
+  listed_at: string;
+  status: "OPEN" | "SOLD" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+  bids: MarketBid[];
+  accepted_bid_id: string | null;
+  escrow: { escrow_id: string; amount_tk: number; wallet: Wallet; wallet_masked: string; status: "HELD" | "RELEASED"; locked_at: string; released_at: string | null; signature: string } | null;
+  delivery: {
+    status: "AWAITING_DRIVER" | "ASSIGNED" | "PICKED_UP" | "DELIVERED";
+    origin_district: string;
+    destination_district: string;
+    distance_km: number;
+    eta_hours: number;
+    driver_id: string | null;
+    driver_name: string | null;
+    last_temp_c: number | null;
+    last_rh_pct: number | null;
+    shelf_life_hours: number | null;
+    at_risk: boolean;
+    events: { at: string; kind: string; detail: string }[];
+  } | null;
+}
 
 export interface StorageReservation {
   status: "CONFIRMED" | "PARTIAL" | "REJECTED";
@@ -798,7 +856,7 @@ export interface ActiveAnomaly {
   expires_at: string;
 }
 
-export type Role = "farmer" | "coop" | "storage" | "buyer" | "bank" | "judge" | "admin";
+export type Role = "farmer" | "coop" | "storage" | "buyer" | "bank" | "driver" | "judge" | "admin";
 
 export interface AuthUser {
   user_id: string;

@@ -44,6 +44,7 @@ POST   /auth/login                   Quick login by account id -> signed session
 GET    /auth/me                      The account behind a Bearer token
 *      /auth/admin/...               Admin only: accounts (list, create, update, delete, reset), escrow list, feedback, overview counts
 POST   /feedback                     Was this advice useful? (comment PII-scrubbed; feedback.py)
+*      /market/lots, /market/deliveries  Direct marketplace: lots, buyer bids, accept -> escrow, driver delivery (marketplace.py)
 
 Run:  uvicorn main:app --reload --port 8000
 """
@@ -64,6 +65,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 import auth
 import feedback
+import marketplace
 from agents.state import AgentTraceEvent
 from agents.supervisor import (
     OrchestrateRequest,
@@ -85,7 +87,7 @@ from automation.workflows import (
     SarFloodReport,
 )
 from config import MODEL_ROUTER, RoutingDecision, TaskType, now_bdt, settings
-from edge_node.bangla_voice import VOICE_PRESETS, VoicePreset
+from edge_node.bangla_voice import VOICE_PRESETS, VoicePreset, speech_to_text_available
 from evals.holdout_probe import HoldoutReport, get_holdout_report
 from evals.regression_suite import CATEGORY_RUNNERS, EVALUATION_ENGINE, RagasReport, RegressionReport, RegressionRequest
 from edge_node.ollama_local import (
@@ -165,6 +167,7 @@ app.include_router(auth.router)
 app.include_router(auth.admin)
 app.include_router(feedback.router)
 app.include_router(feedback.admin)
+app.include_router(marketplace.router)
 
 _RPC_EXAMPLES: dict[str, dict[str, Any]] = {
     "syndicate_anomaly": {
@@ -252,6 +255,7 @@ async def health() -> dict[str, Any]:
         "mcp_servers": len(registry.SERVERS),
         "tools": registry.GATEWAY.tool_count,
         "active_anomalies": len(ANOMALIES.active()),
+        "speech_to_text": speech_to_text_available(),
     }
 
 
