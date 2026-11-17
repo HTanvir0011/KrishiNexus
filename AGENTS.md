@@ -111,6 +111,7 @@ krishinexus-os/
 ├── FIELD_TEST_KIT.md                   # plan for the first study with farmers: consent script, tasks, score sheet, success bar set in advance
 ├── TRAINING_PLAN.md                    # Phase 9: SFT data (prompts v4, v5), training recipe, honest eval design + measured runs (§6)
 ├── render.yaml                         # Render Blueprint: one free Docker web service (Singapore) from deploy/cloudrun/Dockerfile, stable generated signing key, custom domain tanvir.health
+├── .github/workflows/deploy-render.yml    # redeploys the Render service after every push to main via its deploy hook, once the repo secret RENDER_DEPLOY_HOOK is set
 ├── .github/workflows/keep-demo-awake.yml  # optional: calls the hosted demo's /health every 10 min once the repo variable DEMO_URL is set
 ├── deploy/cloudrun/                    # hosted demo for Render or Cloud Run: Dockerfile (builds GitHub main, listens on $PORT), serve.py (SPA + API on one origin, write limit, gzip), check_serve.py, DEPLOY.md
 ├── docker-compose.yml                  # backend + frontend; ollama + ollama-pull under profile local-llm; profile data: pgvector, Neo4j, Redis, n8n

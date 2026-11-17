@@ -1,0 +1,29 @@
+# Redeploys https://tanvir.health after every push to main. The Render service was created from the public repository
+# URL, so Render doesn't see pushes by itself; this calls the service's deploy hook instead. It does nothing until the
+# repository secret RENDER_DEPLOY_HOOK holds the hook URL (Render: service > Settings > Deploy Hook; GitHub: Settings >
+# Secrets and variables > Actions > New repository secret). See deploy/cloudrun/DEPLOY.md.
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: render-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+    steps:
+      - name: Call the deploy hook
+        run: |
+          if [ -z "$HOOK" ]; then echo "RENDER_DEPLOY_HOOK is not set; skipping."; exit 0; fi
+          curl --fail --silent --show-error --max-time 60 --retry 3 -X POST "$HOOK" -o /dev/null
+          echo "Render is building the latest commit; it is live in about 5-10 minutes."

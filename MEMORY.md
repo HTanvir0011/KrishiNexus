@@ -1819,3 +1819,9 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   Local marketplace reset to the seeds afterwards; local accounts re-seeded (11).
 - Checks: auth, privacy, marketplace and serve self-checks pass; regression 100/100; `tsc` clean.
 
+### 2026-11-17 · Push-to-deploy for tanvir.health
+- The Render service came from the public repo URL, so pushes didn't redeploy it. New
+  `.github/workflows/deploy-render.yml` POSTs the service's deploy hook on every push to `main` (and on manual run);
+  it skips until the repo secret `RENDER_DEPLOY_HOOK` is set. The owner sets the secret (it is a credential). Steps in
+  `deploy/cloudrun/DEPLOY.md` → Run it.
+
