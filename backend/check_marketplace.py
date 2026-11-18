@@ -17,7 +17,10 @@ auth.USERS_FILE = Path(tmp.name) / "users.json"
 auth.USERS.reset()
 marketplace.MARKET_FILE = Path(tmp.name) / "marketplace.json"
 seeded = marketplace.MARKET.reset()
-assert {l.status for l in seeded} == {"OPEN", "SOLD"} and len(seeded) == 3
+assert sorted(l.status for l in seeded) == ["DELIVERED", "IN_TRANSIT", "OPEN", "OPEN", "OPEN", "OPEN", "SOLD"]
+assert all(l.escrow is None or l.escrow.signature for l in seeded) and len({b.bid_id for l in seeded for b in l.bids}) == 10
+below = next(l for l in seeded if l.lot_id == "LOT-SEED04")
+assert all(b.price_tk_per_kg < below.floor_tk_per_kg for b in below.bids)  # the circuit-breaker demo lot
 
 with TestClient(app) as client:
     def as_(user_id: str) -> dict[str, str]:
@@ -75,6 +78,6 @@ with TestClient(app) as client:
     assert client.post(f"/market/lots/{open_lot['lot_id']}/cancel", headers=other_farmer).status_code == 403
     assert client.post(f"/market/lots/{open_lot['lot_id']}/cancel", headers=farmer).json()["status"] == "CANCELLED"
     assert client.post("/market/reset", headers=buyer).status_code == 403
-    assert len(client.post("/market/reset", headers=admin).json()) == 3
+    assert len(client.post("/market/reset", headers=admin).json()) == 7
 
 print("marketplace.py: all checks passed")

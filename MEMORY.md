@@ -1839,3 +1839,12 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
      Referrer-Policy, Permissions-Policy (camera and microphone self).
 - Checks: serve, auth, marketplace and privacy self-checks pass; `tsc` clean.
 
+### 2026-11-18 · Richer marketplace seed for the demo video (the user asked for "enough demo data")
+- `MarketBook.reset()` now seeds 7 lots with staggered times: Rahim's Cardinal potato (2 bids) and Diamant potato (one
+  bid, below the Tk 15 floor, for the circuit-breaker shot), Jamila's Boro rice (2 bids), Abdul's brinjal (2 bids),
+  Abdul's chili sold awaiting a driver, Rahim's potato on the road with Jalal (no temperature yet, reported live), and
+  Jamila's rice delivered last week with the escrow released. Each escrow is signed like `accept()` signs one.
+- Not seeded on purpose: farmer feedback (the admin feedback page is impact evidence; the video files a live one) and
+  1-tap escrows. Truck pools keep their 5 seeds; injecting an anomaly stays a live click.
+- `check_marketplace.py` asserts the seed mix; all four self-checks pass.
+

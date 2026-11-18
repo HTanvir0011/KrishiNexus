@@ -175,7 +175,7 @@ krishinexus-os/
 │   │   └── sft_heldout_wordings.json   # 32 test-only wordings written separately (subset ood_wording); never tune against them
 │   ├── models/                         # git-ignored Kaggle run outputs: lora/ (adapter, GGUF, Modelfile), yolo/, price/, retrieval/
 │   ├── price_monitor.py                # staple price monitor over models/price (krishi-price-v1, TRAINING_PLAN §8b)
-│   ├── marketplace.py · check_marketplace.py  # direct marketplace: lots, open buyer bids, accept -> signed escrow + delivery job, driver claim/pickup/temperature/deliver -> escrow released (.state/marketplace.json, 3 seeded lots)
+│   ├── marketplace.py · check_marketplace.py  # direct marketplace: lots, open buyer bids, accept -> signed escrow + delivery job, driver claim/pickup/temperature/deliver -> escrow released (.state/marketplace.json, 7 seeded lots: 4 open with bids, one only below the cost floor; 1 sold awaiting a driver; 1 on the road with DRIVER-BOG-01; 1 delivered and paid)
 │   ├── feedback.py · check_privacy.py   # 'Was this advice useful?' (comments PII-scrubbed, .state/feedback.json, latest 5,000); privacy self-check
 │   ├── auth.py · check_auth.py          # demo accounts: password login (PBKDF2 hashes) + quick login, HMAC session tokens, admin API (/auth, .state/users.json); self-check
 │   ├── market_bids.py                  # modelled buyer bids (bid_board) and the simulated 1-tap escrow (ESCROWS, .state/escrows.json)

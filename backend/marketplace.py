@@ -19,7 +19,7 @@ import hmac
 import json
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -175,36 +175,76 @@ class MarketBook:
         os.replace(tmp, MARKET_FILE)
 
     def reset(self) -> list[Lot]:
-        """Three demo lots: two open with competing bids, one sold and waiting for a driver."""
+        """Seven demo lots, enough for a walkthrough: four open with competing bids (one only below the cost floor, so the
+        circuit breaker shows), one sold and waiting for a driver, one on the road with Jalal, one delivered and paid."""
         now = now_bdt()
         floor = {c: SEASONAL_CURVES[c].production_cost_floor for c in Crop}
+        dhaka, bogura = ("BUY-DHK-01", "Dhaka Fresh DC", "Dhaka"), ("BUY-BOG-02", "Bogura Agro Traders", "Bogura")
 
-        def bid(lot: str, buyer: str, name: str, district: str, price: float) -> MarketBid:
-            return MarketBid(bid_id=f"MB-SEED{lot[-2:]}{buyer[-2:]}", buyer_id=buyer, buyer_name=name, buyer_district=district,
-                             price_tk_per_kg=price, placed_at=now)
+        def ago(hours: float) -> datetime:
+            return now - timedelta(hours=hours)
 
-        rahim = Lot(lot_id="LOT-SEED01", farmer_id="FARM-RAN-001", farmer_name="Rahim Mia", crop=Crop.CARDINAL_POTATO, grade=Grade.A,
-                    weight_kg=400, district="Rangpur", upazila="Pirgachha", asking_price_tk_per_kg=19,
-                    floor_tk_per_kg=floor[Crop.CARDINAL_POTATO], listed_at=now,
-                    bids=[bid("LOT-SEED01", "BUY-DHK-01", "Dhaka Fresh DC", "Dhaka", 18.5),
-                          bid("LOT-SEED01", "BUY-BOG-02", "Bogura Agro Traders", "Bogura", 17.75)])
-        jamila = Lot(lot_id="LOT-SEED02", farmer_id="FARM-SUN-007", farmer_name="Jamila Begum", crop=Crop.BORO_RICE, grade=Grade.B,
-                     weight_kg=1_200, district="Sunamganj", upazila="Tahirpur", asking_price_tk_per_kg=44,
-                     floor_tk_per_kg=floor[Crop.BORO_RICE], listed_at=now,
-                     bids=[bid("LOT-SEED02", "BUY-BOG-02", "Bogura Agro Traders", "Bogura", 42.5)])
-        sold_bid = bid("LOT-SEED03", "BUY-BOG-02", "Bogura Agro Traders", "Bogura", 58).model_copy(update={"status": "ACCEPTED"})
-        km, eta = _route("Bogura", "Bogura")
-        escrow_fields = {"escrow_id": "MES-SEED03", "amount_tk": 300 * 58, "wallet": "bKash", "wallet_masked": "017•••••344",
-                         "locked_at": now.isoformat()}
-        abdul = Lot(lot_id="LOT-SEED03", farmer_id="FARM-BOG-104", farmer_name="Abdul Karim", crop=Crop.GREEN_CHILI, grade=Grade.A,
-                    weight_kg=300, district="Bogura", upazila="Shibganj", asking_price_tk_per_kg=60,
-                    floor_tk_per_kg=floor[Crop.GREEN_CHILI], listed_at=now, status="SOLD", bids=[sold_bid],
-                    accepted_bid_id=sold_bid.bid_id,
-                    escrow=Escrow(**{**escrow_fields, "locked_at": now}, signature=_sign(escrow_fields)),
-                    delivery=Delivery(origin_district="Bogura", destination_district="Bogura", distance_km=km, eta_hours=eta,
-                                      events=[DeliveryEvent(at=now, kind="CREATED", detail="Sold to Bogura Agro Traders at Tk 58/kg")]))
+        def bid(lot: str, buyer: tuple[str, str, str], price: float, hours: float, note: str = "") -> MarketBid:
+            return MarketBid(bid_id=f"MB-SEED{lot[-2:]}{buyer[0][-2:]}", buyer_id=buyer[0], buyer_name=buyer[1],
+                             buyer_district=buyer[2], price_tk_per_kg=price, note=note, placed_at=ago(hours))
+
+        def lot(lot_id: str, farmer: tuple[str, str], crop: Crop, grade: Grade, kg: float, district: str, upazila: str,
+                asking: float, hours: float, bids: list[MarketBid], note: str = "") -> Lot:
+            return Lot(lot_id=lot_id, farmer_id=farmer[0], farmer_name=farmer[1], crop=crop, grade=grade, weight_kg=kg,
+                       district=district, upazila=upazila, asking_price_tk_per_kg=asking, floor_tk_per_kg=floor[crop],
+                       note=note, listed_at=ago(hours), bids=bids)
+
+        def sold(item: Lot, buyer: tuple[str, str, str], price: float, hours: float, wallet: str) -> Lot:
+            """Mark `item` sold to `buyer` `hours` ago, with a signed escrow and a delivery job (as accept() does)."""
+            chosen = bid(item.lot_id, buyer, price, hours + 1).model_copy(update={"status": "ACCEPTED"})
+            km, eta = _route(item.district, buyer[2])
+            fields = {"escrow_id": f"MES-{item.lot_id[4:]}", "amount_tk": round(price * item.weight_kg, 2), "wallet": "bKash",
+                      "wallet_masked": wallet, "locked_at": ago(hours).isoformat()}
+            return item.model_copy(update={
+                "status": "SOLD", "bids": [*item.bids, chosen], "accepted_bid_id": chosen.bid_id,
+                "escrow": Escrow(**{**fields, "locked_at": ago(hours)}, signature=_sign(fields)),
+                "delivery": Delivery(origin_district=item.district, destination_district=resolve_district(buyer[2]).name,
+                                     distance_km=km, eta_hours=eta,
+                                     events=[DeliveryEvent(at=ago(hours), kind="CREATED",
+                                                           detail=f"Sold to {buyer[1]} at Tk {price:g}/kg")])})
+
+        rahim, jamila, abdul = ("FARM-RAN-001", "Rahim Mia"), ("FARM-SUN-007", "Jamila Begum"), ("FARM-BOG-104", "Abdul Karim")
+        lots = [
+            lot("LOT-SEED01", rahim, Crop.CARDINAL_POTATO, Grade.A, 400, "Rangpur", "Pirgachha", 19, 5,
+                [bid("LOT-SEED01", bogura, 17.75, 4), bid("LOT-SEED01", dhaka, 18.5, 2, "Can collect this week")],
+                note="Sorted and bagged, 50 kg sacks"),
+            lot("LOT-SEED04", rahim, Crop.DIAMANT_POTATO, Grade.B, 600, "Rangpur", "Pirgachha", 17, 3,
+                [bid("LOT-SEED04", bogura, 13.5, 1, "Grade B, small tubers")]),
+            lot("LOT-SEED02", jamila, Crop.BORO_RICE, Grade.B, 1_200, "Sunamganj", "Tahirpur", 44, 9,
+                [bid("LOT-SEED02", bogura, 42.5, 7), bid("LOT-SEED02", dhaka, 43.25, 3)],
+                note="Harvested before the flood warning"),
+            lot("LOT-SEED05", abdul, Crop.BRINJAL, Grade.A, 250, "Bogura", "Shibganj", 25, 6,
+                [bid("LOT-SEED05", dhaka, 22, 5), bid("LOT-SEED05", bogura, 23.5, 2)]),
+            sold(lot("LOT-SEED03", abdul, Crop.GREEN_CHILI, Grade.A, 300, "Bogura", "Shibganj", 60, 8, []),
+                 bogura, 58, 2, "017•••••344"),
+            sold(lot("LOT-SEED06", rahim, Crop.CARDINAL_POTATO, Grade.A, 800, "Rangpur", "Mithapukur", 18.5, 30, []),
+                 dhaka, 18, 26, "018•••••512"),
+            sold(lot("LOT-SEED07", jamila, Crop.BORO_RICE, Grade.A, 1_000, "Sunamganj", "Tahirpur", 44, 100, []),
+                 dhaka, 43, 96, "019•••••207"),
+        ]
+        by_id = {item.lot_id: item for item in lots}
+        # On the road with Jalal: claimed and loaded, no temperature reading yet (the walkthrough reports one live).
+        on_road = by_id["LOT-SEED06"]
+        on_road.status = "IN_TRANSIT"
+        on_road.delivery.status, on_road.delivery.driver_id, on_road.delivery.driver_name = "PICKED_UP", "DRIVER-BOG-01", "Jalal Uddin"
+        on_road.delivery.events += [DeliveryEvent(at=ago(25), kind="CLAIMED", detail="Jalal Uddin took the job"),
+                                    DeliveryEvent(at=ago(3), kind="PICKED_UP", detail="800 kg loaded in Rangpur")]
+        # Delivered last week: the escrow was released to Jamila.
+        done = by_id["LOT-SEED07"]
+        done.status = "DELIVERED"
+        done.escrow.status, done.escrow.released_at = "RELEASED", ago(80)
+        done.delivery.status, done.delivery.driver_id, done.delivery.driver_name = "DELIVERED", "DRIVER-BOG-01", "Jalal Uddin"
+        done.delivery.events += [DeliveryEvent(at=ago(95), kind="CLAIMED", detail="Jalal Uddin took the job"),
+                                 DeliveryEvent(at=ago(90), kind="PICKED_UP", detail="1000 kg loaded in Sunamganj"),
+                                 DeliveryEvent(at=ago(80), kind="DELIVERED",
+                                               detail=f"Weighed at {done.delivery.destination_district}; escrow released to the farmer")]
         with self._lock:
-            self.lots = {lot.lot_id: lot for lot in (rahim, jamila, abdul)}
+            self.lots = by_id
             self._persist()
             return list(self.lots.values())
 
@@ -431,6 +471,6 @@ async def deliver(lot_id: str, user: User) -> Lot:
 
 @router.post("/reset", response_model=list[Lot])
 async def reset(user: User) -> list[Lot]:
-    """Admin: restore the three demo lots."""
+    """Admin: restore the seven demo lots."""
     _role(user, auth.Role.ADMIN)
     return MARKET.reset()
