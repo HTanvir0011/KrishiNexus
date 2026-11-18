@@ -64,12 +64,11 @@ Render workspace while it is on. GitHub sometimes starts scheduled runs late, so
 
 ### Run it
 
-- Update: push to `main` (GitHub Desktop: **Commit to main**, then **Push origin**). A service created from the
-  public repository URL, as `tanvir.health` is, doesn't see pushes, so `.github/workflows/deploy-render.yml` calls its
-  deploy hook. Set it up once: in Render, open the service's **Settings → Deploy Hook** and copy the URL; on GitHub, open
-  **Settings → Secrets and variables → Actions → New repository secret**, name it `RENDER_DEPLOY_HOOK` and paste the
-  URL. Every push then redeploys (5–10 minutes); the repository's **Actions** tab shows each run. Without the secret,
-  use the service's **Manual Deploy → Deploy latest commit**.
+- Update: push to `main` (GitHub Desktop: **Commit to main**, then **Push origin**). Render's GitHub App is installed
+  on this repository only (GitHub: **Settings → Applications → Render → Configure**), so with Auto-Deploy **On Commit**
+  every push redeploys `tanvir.health` in 5–10 minutes; the service's **Events** tab shows each deploy. Fallback if a
+  push doesn't deploy: the service's **Manual Deploy → Deploy latest commit**, or set the repository secret
+  `RENDER_DEPLOY_HOOK` to the service's **Settings → Deploy Hook** URL and `.github/workflows/deploy-render.yml` calls it.
 - Reset the demo state: restart the service from its page in the dashboard, or let it sleep.
 
 ## Check the hosted demo
