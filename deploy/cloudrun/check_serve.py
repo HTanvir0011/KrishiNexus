@@ -1,7 +1,7 @@
 """Self-check for serve.py: the nginx.conf routing, the SPA fallback, the write limit and the trace WebSocket.
 
 Run it with the backend's Python from the repo root:  backend/.venv/Scripts/python deploy/cloudrun/check_serve.py
-It changes no demo state: the limited requests carry empty bodies (422) until the limit answers 429.
+It changes no demo state: the limited requests carry empty bodies (422) or are refused logins until the limit answers 429.
 """
 
 import os
@@ -42,6 +42,20 @@ with TestClient(serve.app) as client:
     assert client.delete("/mcp/anomalies", headers={"X-Forwarded-For": "5.6.7.8, 169.254.1.1"}).status_code == 429
     assert client.post("/market/bids/lock", json={}, headers={"X-Forwarded-For": "5.6.7.9"}).status_code == 422
     assert client.get("/mcp/anomalies", headers=visitor).status_code == 200  # reads stay open
+
+    # Logins and the heavy AI calls have their own buckets; the MCP calls the pages poll are never limited.
+    other = {"X-Forwarded-For": "7.7.7.7"}
+    assert client.post("/auth/login", json={"user_id": "ADMIN-01"}, headers=other).status_code == 401  # admin needs the host password
+    for _ in range(19):
+        client.post("/auth/login", json={}, headers=other)
+    assert client.post("/auth/login", json={}, headers=other).status_code == 429
+    assert client.post("/edge/grade-crop", json={}, headers=other).status_code == 422  # a separate bucket
+    for _ in range(40):
+        assert client.post("/mcp/call", json={}, headers=other).status_code != 429
+
+    page = client.get("/")
+    assert page.headers["x-frame-options"] == "DENY" and page.headers["x-content-type-options"] == "nosniff"
+    assert client.get("/health").headers["strict-transport-security"].startswith("max-age=")
 
     # Polled JSON is gzipped; a server-sent event stream is not.
     assert client.get("/automation/truck-pools", headers={"Accept-Encoding": "gzip"}).headers.get("content-encoding") == "gzip"

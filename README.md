@@ -29,7 +29,9 @@ it sleeps after 15 minutes without visitors and takes about a minute to wake). D
 | `ADMIN-01` | Admin console |
 
 Every demo account uses the password `krishi2026`, or one click on the quick-login cards. This is a demo login, not
-production security.
+production security. On the public site, `ADMIN-01` is the exception: it needs the admin password set on the server
+(Render → Environment → `KNX_ADMIN_PASSWORD`); quick login and the demo password don't open it. Logins, account changes
+and the heavy AI calls are rate-limited per visitor there, and every response carries the usual security headers.
 
 ![Team Roster](assets/team_animation.svg)
 

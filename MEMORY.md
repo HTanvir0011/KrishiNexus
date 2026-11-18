@@ -1825,3 +1825,17 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   it skips until the repo secret `RENDER_DEPLOY_HOOK` is set. The owner sets the secret (it is a credential). Steps in
   `deploy/cloudrun/DEPLOY.md` → Run it.
 
+### 2026-11-18 · Scored again (about 79/100) and closed three live-site leaks (the user said "Yes, fix them")
+- **Score** (five AI Battle criteria, 20 each, estimates): Innovation 17, Impact 15, Feasibility 17, Sustainability 15,
+  Responsible AI 15. Biggest remaining levers: a small farmer field test, one partner letter, a backup demo video.
+- **Leak scan:** git history and tracked files clean (no keys, tokens, .env or state files; no source maps live).
+- **Fixed:**
+  1. Anyone could quick-login as `ADMIN-01` on tanvir.health. Now, where `KNX_ADMIN_PASSWORD` is set, admins need
+     exactly it (`auth.py`); `serve.py` defaults it to a per-boot random value; `render.yaml` has Render generate it.
+     The login page moves a refused quick login into the form with the id filled in.
+  2. Rate limits in `serve.py` are now three per-visitor buckets: writes 30/min (as before), `/auth` 20/min, heavy AI
+     (`/edge /agents /rag /evals /optimization /guardrails`) 20/min. `POST /mcp/call` stays open: pages poll it every 6 s.
+  3. Security headers on every HTTP response: HSTS, nosniff, X-Frame-Options DENY, CSP frame-ancestors 'none',
+     Referrer-Policy, Permissions-Policy (camera and microphone self).
+- Checks: serve, auth, marketplace and privacy self-checks pass; `tsc` clean.
+

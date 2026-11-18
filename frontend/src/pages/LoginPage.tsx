@@ -105,8 +105,13 @@ export function LoginPage() {
       navigate(homeOf(signedIn.role));
     } catch (failure) {
       const text = failure instanceof ApiError ? failure.message : c.down;
-      if (key === "form") setError(text);
-      else pushAlert("danger", c.failed, text);
+      // An account that needs a password (admin on the hosted demo): move it into the form instead of a toast.
+      const needsPassword = failure instanceof ApiError && failure.status === 401;
+      if (key === "form" || needsPassword) {
+        setAccountId(userId);
+        setError(text);
+        if (needsPassword) window.scrollTo({ top: 0, behavior: "smooth" });
+      } else pushAlert("danger", c.failed, text);
     } finally {
       setBusy(null);
     }

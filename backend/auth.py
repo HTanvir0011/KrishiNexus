@@ -1,7 +1,8 @@
 """Demo accounts: password login, one-click quick login by role, signed session tokens and the admin API.
 
 This is a demo login, not a production one: quick login needs no password, so anyone can pick a demo account, the
-seeded accounts share a published demo password, and the other API routes stay open. Roles decide which workspace a user lands on and who may manage accounts (admin only).
+seeded accounts share a published demo password, and the other API routes stay open. Where KNX_ADMIN_PASSWORD is set
+(the hosted demo), admin accounts need that password instead. Roles decide which workspace a user lands on and who may manage accounts (admin only).
 Accounts persist in .state/users.json (delete it to re-seed).
 """
 
@@ -155,7 +156,13 @@ class UserBook:
     def authenticate(self, user_id: str, password: str | None) -> User:
         """The active account for this id (any case); with a password, only if it matches."""
         user = self.users.get(user_id.strip().upper())
-        if password is not None:
+        # A public host sets KNX_ADMIN_PASSWORD: admin accounts then need it, and neither quick login nor the published
+        # demo password opens them. Unset (local runs), admins log in like every other demo account.
+        admin_password = os.getenv("KNX_ADMIN_PASSWORD")
+        if admin_password and user is not None and user.role is Role.ADMIN:
+            if password is None or not hmac.compare_digest(password.encode(), admin_password.encode()):
+                raise HTTPException(status_code=401, detail="Admin accounts need the admin password on this server.")
+        elif password is not None:
             if user is None or not password_matches(password, self.password_hashes[user.user_id]):
                 raise HTTPException(status_code=401, detail="Wrong account ID or password.")
         if user is None or not user.active:

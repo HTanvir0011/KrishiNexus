@@ -3,6 +3,7 @@
 Run from backend/:  .venv/Scripts/python check_auth.py   (uses a temporary users file; .state is left alone)
 """
 
+import os
 import tempfile
 import time
 from pathlib import Path
@@ -68,5 +69,15 @@ with TestClient(app) as client:
     assert client.delete("/auth/admin/users/ADMIN-01", headers=bearer(admin["token"])).status_code == 409
     assert client.delete("/auth/admin/users/FARM-U001", headers=bearer(admin["token"])).status_code == 200
     assert len(client.post("/auth/admin/users/reset", headers=bearer(admin["token"])).json()) == len(auth.SEED_USERS)
+
+    # A public host sets KNX_ADMIN_PASSWORD: admins then need it; quick login and the demo password are refused.
+    os.environ["KNX_ADMIN_PASSWORD"] = "host-only-secret"
+    try:
+        assert client.post("/auth/login", json={"user_id": "ADMIN-01"}).status_code == 401
+        assert client.post("/auth/login", json={"user_id": "admin-01", "password": auth.DEMO_PASSWORD}).status_code == 401
+        assert client.post("/auth/login", json={"user_id": "ADMIN-01", "password": "host-only-secret"}).status_code == 200
+        assert client.post("/auth/login", json={"user_id": "FARM-RAN-001"}).status_code == 200  # other roles unchanged
+    finally:
+        del os.environ["KNX_ADMIN_PASSWORD"]
 
 print("auth.py: all checks passed")

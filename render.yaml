@@ -18,3 +18,7 @@ services:
       # A stable random key, so session tokens and signed receipts survive the free service sleeping and waking.
       - key: KNX_RECEIPT_SIGNING_KEY
         generateValue: true
+      # The admin password on the public site (quick login and the demo password don't open admin accounts there).
+      # Render generates it; read or change it in the service's Environment tab.
+      - key: KNX_ADMIN_PASSWORD
+        generateValue: true
