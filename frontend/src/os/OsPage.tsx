@@ -26,7 +26,7 @@ const VIEWS: { view: OsView; to: string; icon: LucideIcon }[] = [
 const COPY = {
   en: {
     title: "Live operations workspace",
-    lede: "One backend, five seats: the farmer's phone, the co-op desk, the himagar (cold storage), and the buyer and bank desk. An action in one updates the others.",
+    lede: "One backend, seven seats: the farmer's phone, the co-op desk, the himagar (cold storage), the direct market, the truck driver, and the buyer and bank desk. An action in one updates the others.",
     views: { judge: "Split-screen judge mode", field: "Farmer mobile companion", coop: "Co-op and cold-chain command", himagar: "Himagar OS (cold storage)", trade: "Direct market (lots and bids)", driver: "Truck driver", market: "B2B market and bank desk" },
     welcome: (name: string) => `Welcome, ${name}`,
     admin: "Admin panel",
@@ -36,7 +36,7 @@ const COPY = {
   },
   bn: {
     title: "লাইভ অপারেশনস ওয়ার্কস্পেস",
-    lede: "একই ব্যাকএন্ড, পাঁচটি আসন: কৃষকের ফোন, সমবায় ডেস্ক, হিমাগার, আর ক্রেতা ও ব্যাংক ডেস্ক। এক জায়গার কাজ অন্যগুলোতেও দেখা যায়।",
+    lede: "একই ব্যাকএন্ড, সাতটি আসন: কৃষকের ফোন, সমবায় ডেস্ক, হিমাগার, সরাসরি বাজার, ট্রাকচালক, আর ক্রেতা ও ব্যাংক ডেস্ক। এক জায়গার কাজ অন্যগুলোতেও দেখা যায়।",
     views: { judge: "বিচারক স্প্লিট-স্ক্রিন", field: "কৃষকের মোবাইল", coop: "সমবায় ও কোল্ড চেইন", himagar: "হিমাগার ওএস", trade: "সরাসরি বাজার (লট ও দর)", driver: "ট্রাক চালক", market: "বাজার ও ব্যাংক ডেস্ক" },
     welcome: (name: string) => `স্বাগতম, ${name}`,
     admin: "অ্যাডমিন প্যানেল",
