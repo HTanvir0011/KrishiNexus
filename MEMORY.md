@@ -1932,3 +1932,19 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   six draft files in frontend/public/video/ are uncommitted and unchecked); emulator tests (AVD knx_pixel7, Android 15
   Play image, test photo at /sdcard/Pictures/potato_crate.jpg; only launch, login and the Ask screen were seen).
 
+### 2026-11-19 (night) · Videos, phone test, two fixes (commits 7faa062, 6adb9a6; release v1.1.0 assets replaced)
+- Videos in frontend/public/video/: problem-30s.mp4 (30.0 s) and krishinexus-demo.mp4 (3:14, 720p H.264/AAC, 16.6 MB),
+  posters and English VTT captions; 1080p master and EDIT_NOTES.md in video/out/ (local). Narration = the owner's 11
+  clips (pauses trimmed, 1.08x); the 22.9 s Android section uses a consented Chatterbox clone of his voice (MIT,
+  video/.venv-tts, weights in video/models/); original numpy score ~16 dB under the voice, voice -16 LUFS.
+  .git/info/exclude now has /video/ (anchored) so frontend/public/video/ is tracked.
+- Emulator (AVD knx_pixel7, Android 15 Play image, x86_64 APK): mic permission + bn-BD recogniser, preset answer from
+  the live node, online Bangla voice playback, real camera capture, gallery photo grade (14 potatoes, B), Live dot,
+  driver location sharing all checked. To test against a local node set Me -> Server to http://10.0.2.2:8020.
+- Fix 1: Android location used Google's fused provider; declining Google's 'Location Accuracy' prompt stopped sharing.
+  Now AndroidSettings(forceLocationManager: true) (phone GPS). Fix 2: hosted classical-CV graded a room photo C; now
+  optical_grader.not_a_lot refuses irregular scenes (median box fill < 0.65 AND sqrt-area spread > 0.45), 422;
+  backend/check_grader.py. Both thresholds are from synthetic lots + one emulator photo: refit on real field photos.
+- The video agent's recording changed live demo data (a bid, a delivered chili job); each deploy restarts the node
+  with the seeds, and 6adb9a6's deploy did so.
+
