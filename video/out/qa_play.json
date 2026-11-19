@@ -1,0 +1,37 @@
+{
+ "browser": {
+  "channel": "playwright chromium",
+  "version": "153.0.8010.12",
+  "canPlayType": "probably"
+ },
+ "krishinexus-demo": {
+  "readyState": 4,
+  "duration": 194.9,
+  "videoWidth": 1280,
+  "videoHeight": 720,
+  "playedTo": 1.46098,
+  "seekedReadyState": 4,
+  "error": null,
+  "cues": 66,
+  "firstCue": [
+   0.34,
+   "KrishiNexus OS, built by Team Heat Wave."
+  ],
+  "ok": true
+ },
+ "problem-30s": {
+  "readyState": 4,
+  "duration": 30,
+  "videoWidth": 1280,
+  "videoHeight": 720,
+  "playedTo": 1.46023,
+  "seekedReadyState": 4,
+  "error": null,
+  "cues": 5,
+  "firstCue": [
+   1.14,
+   "In Bangladesh, a potato farmer often sells below cost."
+  ],
+  "ok": true
+ }
+}
