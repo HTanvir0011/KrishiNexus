@@ -1948,3 +1948,18 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - The video agent's recording changed live demo data (a bid, a delivered chili job); each deploy restarts the node
   with the seeds, and 6adb9a6's deploy did so.
 
+### 2026-11-20 · Repository private: APK on the site, Render builds from its own checkout (commit caa9f58)
+- The owner made HTanvir0011/KrishiNexus private. GitHub release links and the public tar.gz the image ADDed now 404,
+  and b703fe3's Render deploy failed, most likely on that ADD (log not read); the live site kept 60bfe67.
+- APKs (arm64 21,996,471 B; armv7 19,619,371 B; v1.1.0+2) ship in frontend/public/download/; site.json apk links are
+  /download/...; the 'Source on GitHub' links are gone (StoryPage, prerender). serve.py types .apk as
+  application/vnd.android.package-archive and adds Content-Disposition: attachment on /download/ (check_serve.py).
+- Dockerfile source stage is COPY . /src; render.yaml dockerContext: . and the Render dashboard's Docker Build Context
+  Directory changed from ./deploy/cloudrun to . (Blueprint managed); root .dockerignore keeps the context to
+  backend/, frontend/, deploy/.
+- Blocked: Render has no Git Deployment Credentials (Account settings), so the caa9f58 deploy failed at the clone
+  ("could not read Username for 'https://github.com'"); tanvir.health still serves 60bfe67, whose APK links point at
+  the now-private release (404 for visitors). The fix needs the owner: Render > Account settings > Git Deployment
+  Credentials > Add credential > GitHub, with the Render app given access to KrishiNexus, then redeploy. Making the
+  repository public again would also work with the current settings.
+- A new APK build must be copied into frontend/public/download/ (and apk_size_mb in site.json) to reach the site.

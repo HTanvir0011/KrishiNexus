@@ -2,8 +2,8 @@
 
 The farmer, buyer and driver app for the KrishiNexus node (version 1.1.0). It talks to the same API as the website
 (`https://tanvir.health` by default), so accounts, lots, bids, escrows and deliveries are shared with the web seats.
-Download: https://github.com/HTanvir0011/KrishiNexus/releases/latest/download/KrishiNexus.apk (Android 7+, arm64), or
-`KrishiNexus-armv7.apk` from the same release for older phones. User guide: https://tanvir.health/guide/
+Download: https://tanvir.health/download/KrishiNexus.apk (Android 7+, arm64), or
+https://tanvir.health/download/KrishiNexus-armv7.apk for older phones (the repository is private, so the site serves them). User guide: https://tanvir.health/guide/
 
 ## What each role gets
 
