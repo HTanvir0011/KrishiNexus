@@ -804,71 +804,77 @@ class HeaderBand extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        20,
-        MediaQuery.paddingOf(context).top + 12,
-        12,
-        24,
-      ),
-      decoration: BoxDecoration(
-        color: dark ? Brand.greenDeep : Brand.green,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          title,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      if (subtitle != null)
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              ?trailing,
-              if (showHelp)
-                IconButton(
-                  tooltip: t('সাহায্য', 'Help'),
-                  constraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
-                  ),
-                  icon: const Icon(
-                    Icons.help_outline_rounded,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).push(fadeRoute(const GuideScreen())),
-                ),
-            ],
+    // Light status-bar icons: the band is always green, in light and dark theme.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.paddingOf(context).top + 12,
+          12,
+          24,
+        ),
+        decoration: BoxDecoration(
+          color: dark ? Brand.greenDeep : Brand.green,
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(28),
           ),
-          if (child != null) ...[const SizedBox(height: 16), child!],
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (subtitle != null)
+                          Text(
+                            subtitle!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                ?trailing,
+                if (showHelp)
+                  IconButton(
+                    tooltip: t('সাহায্য', 'Help'),
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    icon: const Icon(
+                      Icons.help_outline_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).push(fadeRoute(const GuideScreen())),
+                  ),
+              ],
+            ),
+            if (child != null) ...[const SizedBox(height: 16), child!],
+          ],
+        ),
       ),
     );
   }
