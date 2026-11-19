@@ -1916,3 +1916,19 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   temperature, deliver (RELEASED); bank ledger and disputes; judge views. Not verified on a phone: live camera capture,
   the phone's Bangla speech recognition and TTS voices. Release APK is debug-signed (sideload only).
 
+### 2026-11-19 · Team, sign-up with KYC, live tracking, web camera, guide, app 1.1.0 (commit 7629bd7, release v1.1.0)
+- Built with 4 parallel agents (backend, web, mobile, video) against one API contract; AGENTS.md section 6 has the rows.
+- Team: frontend/src/data/team.json is the single source (home section, static /team/ and /team/bn/ from
+  frontend/scripts/prerender.mjs with JSON-LD, the app's Team screen via /team/team.json + bundled copy). Bios are
+  drafts; only Tanvir has a link (GitHub HTanvir0011).
+- Sign-up POST /auth/register: NID, phone, wallet stored only as HMAC digests (KNX_RECEIPT_SIGNING_KEY) + masks; coop,
+  storage, bank pending admin approval; payouts only to the registered wallet; reset accounts removes sign-ups.
+- Live feed /market/stream (SSE) + /market/events; driver location (rounded 0.01 deg) visible only to the sale's farmer,
+  buyer, driver and bank/judge/admin (marketplace._sees_position, added by the lead after the web agent flagged it).
+- serve.py: 413 limits (8 MB photos, 512 KB else), location bucket 60/min, IPv6 /64 limiting, geolocation=(self).
+- Release v1.1.0 on GitHub: KrishiNexus.apk (arm64), -armv7, -x86_64; the site's download links work (checked 206).
+- Live after deploy: /team/, /guide/, /signup, /team/team.json, /sitemap.xml 200; new endpoints in openapi. CI green.
+- Unfinished: videos (agent stopped while generating the cloned mobile-app lines with Chatterbox in video/.venv-tts;
+  six draft files in frontend/public/video/ are uncommitted and unchecked); emulator tests (AVD knx_pixel7, Android 15
+  Play image, test photo at /sdcard/Pictures/potato_crate.jpg; only launch, login and the Ask screen were seen).
+
