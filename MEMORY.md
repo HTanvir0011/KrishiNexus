@@ -1883,4 +1883,6 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   screenshots of bank, co-op, driver, buyer and a Himagar blackout drill, no console errors.
 - Deploy blocker found the same day: Render's `KNX_RECEIPT_SIGNING_KEY` was set to `krishi2026` (10 chars), so every
   new container exits (pydantic min 16). The live site still runs `cd1f613` until the owner fixes the variable.
-
+- Resolved the same day (the owner said "Yes, regenerate it"): Render's own "Generated secret" (32 chars, never typed or
+  read) replaced `KNX_RECEIPT_SIGNING_KEY`; `33da6ab` deployed (live after ~100 s). Checked live: all seats 200, admin quick
+  login 401, judge deliveries 200, bank ledger (3 rows) and disputes (1 open, 1 resolved), security headers, no console errors.
