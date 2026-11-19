@@ -15,31 +15,61 @@ Future<bool> ensureConsent(BuildContext context) async {
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(Icons.shield_rounded, color: Tone.sky.fg(context), size: 28),
-              const SizedBox(width: 10),
-              Text(t('আপনার অনুমতি', 'Your consent'), style: theme.textTheme.titleLarge),
-            ]),
-            const SizedBox(height: 14),
-            Text(
-              'আপনার কথা ও ছবি শুধু এই পরামর্শের জন্য ব্যবহার হবে। নাম, ফোন ও এনআইডি নম্বর লুকানো থাকে এবং ২৪ ঘণ্টার মধ্যে '
-              'মুছে যায়; কণ্ঠস্বর বা ছবি জমা রাখা হয় না। সিদ্ধান্ত আপনার।',
-              style: voiceStyle(context, size: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Your words and photo are used only for this advice. Names, phone and NID numbers are hidden and erased within 24 '
-              'hours; voice and photos are not saved. Online, the phone\'s speech service hears the question. The decision stays yours.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, false), child: Text(t('এখন না', 'Not now')))),
-              const SizedBox(width: 12),
-              Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(t('রাজি', 'I agree')))),
-            ]),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: Brand.voice,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mic_rounded,
+                      color: Brand.ink,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      t('আপনার অনুমতি', 'Your consent'),
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'আপনার কথা ও ছবি শুধু এই পরামর্শের জন্য ব্যবহার হবে। নাম, ফোন ও এনআইডি নম্বর লুকানো থাকে এবং ২৪ ঘণ্টার মধ্যে '
+                'মুছে যায়; কণ্ঠস্বর বা ছবি জমা রাখা হয় না। সিদ্ধান্ত আপনার।',
+                style: voiceStyle(context, size: 18),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Your words and photo are used only for this advice. Names, phone and NID numbers are hidden and erased within 24 '
+                'hours; voice and photos are not saved. Online, the phone\'s speech service hears the question. The decision stays yours.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.check_rounded),
+                label: Text(t('রাজি, চালিয়ে যান', 'I agree, continue')),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(t('এখন না', 'Not now')),
+              ),
+            ],
+          ),
         ),
       );
     },

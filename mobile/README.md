@@ -61,7 +61,11 @@ the truck's location).
 
 ## Design
 
-Same world as the website (`frontend/design/DESIGN_PLAN.md` §11–12): daylight canvas `#F6F8F5`, emerald `#047857`,
-amber, rose, sky; Anek Bangla for the interface and Tiro Bangla for words a farmer says or hears; dark theme from the
-"night paddy" palette. Material 3 components, 48 dp targets, system Back and predictive back. One authored moment (the
-grade reveal: sweep, outlines, stamp); everything else is quiet feedback. "Remove animations" lands everything at once.
+"Krishi Wallet" direction (`design/DIRECTION.md`, with the research behind it): a trusted mobile-money feel, farmers
+first, Bangla first. Flag green `#006A4E` header bands and primary buttons, mustard `#EDB723` reserved for voice and
+money to receive, warm canvas `#F7F5EE`, soft-shadow cards; amber, rose, sky for status, always icon + colour + word.
+Amounts are the biggest text on money screens, and every commit shows amount and receiver before a confirm, then a
+tick and receipt. Anek Bangla for the interface and Tiro Bangla for words a farmer says or hears; dark theme from the
+"night paddy" palette. Material 3 components, 48 dp targets (56 dp primary buttons), a help button in every tab
+header, system Back and predictive back. One authored moment (the grade reveal: sweep, outlines, stamp); everything
+else is quiet feedback. "Remove animations" lands everything at once.

@@ -14,7 +14,8 @@ import '../widgets/grade_view.dart';
 import 'driver.dart' show RouteLine;
 import 'scan.dart' show fadeRoute;
 
-Future<List<Lot>> fetchLots() async => mapsOf(await Api.get('/market/lots')).map(Lot.new).toList();
+Future<List<Lot>> fetchLots() async =>
+    mapsOf(await Api.get('/market/lots')).map(Lot.new).toList();
 
 /// Loads [load], then reloads it at once (debounced) on each [relevant] live market event and on pull-to-refresh.
 /// Polls every [every] while the tab or screen is on show (TickerMode) and the live feed is down, every 30 s while it
@@ -46,7 +47,11 @@ mixin Polling<T extends StatefulWidget, D> on State<T> {
     refresh();
     _timer = Timer.periodic(every, (_) {
       if (!mounted || !_visible) return;
-      if (followsMarket && live.connected && DateTime.now().difference(_loadedAt) < const Duration(seconds: 30)) return;
+      if (followsMarket &&
+          live.connected &&
+          DateTime.now().difference(_loadedAt) < const Duration(seconds: 30)) {
+        return;
+      }
       refresh(quiet: true);
     });
     if (followsMarket) {
@@ -105,14 +110,152 @@ mixin Polling<T extends StatefulWidget, D> on State<T> {
   }
 }
 
-int lotStage(Lot lot) => switch (lot.status) { 'OPEN' => 0, 'SOLD' => 1, 'IN_TRANSIT' => 2, 'DELIVERED' => 3, _ => 0 };
+int lotStage(Lot lot) => switch (lot.status) {
+  'OPEN' => 0,
+  'SOLD' => 1,
+  'IN_TRANSIT' => 2,
+  'DELIVERED' => 3,
+  _ => 0,
+};
 Tone lotTone(String status) => switch (status) {
-      'OPEN' => Tone.amber,
-      'SOLD' => Tone.violet,
-      'IN_TRANSIT' => Tone.sky,
-      'DELIVERED' => Tone.green,
-      _ => Tone.slate,
-    };
+  'OPEN' => Tone.amber,
+  'SOLD' => Tone.sky,
+  'IN_TRANSIT' => Tone.sky,
+  'DELIVERED' => Tone.green,
+  _ => Tone.slate,
+};
+
+/// Status is always icon + colour + word: waiting amber, escrow sky, paid green.
+IconData lotIcon(String status) => switch (status) {
+  'OPEN' => Icons.hourglass_top_rounded,
+  'SOLD' => Icons.lock_rounded,
+  'IN_TRANSIT' => Icons.local_shipping_rounded,
+  'DELIVERED' => Icons.check_circle_rounded,
+  _ => Icons.block_rounded,
+};
+
+/// The live dot on a white chip, since its green would vanish on the green header band.
+Widget _liveBadge() => Container(
+  padding: const EdgeInsets.symmetric(vertical: 6),
+  decoration: BoxDecoration(
+    color: Colors.white.withValues(alpha: 0.92),
+    borderRadius: BorderRadius.circular(999),
+  ),
+  child: const LiveDot(),
+);
+
+/// Before money moves: the amount big, who and what under it, one full-width button. True when the user confirms.
+Future<bool> _confirmSheet(
+  BuildContext context, {
+  required String title,
+  required String amount,
+  String? caption,
+  required List<(String, String)> rows,
+  required String action,
+  IconData icon = Icons.check_rounded,
+}) async {
+  final theme = Theme.of(context);
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 12),
+            AppCard(
+              tone: Tone.green,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AmountText(amount, caption: caption),
+                  const SizedBox(height: 8),
+                  for (final r in rows) InfoRow(r.$1, r.$2),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: Icon(icon),
+                label: Text(action),
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 48,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(t('না, ফিরে যাই', 'No, go back')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  return ok == true;
+}
+
+/// After money moved: a big tick, the amount and the receipt lines.
+Future<void> _receiptSheet(
+  BuildContext context, {
+  required String title,
+  required String amount,
+  required List<(String, String)> rows,
+}) {
+  final theme = Theme.of(context);
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Center(child: ConfirmTick()),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: AmountText(
+                amount,
+                size: 36,
+                color: Tone.green.fg(context),
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                children: [for (final r in rows) InfoRow(r.$1, r.$2)],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 56,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(t('ঠিক আছে', 'Done')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 /// Farmer: own lots and "List a lot". Buyer: open lots to bid on. Judge and admin: every lot, read only.
 class MarketScreen extends StatefulWidget {
@@ -122,7 +265,8 @@ class MarketScreen extends StatefulWidget {
   State<MarketScreen> createState() => _MarketScreenState();
 }
 
-class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, List<Lot>> {
+class _MarketScreenState extends State<MarketScreen>
+    with Polling<MarketScreen, List<Lot>> {
   String? _crop;
   String _status = 'OPEN';
 
@@ -150,16 +294,38 @@ class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, 
   // A grade or a decision asked to sell a lot: open the listing sheet with its details filled in.
   void _draftWatcher() {
     final draft = app.sellDraft;
-    if (draft == null || app.tab != 'market' || !mounted || _role != 'farmer') return;
+    if (draft == null || app.tab != 'market' || !mounted || _role != 'farmer') {
+      return;
+    }
     app.sellDraft = null;
     _sell(draft);
   }
 
   Future<void> _sell([Map<String, dynamic>? draft]) async {
-    final lot = await showModalBottomSheet<Lot>(context: context, isScrollControlled: true, builder: (_) => SellSheet(draft: draft));
+    final lot = await showModalBottomSheet<Lot>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SellSheet(draft: draft),
+    );
     if (lot == null || !mounted) return;
     await refresh(quiet: true);
-    if (mounted) await Navigator.of(context).push(fadeRoute(LotScreen(lotId: lot.id, initial: lot)));
+    if (!mounted) return;
+    final asking = lot.asking;
+    await _receiptSheet(
+      context,
+      title: t('লট বাজারে উঠেছে', 'Your lot is listed'),
+      amount: asking == null ? kg(lot.kg) : money(asking * lot.kg),
+      rows: [
+        (t('ফসল', 'Crop'), '${cropName(lot.crop)} · ${gradeName(lot.grade)}'),
+        (t('পরিমাণ', 'Quantity'), kg(lot.kg)),
+        if (asking != null) (t('চাওয়া দাম', 'Asking price'), perKg(asking)),
+      ],
+    );
+    if (mounted) {
+      await Navigator.of(
+        context,
+      ).push(fadeRoute(LotScreen(lotId: lot.id, initial: lot)));
+    }
   }
 
   @override
@@ -168,7 +334,12 @@ class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, 
     final all = data ?? const <Lot>[];
     final lots = switch (_role) {
       'farmer' => all.where((l) => l.farmerId == me.id).toList(),
-      'buyer' => all.where((l) => l.status == 'OPEN' && (_crop == null || l.crop == _crop)).toList(),
+      'buyer' =>
+        all
+            .where(
+              (l) => l.status == 'OPEN' && (_crop == null || l.crop == _crop),
+            )
+            .toList(),
       _ => all.where((l) => _status == 'ALL' || l.status == _status).toList(),
     };
     final title = switch (_role) {
@@ -176,57 +347,140 @@ class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, 
       'buyer' => t('খোলা লট', 'Open lots'),
       _ => t('সব লট', 'All lots'),
     };
+    // The one number: farmer = money held in escrow (else the best bid on an open lot); everyone else = lots shown.
+    final held = lots.fold<double>(
+      0,
+      (s, l) => s + (l.escrow?.status == 'HELD' ? l.escrow!.amount : 0),
+    );
+    final bestBid = lots
+        .where((l) => l.status == 'OPEN' && l.best != null)
+        .fold<double>(
+          0,
+          (s, l) => (l.best!.price * l.kg) > s ? l.best!.price * l.kg : s,
+        );
+    final Widget? hero = data == null
+        ? null
+        : _role == 'farmer'
+        ? (held > 0
+              ? AmountText(
+                  money(held),
+                  color: Colors.white,
+                  caption: t(
+                    'ব্যাংকের এসক্রোতে আপনার টাকা',
+                    'Your money in escrow',
+                  ),
+                )
+              : bestBid > 0
+              ? AmountText(
+                  money(bestBid),
+                  color: Colors.white,
+                  caption: t('সবচেয়ে ভালো দর', 'Best bid now'),
+                )
+              : null)
+        : AmountText(
+            digits(lots.length),
+            color: Colors.white,
+            caption: _role == 'buyer'
+                ? t('খোলা লট', 'Open lots')
+                : t('লট দেখাচ্ছে', 'Lots shown'),
+          );
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: const [LiveDot()]),
       floatingActionButton: _role == 'farmer'
-          ? FloatingActionButton.extended(onPressed: _sell, icon: const Icon(Icons.add_rounded), label: Text(t('নতুন লট', 'List a lot')))
+          ? FloatingActionButton.extended(
+              onPressed: _sell,
+              icon: const Icon(Icons.add_rounded),
+              label: Text(t('নতুন লট', 'List a lot')),
+            )
           : null,
-      body: Column(children: [
-        if (_role == 'buyer')
-          _FilterBar(children: [
-            ChoiceChip(label: Text(t('সব ফসল', 'All crops')), selected: _crop == null, onSelected: (_) => setState(() => _crop = null)),
-            for (final c in marketCrops) ChoiceChip(label: Text(cropName(c)), selected: _crop == c, onSelected: (_) => setState(() => _crop = c)),
-          ]),
-        if (_role != 'buyer' && _role != 'farmer')
-          _FilterBar(children: [
-            for (final s in ['OPEN', 'SOLD', 'IN_TRANSIT', 'DELIVERED', 'ALL'])
-              ChoiceChip(label: Text(s == 'ALL' ? t('সব', 'All') : lotStatus(s)), selected: _status == s, onSelected: (_) => setState(() => _status = s)),
-          ]),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: refresh,
-            child: loading && data == null
-                ? const SkeletonList()
-                : error != null && data == null
-                    ? ListView(children: [ErrorState(error: error!, onRetry: refresh)])
-                    : lots.isEmpty
-                        ? ListView(children: [
-                            EmptyState(
-                              icon: Icons.storefront_rounded,
-                              title: _role == 'farmer' ? t('এখনো কোনো লট নেই', 'No lots yet') : t('এখন কোনো লট নেই', 'Nothing here right now'),
-                              body: _role == 'farmer'
-                                  ? t('ফসল স্ক্যান করে বা সরাসরি লট দিন; ক্রেতারা খোলাখুলি দর দেবেন।', 'Scan the harvest or list a lot; buyers bid in the open.')
-                                  : null,
-                              action: _role == 'farmer'
-                                  ? FilledButton.icon(onPressed: _sell, icon: const Icon(Icons.add_rounded), label: Text(t('নতুন লট', 'List a lot')))
-                                  : null,
+      body: Column(
+        children: [
+          HeaderBand(title: title, trailing: _liveBadge(), child: hero),
+          if (_role == 'buyer')
+            _FilterBar(
+              children: [
+                ChoiceChip(
+                  label: Text(t('সব ফসল', 'All crops')),
+                  selected: _crop == null,
+                  onSelected: (_) => setState(() => _crop = null),
+                ),
+                for (final c in marketCrops)
+                  ChoiceChip(
+                    label: Text(cropName(c)),
+                    selected: _crop == c,
+                    onSelected: (_) => setState(() => _crop = c),
+                  ),
+              ],
+            ),
+          if (_role != 'buyer' && _role != 'farmer')
+            _FilterBar(
+              children: [
+                for (final s in [
+                  'OPEN',
+                  'SOLD',
+                  'IN_TRANSIT',
+                  'DELIVERED',
+                  'ALL',
+                ])
+                  ChoiceChip(
+                    label: Text(s == 'ALL' ? t('সব', 'All') : lotStatus(s)),
+                    selected: _status == s,
+                    onSelected: (_) => setState(() => _status = s),
+                  ),
+              ],
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: refresh,
+              child: loading && data == null
+                  ? const SkeletonList()
+                  : error != null && data == null
+                  ? ListView(
+                      children: [ErrorState(error: error!, onRetry: refresh)],
+                    )
+                  : lots.isEmpty
+                  ? ListView(
+                      children: [
+                        EmptyState(
+                          icon: Icons.storefront_rounded,
+                          title: _role == 'farmer'
+                              ? t('এখনো কোনো লট নেই', 'No lots yet')
+                              : t('এখন কোনো লট নেই', 'Nothing here right now'),
+                          body: _role == 'farmer'
+                              ? t(
+                                  'ফসল স্ক্যান করে বা সরাসরি লট দিন; ক্রেতারা খোলাখুলি দর দেবেন।',
+                                  'Scan the harvest or list a lot; buyers bid in the open.',
+                                )
+                              : null,
+                          action: _role == 'farmer'
+                              ? FilledButton.icon(
+                                  onPressed: _sell,
+                                  icon: const Icon(Icons.add_rounded),
+                                  label: Text(t('নতুন লট', 'List a lot')),
+                                )
+                              : null,
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                      itemCount: lots.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) => LotCard(
+                        lot: lots[i],
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            fadeRoute(
+                              LotScreen(lotId: lots[i].id, initial: lots[i]),
                             ),
-                          ])
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                            itemCount: lots.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
-                            itemBuilder: (context, i) => LotCard(
-                              lot: lots[i],
-                              onTap: () async {
-                                await Navigator.of(context).push(fadeRoute(LotScreen(lotId: lots[i].id, initial: lots[i])));
-                                refresh(quiet: true);
-                              },
-                            ),
-                          ),
+                          );
+                          refresh(quiet: true);
+                        },
+                      ),
+                    ),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -237,15 +491,15 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 56,
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          scrollDirection: Axis.horizontal,
-          itemCount: children.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) => children[i],
-        ),
-      );
+    height: 56,
+    child: ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      scrollDirection: Axis.horizontal,
+      itemCount: children.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (_, i) => children[i],
+    ),
+  );
 }
 
 class LotCard extends StatelessWidget {
@@ -261,55 +515,122 @@ class LotCard extends StatelessWidget {
     final sold = lot.acceptedBid;
     final mine = lot.activeBids.where((b) => b.buyerId == me).firstOrNull;
     final leading = mine != null && best != null && mine.id == best.id;
+    final price = sold?.price ?? best?.price ?? lot.asking;
     return AppCard(
       onTap: onTap,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          GradeStamp(letter: lot.grade, size: 46),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${cropName(lot.crop)} · ${kg(lot.kg)}', style: theme.textTheme.titleMedium),
-              Text([lot.upazila, lot.district].where((s) => s.isNotEmpty).join(', ') + (app.user!.role == 'farmer' ? '' : ' · ${lot.farmerName}'),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              GradeStamp(letter: lot.grade, size: 46),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(cropName(lot.crop), style: theme.textTheme.titleLarge),
+                    Text(
+                      '${kg(lot.kg)} · ${[lot.upazila, lot.district].where((s) => s.isNotEmpty).join(', ')}${app.user!.role == 'farmer' ? '' : ' · ${lot.farmerName}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (lot.certId != null)
+                Icon(
+                  Icons.verified_rounded,
+                  size: 24,
+                  color: Tone.green.fg(context),
+                  semanticLabel: t('সনদ আছে', 'Certified'),
+                ),
+            ],
           ),
-          Pill(lotStatus(lot.status), tone: lotTone(lot.status)),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                  sold != null
-                      ? t('বিক্রি দাম', 'Sold at')
-                      : best == null
-                          ? t('এখনো দর নেই', 'No bids yet')
-                          : t('সর্বোচ্চ দর', 'Highest bid'),
-                  style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              Text(
-                  sold != null
-                      ? '${perKg(sold.price)} · ${sold.buyerName}'
-                      : best == null
-                          ? (lot.asking == null ? t('প্রথম দর দিন', 'Be the first to bid') : '${t('চাওয়া', 'asking')} ${perKg(lot.asking)}')
-                          : perKg(best.price),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontFeatures: tabular, color: sold == null && best == null ? null : Tone.green.fg(context))),
-            ]),
-          ),
-          if (lot.certId != null) Icon(Icons.verified_rounded, size: 22, color: Tone.green.fg(context), semanticLabel: t('সনদ আছে', 'Certified')),
-        ]),
-        if (lot.activeBids.isNotEmpty || mine != null) ...[
           const SizedBox(height: 10),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            if (lot.activeBids.isNotEmpty) Pill(plural(lot.activeBids.length, 'টি দর', 'bid', 'bids'), tone: Tone.slate, icon: Icons.gavel_rounded),
-            if (mine != null) Pill(leading ? t('আপনি এগিয়ে', 'You lead') : t('আপনাকে ছাড়িয়েছে', 'Outbid'), tone: leading ? Tone.green : Tone.rose),
-          ]),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Pill(
+                lotStatus(lot.status),
+                tone: lotTone(lot.status),
+                icon: lotIcon(lot.status),
+              ),
+              if (lot.openDisputes > 0)
+                Pill(
+                  t('অভিযোগ খোলা', 'Problem reported'),
+                  tone: Tone.rose,
+                  icon: Icons.report_rounded,
+                ),
+              if (lot.activeBids.isNotEmpty)
+                Pill(
+                  plural(lot.activeBids.length, 'টি দর', 'bid', 'bids'),
+                  tone: Tone.slate,
+                  icon: Icons.gavel_rounded,
+                ),
+              if (mine != null)
+                Pill(
+                  leading
+                      ? t('আপনি এগিয়ে', 'You lead')
+                      : t('আপনাকে ছাড়িয়েছে', 'Outbid'),
+                  tone: leading ? Tone.green : Tone.rose,
+                  icon: leading
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (price == null)
+            Text(
+              t('প্রথম দর দিন', 'Be the first to bid'),
+              style: theme.textTheme.titleMedium,
+            )
+          else ...[
+            AmountText(
+              money(price * lot.kg),
+              size: 30,
+              color: sold == null && best == null
+                  ? null
+                  : Tone.green.fg(context),
+              caption: sold != null
+                  ? t('বিক্রি হয়েছে', 'Sold for')
+                  : best == null
+                  ? t('চাওয়া মোট দাম', 'Asking, total')
+                  : t('সর্বোচ্চ দর, মোট', 'Highest bid, total'),
+            ),
+            Text(
+              '${perKg(price)}${sold == null ? '' : ' · ${sold.buyerName}'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontFeatures: tabular,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 56,
+            child: FilledButton.icon(
+              onPressed: onTap,
+              icon: Icon(
+                app.user!.role == 'buyer' && lot.status == 'OPEN'
+                    ? Icons.gavel_rounded
+                    : Icons.arrow_forward_rounded,
+              ),
+              label: Text(
+                app.user!.role == 'buyer' && lot.status == 'OPEN'
+                    ? t('দর দিন', 'Place a bid')
+                    : t('খুলুন', 'Open'),
+              ),
+            ),
+          ),
         ],
-      ]),
+      ),
     );
   }
 }
@@ -340,22 +661,48 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
 
   @override
   Future<Lot> load() async {
-    final lot = (await fetchLots()).where((l) => l.id == widget.lotId).firstOrNull;
-    if (lot == null) throw ApiError(404, t('লটটি আর নেই।', 'This lot no longer exists.'));
+    final lot = (await fetchLots())
+        .where((l) => l.id == widget.lotId)
+        .firstOrNull;
+    if (lot == null) {
+      throw ApiError(404, t('লটটি আর নেই।', 'This lot no longer exists.'));
+    }
     return lot;
   }
 
   void _replace(Object? json) {
-    if (json is Map && mounted) setState(() => data = Lot(json.cast<String, dynamic>()));
+    if (json is Map && mounted) {
+      setState(() => data = Lot(json.cast<String, dynamic>()));
+    }
   }
 
   Future<void> _accept(Bid bid) async {
     final lot = data!;
-    final res = await showModalBottomSheet<Object>(context: context, isScrollControlled: true, builder: (_) => AcceptSheet(lot: lot, bid: bid));
+    final res = await showModalBottomSheet<Object>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AcceptSheet(lot: lot, bid: bid),
+    );
     if (res != null) {
       _replace(res);
       HapticFeedback.heavyImpact();
-      if (mounted) snack(context, t('বিক্রি নিশ্চিত: টাকা ব্যাংকের এসক্রোতে জমা আছে।', 'Sold: the payment is held in escrow by the bank.'), icon: Icons.lock_rounded, tone: Tone.green);
+      if (mounted) {
+        await _receiptSheet(
+          context,
+          title: t('বিক্রি নিশ্চিত', 'Sale confirmed'),
+          amount: money(bid.price * lot.kg),
+          rows: [
+            (t('ক্রেতা', 'Buyer'), bid.buyerName),
+            (
+              t('টাকা', 'Payment'),
+              t(
+                'ব্যাংকের এসক্রোতে জমা, মাল পৌঁছালে আপনার ওয়ালেটে যাবে',
+                'Held in escrow by the bank, paid to your wallet on delivery',
+              ),
+            ),
+          ],
+        );
+      }
     }
   }
 
@@ -364,11 +711,21 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(t('লটটি বাতিল করবেন?', 'Cancel this lot?')),
-        content: Text(t('সব দর বন্ধ হয়ে যাবে। এটি ফেরানো যায় না।', 'All bids close. This cannot be undone.')),
+        content: Text(
+          t(
+            'সব দর বন্ধ হয়ে যাবে। এটি ফেরানো যায় না।',
+            'All bids close. This cannot be undone.',
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t('না', 'Keep it'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t('না', 'Keep it')),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(t('বাতিল করুন', 'Cancel the lot')),
           ),
@@ -376,14 +733,33 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
       ),
     );
     if (ok != true || !mounted) return;
-    _replace(await guarded<Object?>(context, () => Api.post('/market/lots/${widget.lotId}/cancel'), done: t('লট বাতিল হয়েছে', 'Lot cancelled')));
+    _replace(
+      await guarded<Object?>(
+        context,
+        () => Api.post('/market/lots/${widget.lotId}/cancel'),
+        done: t('লট বাতিল হয়েছে', 'Lot cancelled'),
+      ),
+    );
   }
 
   Future<void> _report() async {
-    final res = await showModalBottomSheet<Object>(context: context, isScrollControlled: true, builder: (_) => DisputeSheet(lotId: widget.lotId));
+    final res = await showModalBottomSheet<Object>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DisputeSheet(lotId: widget.lotId),
+    );
     if (res != null) {
       _replace(res);
-      if (mounted) snack(context, t('অভিযোগ ব্যাংকে পাঠানো হয়েছে।', 'Reported: the bank will look into it.'), icon: Icons.report_rounded);
+      if (mounted) {
+        snack(
+          context,
+          t(
+            'অভিযোগ ব্যাংকে পাঠানো হয়েছে।',
+            'Reported: the bank will look into it.',
+          ),
+          icon: Icons.report_rounded,
+        );
+      }
     }
   }
 
@@ -394,73 +770,168 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
     if (lot == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: error != null ? ErrorState(error: error!, onRetry: refresh) : const SkeletonList(count: 3, height: 140),
+        body: error != null
+            ? ErrorState(error: error!, onRetry: refresh)
+            : const SkeletonList(count: 3, height: 140),
       );
     }
     final me = app.user!;
     final isOwner = me.role == 'farmer' && lot.farmerId == me.id;
     final isBuyer = me.role == 'buyer';
     final accepted = lot.acceptedBid;
-    final party = isOwner || (accepted != null && accepted.buyerId == me.id) || (lot.delivery?.driverId == me.id);
+    final party =
+        isOwner ||
+        (accepted != null && accepted.buyerId == me.id) ||
+        (lot.delivery?.driverId == me.id);
+    final price = accepted?.price ?? lot.best?.price ?? lot.asking;
     return Scaffold(
       appBar: AppBar(
         title: Text('${cropName(lot.crop)} · ${kg(lot.kg)}'),
         actions: [
           const LiveDot(),
           if (isOwner && lot.status == 'OPEN')
-            IconButton(onPressed: _cancel, icon: const Icon(Icons.delete_outline_rounded), tooltip: t('লট বাতিল', 'Cancel the lot')),
+            IconButton(
+              onPressed: _cancel,
+              icon: const Icon(Icons.delete_outline_rounded),
+              tooltip: t('লট বাতিল', 'Cancel the lot'),
+            ),
         ],
       ),
-      bottomNavigationBar: isBuyer && lot.status == 'OPEN' ? BidBar(lot: lot, onPlaced: _replace) : null,
+      bottomNavigationBar: isBuyer && lot.status == 'OPEN'
+          ? BidBar(lot: lot, onPlaced: _replace)
+          : null,
       body: RefreshIndicator(
         onRefresh: refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
             AppCard(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  GradeStamp(letter: lot.grade, size: 64),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(gradeName(lot.grade), style: theme.textTheme.titleMedium),
-                      Text('${lot.farmerName} · ${[lot.upazila, lot.district].where((s) => s.isNotEmpty).join(', ')}',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                      Text('${t('তালিকাভুক্ত', 'Listed')} ${ago(lot.listedAt)}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      GradeStamp(letter: lot.grade, size: 64),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              gradeName(lot.grade),
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            Text(
+                              '${lot.farmerName} · ${[lot.upazila, lot.district].where((s) => s.isNotEmpty).join(', ')}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              '${t('তালিকাভুক্ত', 'Listed')} ${ago(lot.listedAt)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Pill(
+                        lotStatus(lot.status),
+                        tone: lotTone(lot.status),
+                        icon: lotIcon(lot.status),
+                      ),
+                    ],
                   ),
-                  Pill(lotStatus(lot.status), tone: lotTone(lot.status)),
-                ]),
-                const SizedBox(height: 16),
-                if (lot.status != 'CANCELLED')
-                  RouteSteps(
-                    steps: [t('তালিকা', 'Listed'), t('বিক্রি', 'Sold'), t('পথে', 'On the road'), t('পৌঁছেছে', 'Delivered')],
-                    current: lotStage(lot),
-                  ),
-                const SizedBox(height: 8),
-                if (lot.asking != null) InfoRow(t('চাওয়া দাম', 'Asking price'), perKg(lot.asking)),
-                if (isOwner) InfoRow(t('খরচের সীমা', 'Cost floor'), perKg(lot.floor)),
-                if (lot.note.isNotEmpty) InfoRow(t('নোট', 'Note'), lot.note),
-                if (lot.certId != null) _CertRow(certId: lot.certId!),
-              ]),
+                  if (price != null) ...[
+                    const SizedBox(height: 14),
+                    AmountText(
+                      money(price * lot.kg),
+                      size: 34,
+                      color: accepted == null && lot.best == null
+                          ? null
+                          : Tone.green.fg(context),
+                      caption: accepted != null
+                          ? t('বিক্রি হয়েছে', 'Sold for')
+                          : lot.best == null
+                          ? t('চাওয়া মোট দাম', 'Asking, total')
+                          : t('সর্বোচ্চ দর, মোট', 'Highest bid, total'),
+                    ),
+                    Text(
+                      perKg(price),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFeatures: tabular,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  if (lot.status != 'CANCELLED')
+                    RouteSteps(
+                      steps: [
+                        t('তালিকা', 'Listed'),
+                        t('বিক্রি', 'Sold'),
+                        t('পথে', 'On the road'),
+                        t('পৌঁছেছে', 'Delivered'),
+                      ],
+                      current: lotStage(lot),
+                    ),
+                  const SizedBox(height: 8),
+                  if (lot.asking != null)
+                    InfoRow(t('চাওয়া দাম', 'Asking price'), perKg(lot.asking)),
+                  if (isOwner)
+                    InfoRow(t('খরচের সীমা', 'Cost floor'), perKg(lot.floor)),
+                  if (lot.note.isNotEmpty) InfoRow(t('নোট', 'Note'), lot.note),
+                  if (lot.certId != null) _CertRow(certId: lot.certId!),
+                ],
+              ),
             ),
-            if (lot.escrow != null) ...[const SizedBox(height: 12), EscrowCard(lot: lot)],
-            if (lot.delivery != null) ...[const SizedBox(height: 12), DeliveryCard(delivery: lot.delivery!)],
+            if (lot.escrow != null) ...[
+              const SizedBox(height: 12),
+              EscrowCard(lot: lot),
+            ],
+            if (lot.delivery != null) ...[
+              const SizedBox(height: 12),
+              DeliveryCard(delivery: lot.delivery!),
+            ],
             if (lot.disputes.isNotEmpty) ...[
               SectionTitle(t('অভিযোগ', 'Reported problems')),
-              for (final d in lot.disputes) ...[DisputeTile(dispute: d), const SizedBox(height: 8)],
+              for (final d in lot.disputes) ...[
+                DisputeTile(dispute: d),
+                const SizedBox(height: 8),
+              ],
             ],
             if (party && lot.escrow != null) ...[
               const SizedBox(height: 8),
-              OutlinedButton.icon(onPressed: _report, icon: const Icon(Icons.report_outlined), label: Text(t('সমস্যা জানান', 'Report a problem'))),
+              SizedBox(
+                height: 56,
+                child: OutlinedButton.icon(
+                  onPressed: _report,
+                  icon: const Icon(Icons.report_outlined),
+                  label: Text(t('সমস্যা জানান', 'Report a problem')),
+                ),
+              ),
             ],
             SectionTitle(
               t('দর', 'Bids'),
-              trailing: lot.bids.isEmpty ? null : Text(plural(lot.activeBids.length, 'টি চালু', 'active', 'active'), style: theme.textTheme.bodySmall),
+              trailing: lot.bids.isEmpty
+                  ? null
+                  : Text(
+                      plural(
+                        lot.activeBids.length,
+                        'টি চালু',
+                        'active',
+                        'active',
+                      ),
+                      style: theme.textTheme.bodySmall,
+                    ),
             ),
             if (lot.bids.isEmpty)
-              AppCard(child: Text(t('এখনো কেউ দর দেয়নি।', 'No one has bid yet.'), style: theme.textTheme.bodyMedium))
+              AppCard(
+                child: Text(
+                  t('এখনো কেউ দর দেয়নি।', 'No one has bid yet.'),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              )
             else
               ..._bids(lot, isOwner),
           ],
@@ -480,7 +951,9 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
           lot: lot,
           highest: i == 0,
           mine: active[i].buyerId == me,
-          onAccept: isOwner && lot.status == 'OPEN' ? () => _accept(active[i]) : null,
+          onAccept: isOwner && lot.status == 'OPEN'
+              ? () => _accept(active[i])
+              : null,
         ),
         const SizedBox(height: 8),
       ],
@@ -489,8 +962,22 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text(t('আগের ও বন্ধ দর (${digits(others.length)})', 'Earlier and closed bids (${others.length})'), style: Theme.of(context).textTheme.bodyMedium),
-            children: [for (final b in others) BidTile(bid: b, lot: lot, highest: false, mine: b.buyerId == me)],
+            title: Text(
+              t(
+                'আগের ও বন্ধ দর (${digits(others.length)})',
+                'Earlier and closed bids (${others.length})',
+              ),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            children: [
+              for (final b in others)
+                BidTile(
+                  bid: b,
+                  lot: lot,
+                  highest: false,
+                  mine: b.buyerId == me,
+                ),
+            ],
           ),
         ),
     ];
@@ -511,31 +998,61 @@ class _CertRowState extends State<_CertRow> {
 
   Future<void> _verify() async {
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/edge/verify-certificate', {'cert_id': widget.certId}));
+    final res = await guarded(
+      context,
+      () => Api.post('/edge/verify-certificate', {'cert_id': widget.certId}),
+    );
     if (!mounted) return;
     setState(() {
       _busy = false;
-      if (res is Map) _ok = res['signature_valid'] == true && res['payload_hash_valid'] == true && res['tampered'] != true;
+      if (res is Map) {
+        _ok =
+            res['signature_valid'] == true &&
+            res['payload_hash_valid'] == true &&
+            res['tampered'] != true;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Row(children: [
-          Icon(Icons.verified_rounded, size: 20, color: Tone.green.fg(context)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(shortId(widget.certId, keep: 14), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'))),
-          if (_ok == null)
-            TextButton(onPressed: _busy ? null : _verify, child: Text(_busy ? '…' : t('যাচাই', 'Verify')))
-          else
-            Pill(_ok! ? t('সঠিক', 'Valid') : t('বদলানো', 'Tampered'), tone: _ok! ? Tone.green : Tone.rose),
-        ]),
-      );
+    padding: const EdgeInsets.only(top: 6),
+    child: Row(
+      children: [
+        Icon(Icons.verified_rounded, size: 20, color: Tone.green.fg(context)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            shortId(widget.certId, keep: 14),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+          ),
+        ),
+        if (_ok == null)
+          TextButton(
+            onPressed: _busy ? null : _verify,
+            child: Text(_busy ? '…' : t('যাচাই', 'Verify')),
+          )
+        else
+          Pill(
+            _ok! ? t('সঠিক', 'Valid') : t('বদলানো', 'Tampered'),
+            tone: _ok! ? Tone.green : Tone.rose,
+          ),
+      ],
+    ),
+  );
 }
 
 class BidTile extends StatelessWidget {
-  const BidTile({super.key, required this.bid, required this.lot, required this.highest, required this.mine, this.onAccept});
+  const BidTile({
+    super.key,
+    required this.bid,
+    required this.lot,
+    required this.highest,
+    required this.mine,
+    this.onAccept,
+  });
   final Bid bid;
   final Lot lot;
   final bool highest;
@@ -549,35 +1066,82 @@ class BidTile extends StatelessWidget {
     final closed = bid.status != 'ACTIVE';
     return AppCard(
       tone: highest ? Tone.green : null,
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              Text(bid.buyerName, style: theme.textTheme.titleSmall),
-              if (highest) Pill(t('সর্বোচ্চ', 'Highest'), tone: Tone.green),
-              if (mine) Pill(t('আপনি', 'You'), tone: Tone.violet),
-              if (closed) Pill(bid.status.toLowerCase(), tone: Tone.slate),
-            ]),
-            Text('${bid.buyerDistrict} · ${ago(bid.placedAt)}${bid.note.isNotEmpty ? ' · ${bid.note}' : ''}',
-                maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ]),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(perKg(bid.price), style: theme.textTheme.titleMedium?.copyWith(fontFeatures: tabular, color: closed ? theme.colorScheme.onSurfaceVariant : null)),
-          Text(money(bid.price * lot.kg), style: theme.textTheme.bodySmall?.copyWith(fontFeatures: tabular)),
-          if (below && !closed) Text(t('খরচের নিচে', 'below cost'), style: theme.textTheme.labelSmall?.copyWith(color: Tone.rose.fg(context))),
-        ]),
-        if (onAccept != null) ...[
-          const SizedBox(width: 8),
-          FilledButton(
-            onPressed: onAccept,
-            style: FilledButton.styleFrom(minimumSize: const Size(64, 44), padding: const EdgeInsets.symmetric(horizontal: 14)),
-            child: Text(t('গ্রহণ', 'Accept')),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(bid.buyerName, style: theme.textTheme.titleSmall),
+                        if (highest)
+                          Pill(t('সর্বোচ্চ', 'Highest'), tone: Tone.green),
+                        if (mine) Pill(t('আপনি', 'You'), tone: Tone.violet),
+                        if (closed)
+                          Pill(bid.status.toLowerCase(), tone: Tone.slate),
+                      ],
+                    ),
+                    Text(
+                      '${bid.buyerDistrict} · ${ago(bid.placedAt)}${bid.note.isNotEmpty ? ' · ${bid.note}' : ''}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    money(bid.price * lot.kg),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: tabular,
+                      color: closed ? theme.colorScheme.onSurfaceVariant : null,
+                    ),
+                  ),
+                  Text(
+                    perKg(bid.price),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontFeatures: tabular,
+                    ),
+                  ),
+                  if (below && !closed)
+                    Text(
+                      t('খরচের নিচে', 'below cost'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Tone.rose.fg(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
+          if (onAccept != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: onAccept,
+                icon: const Icon(Icons.check_rounded),
+                label: Text(t('এই দর গ্রহণ করুন', 'Accept this bid')),
+              ),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -612,17 +1176,57 @@ class _BidBarState extends State<BidBar> {
   Future<void> _place() async {
     final price = double.tryParse(_price.text.trim());
     if (price == null || price <= 0 || price > 500) {
-      snack(context, t('৳০ থেকে ৳৫০০-এর মধ্যে কেজিপ্রতি দাম লিখুন।', 'Enter a price per kg between Tk 0 and Tk 500.'), tone: Tone.amber);
+      snack(
+        context,
+        t(
+          '৳০ থেকে ৳৫০০-এর মধ্যে কেজিপ্রতি দাম লিখুন।',
+          'Enter a price per kg between Tk 0 and Tk 500.',
+        ),
+        tone: Tone.amber,
+      );
       return;
     }
+    final lot = widget.lot;
+    final rows = [
+      (t('কৃষক', 'Farmer'), lot.farmerName),
+      (t('দাম', 'Price'), perKg(price)),
+      (t('পরিমাণ', 'Quantity'), kg(lot.kg)),
+    ];
+    final ok = await _confirmSheet(
+      context,
+      title: t('দর নিশ্চিত করুন', 'Confirm your bid'),
+      amount: money(price * lot.kg),
+      caption: t('আপনার মোট দর', 'Your total bid'),
+      rows: [
+        ...rows,
+        (
+          t('টাকা', 'Payment'),
+          t(
+            'কৃষক গ্রহণ করলে ব্যাংকের এসক্রোতে যাবে',
+            'Goes to bank escrow only if the farmer accepts',
+          ),
+        ),
+      ],
+      action: t('দর দিন', 'Place the bid'),
+      icon: Icons.gavel_rounded,
+    );
+    if (!ok || !mounted) return;
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/market/lots/${widget.lot.id}/bids', {'price_tk_per_kg': price}),
-        done: t('আপনার দর দেওয়া হয়েছে', 'Your bid is in'));
+    final res = await guarded(
+      context,
+      () => Api.post('/market/lots/${lot.id}/bids', {'price_tk_per_kg': price}),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (res != null) {
       HapticFeedback.mediumImpact();
       widget.onPlaced(res);
+      await _receiptSheet(
+        context,
+        title: t('আপনার দর দেওয়া হয়েছে', 'Your bid is in'),
+        amount: money(price * lot.kg),
+        rows: rows,
+      );
     }
   }
 
@@ -630,7 +1234,9 @@ class _BidBarState extends State<BidBar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lot = widget.lot;
-    final mine = lot.activeBids.where((b) => b.buyerId == app.user!.id).firstOrNull;
+    final mine = lot.activeBids
+        .where((b) => b.buyerId == app.user!.id)
+        .firstOrNull;
     final leading = mine != null && lot.best?.id == mine.id;
     final price = double.tryParse(_price.text) ?? 0;
     return Material(
@@ -639,54 +1245,106 @@ class _BidBarState extends State<BidBar> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.viewInsetsOf(context).bottom),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              Expanded(
-                child: Text(
-                  mine == null
-                      ? t('সর্বোচ্চ ${lot.best == null ? '–' : perKg(lot.best!.price)}', 'Highest ${lot.best == null ? '–' : perKg(lot.best!.price)}')
-                      : leading
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            12 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      mine == null
+                          ? t(
+                              'সর্বোচ্চ ${lot.best == null ? '–' : perKg(lot.best!.price)}',
+                              'Highest ${lot.best == null ? '–' : perKg(lot.best!.price)}',
+                            )
+                          : leading
                           ? t('আপনার দর সবার উপরে', 'Your bid leads')
-                          : t('আপনাকে ছাড়িয়ে গেছে, দর বাড়ান', 'You were outbid; raise your bid'),
-                  style: theme.textTheme.titleSmall?.copyWith(color: mine == null ? null : (leading ? Tone.green.fg(context) : Tone.rose.fg(context))),
-                ),
-              ),
-              Text('= ${money(price * lot.kg)}', style: theme.textTheme.titleSmall?.copyWith(fontFeatures: tabular)),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              for (final raise in [0.25, 0.5, 1.0]) ...[
-                if (raise != 0.25) const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44), padding: EdgeInsets.zero),
-                    onPressed: () => setState(() => _price.text = _suggest(raise)),
-                    child: Text('+${digits(raise.toStringAsFixed(2))}'),
+                          : t(
+                              'আপনাকে ছাড়িয়ে গেছে, দর বাড়ান',
+                              'You were outbid; raise your bid',
+                            ),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: mine == null
+                            ? null
+                            : (leading
+                                  ? Tone.green.fg(context)
+                                  : Tone.rose.fg(context)),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _price,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                  onChanged: (_) => setState(() {}),
-                  style: theme.textTheme.titleMedium?.copyWith(fontFeatures: tabular),
-                  decoration: InputDecoration(prefixText: '৳ ', suffixText: '/${t('কেজি', 'kg')}'),
-                ),
+                  AmountText(money(price * lot.kg), size: 24),
+                ],
               ),
-              const SizedBox(width: 10),
-              FilledButton.icon(
-                onPressed: _busy ? null : _place,
-                icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.gavel_rounded),
-                label: Text(mine == null ? t('দর দিন', 'Bid') : t('বাড়ান', 'Raise')),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  for (final raise in [0.25, 0.5, 1.0]) ...[
+                    if (raise != 0.25) const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: () =>
+                            setState(() => _price.text = _suggest(raise)),
+                        child: Text('+${digits(raise.toStringAsFixed(2))}'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ]),
-          ]),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _price,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                      ],
+                      onChanged: (_) => setState(() {}),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFeatures: tabular,
+                      ),
+                      decoration: InputDecoration(
+                        prefixText: '৳ ',
+                        suffixText: '/${t('কেজি', 'kg')}',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 56,
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : _place,
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.gavel_rounded),
+                      label: Text(
+                        mine == null
+                            ? t('দর দিন', 'Bid')
+                            : t('বাড়ান', 'Raise'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -706,7 +1364,9 @@ class AcceptSheet extends StatefulWidget {
 class _AcceptSheetState extends State<AcceptSheet> {
   // A signed-up account is paid only to the wallet it registered (the node refuses any other).
   final _kyc = app.user?.kyc;
-  late String _wallet = walletProviders.contains(_kyc?.walletProvider) ? _kyc!.walletProvider : 'bKash';
+  late String _wallet = walletProviders.contains(_kyc?.walletProvider)
+      ? _kyc!.walletProvider
+      : 'bKash';
   final _number = TextEditingController();
   bool _belowOk = false;
   bool _busy = false;
@@ -724,12 +1384,15 @@ class _AcceptSheetState extends State<AcceptSheet> {
 
   Future<void> _confirm() async {
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/market/lots/${widget.lot.id}/accept', {
-          'bid_id': widget.bid.id,
-          'wallet': _wallet,
-          'wallet_number': _ascii,
-          'accept_below_floor': _belowOk,
-        }));
+    final res = await guarded(
+      context,
+      () => Api.post('/market/lots/${widget.lot.id}/accept', {
+        'bid_id': widget.bid.id,
+        'wallet': _wallet,
+        'wallet_number': _ascii,
+        'accept_below_floor': _belowOk,
+      }),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (res != null) Navigator.pop(context, res);
@@ -742,77 +1405,139 @@ class _AcceptSheetState extends State<AcceptSheet> {
     final bid = widget.bid;
     final below = bid.price < lot.floor;
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(t('${bid.buyerName}-এর দর গ্রহণ', 'Accept ${bid.buyerName}\'s bid'), style: theme.textTheme.titleLarge),
-          const SizedBox(height: 12),
-          AppCard(
-            tone: Tone.green,
-            child: Column(children: [
-              InfoRow(t('দাম', 'Price'), perKg(bid.price)),
-              InfoRow(t('পরিমাণ', 'Quantity'), kg(lot.kg)),
-              InfoRow(t('মোট', 'Total'), money(bid.price * lot.kg), strong: true),
-            ]),
-          ),
-          if (below) ...[
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t(
+                '${bid.buyerName}-এর দর গ্রহণ',
+                'Accept ${bid.buyerName}\'s bid',
+              ),
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             AppCard(
-              tone: Tone.rose,
-              padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
-              child: CheckboxListTile(
-                value: _belowOk,
-                onChanged: (v) => setState(() => _belowOk = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                title: Text(t('দামটি উৎপাদন খরচের (${perKg(lot.floor)}) নিচে। জেনেশুনে বিক্রি করছি।',
-                    'This is below the ${perKg(lot.floor)} production cost. I am selling knowingly.')),
+              tone: Tone.green,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AmountText(
+                    money(bid.price * lot.kg),
+                    caption: t('আপনি পাবেন', 'You receive'),
+                  ),
+                  const SizedBox(height: 8),
+                  InfoRow(t('ক্রেতা', 'Buyer'), bid.buyerName),
+                  InfoRow(t('দাম', 'Price'), perKg(bid.price)),
+                  InfoRow(t('পরিমাণ', 'Quantity'), kg(lot.kg)),
+                ],
+              ),
+            ),
+            if (below) ...[
+              const SizedBox(height: 12),
+              AppCard(
+                tone: Tone.rose,
+                padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+                child: CheckboxListTile(
+                  value: _belowOk,
+                  onChanged: (v) => setState(() => _belowOk = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    t(
+                      'দামটি উৎপাদন খরচের (${perKg(lot.floor)}) নিচে। জেনেশুনে বিক্রি করছি।',
+                      'This is below the ${perKg(lot.floor)} production cost. I am selling knowingly.',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              t(
+                'টাকা কোন ওয়ালেটে আসবে?',
+                'Which wallet should receive the money?',
+              ),
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: [
+                for (final w in walletProviders)
+                  ButtonSegment(value: w, label: Text(w)),
+              ],
+              selected: {_wallet},
+              onSelectionChanged: (s) => setState(() => _wallet = s.first),
+            ),
+            if (_kyc != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                t(
+                  'টাকা যাবে শুধু এই অ্যাকাউন্টে নিবন্ধিত ওয়ালেটে: ${_kyc.walletProvider} ${digits(_kyc.walletMasked)}। সেই নম্বরটি পুরো লিখুন।',
+                  'Payouts go only to the wallet registered with this account: ${_kyc.walletProvider} ${_kyc.walletMasked}. Type that number in full.',
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Tone.violet.fg(context),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _number,
+              keyboardType: TextInputType.phone,
+              maxLength: 11,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: t('ওয়ালেট নম্বর', 'Wallet number'),
+                hintText: '01XXXXXXXXX',
+                helperText: t(
+                  'নম্বরের শুধু শেষ অংশ সংরক্ষিত থাকে।',
+                  'Only a masked form of the number is stored.',
+                ),
+                errorText: _number.text.isNotEmpty && !_valid
+                    ? t(
+                        '০১ দিয়ে শুরু ১১ সংখ্যার নম্বর দিন',
+                        'Enter an 11-digit number starting 01',
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              t(
+                'ক্রেতার টাকা ব্যাংকের এসক্রোতে আটকে থাকবে, মাল পৌঁছালে আপনার ওয়ালেটে যাবে (ডেমোতে কোনো আসল টাকা নড়ে না)।',
+                'The buyer\'s money is held in escrow by the bank and paid to your wallet on delivery (simulated: no real money moves).',
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: _busy || !_valid || (below && !_belowOk)
+                    ? null
+                    : _confirm,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.lock_rounded),
+                label: Text(t('বিক্রি নিশ্চিত করুন', 'Confirm the sale')),
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          Text(t('টাকা কোন ওয়ালেটে আসবে?', 'Which wallet should receive the money?'), style: theme.textTheme.titleSmall),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            showSelectedIcon: false,
-            segments: [for (final w in walletProviders) ButtonSegment(value: w, label: Text(w))],
-            selected: {_wallet},
-            onSelectionChanged: (s) => setState(() => _wallet = s.first),
-          ),
-          if (_kyc != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              t('টাকা যাবে শুধু এই অ্যাকাউন্টে নিবন্ধিত ওয়ালেটে: ${_kyc.walletProvider} ${digits(_kyc.walletMasked)}। সেই নম্বরটি পুরো লিখুন।',
-                  'Payouts go only to the wallet registered with this account: ${_kyc.walletProvider} ${_kyc.walletMasked}. Type that number in full.'),
-              style: theme.textTheme.bodySmall?.copyWith(color: Tone.violet.fg(context)),
-            ),
-          ],
-          const SizedBox(height: 12),
-          TextField(
-            controller: _number,
-            keyboardType: TextInputType.phone,
-            maxLength: 11,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: t('ওয়ালেট নম্বর', 'Wallet number'),
-              hintText: '01XXXXXXXXX',
-              helperText: t('নম্বরের শুধু শেষ অংশ সংরক্ষিত থাকে।', 'Only a masked form of the number is stored.'),
-              errorText: _number.text.isNotEmpty && !_valid ? t('০১ দিয়ে শুরু ১১ সংখ্যার নম্বর দিন', 'Enter an 11-digit number starting 01') : null,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            t('ক্রেতার টাকা ব্যাংকের এসক্রোতে আটকে থাকবে, মাল পৌঁছালে আপনার ওয়ালেটে যাবে (ডেমোতে কোনো আসল টাকা নড়ে না)।',
-                'The buyer\'s money is held in escrow by the bank and paid to your wallet on delivery (simulated: no real money moves).'),
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _busy || !_valid || (below && !_belowOk) ? null : _confirm,
-            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded),
-            label: Text(t('বিক্রি নিশ্চিত করুন', 'Confirm the sale')),
-          ),
-        ]),
+        ),
       ),
     );
   }
@@ -826,21 +1551,38 @@ class EscrowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = lot.escrow!;
     final theme = Theme.of(context);
-    final tone = switch (e.status) { 'RELEASED' => Tone.green, 'REFUNDED' => Tone.rose, _ => Tone.violet };
+    final tone = switch (e.status) {
+      'RELEASED' => Tone.green,
+      'REFUNDED' => Tone.rose,
+      _ => Tone.sky,
+    };
+    final icon = switch (e.status) {
+      'RELEASED' => Icons.check_circle_rounded,
+      'REFUNDED' => Icons.undo_rounded,
+      _ => Icons.lock_rounded,
+    };
     return AppCard(
       tone: tone,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(Icons.account_balance_wallet_rounded, color: tone.fg(context)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(escrowStatus(e.status), style: theme.textTheme.titleSmall)),
-          CountUp(value: e.amount, format: (v) => money(v), style: theme.textTheme.titleLarge?.copyWith(color: tone.fg(context))),
-        ]),
-        const SizedBox(height: 6),
-        InfoRow(t('ক্রেতা', 'Buyer'), lot.acceptedBid?.buyerName ?? '–'),
-        InfoRow(t('ওয়ালেট', 'Wallet'), '${e.wallet} ${e.walletMasked}'),
-        InfoRow(t('এসক্রো', 'Escrow'), e.id, mono: true),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Pill(escrowStatus(e.status), tone: tone, icon: icon),
+          const SizedBox(height: 8),
+          CountUp(
+            value: e.amount,
+            format: (v) => money(v),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              color: tone.fg(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          InfoRow(t('ক্রেতা', 'Buyer'), lot.acceptedBid?.buyerName ?? '–'),
+          InfoRow(t('ওয়ালেট', 'Wallet'), '${e.wallet} ${e.walletMasked}'),
+          InfoRow(t('এসক্রো', 'Escrow'), e.id, mono: true),
+        ],
+      ),
     );
   }
 }
@@ -855,26 +1597,58 @@ class DeliveryCard extends StatelessWidget {
     final theme = Theme.of(context);
     return AppCard(
       tone: d.atRisk ? Tone.rose : null,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(Icons.local_shipping_rounded, color: (d.atRisk ? Tone.rose : Tone.sky).fg(context)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(deliveryStatus(d.status), style: theme.textTheme.titleSmall)),
-          if (d.atRisk) Pill(t('পচনের ঝুঁকি', 'Spoilage risk'), tone: Tone.rose, icon: Icons.warning_rounded),
-        ]),
-        if (d.status == 'ASSIGNED' || d.status == 'PICKED_UP') ...[
-          const SizedBox(height: 12),
-          RouteLine(delivery: d, height: 56),
-          const SizedBox(height: 10),
-          if (truckLine(d) case final line?) TruckLine(text: line),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.local_shipping_rounded,
+                color: (d.atRisk ? Tone.rose : Tone.sky).fg(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  deliveryStatus(d.status),
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              if (d.atRisk)
+                Pill(
+                  t('পচনের ঝুঁকি', 'Spoilage risk'),
+                  tone: Tone.rose,
+                  icon: Icons.warning_rounded,
+                ),
+            ],
+          ),
+          if (d.status == 'ASSIGNED' || d.status == 'PICKED_UP') ...[
+            const SizedBox(height: 12),
+            RouteLine(delivery: d, height: 56),
+            const SizedBox(height: 10),
+            if (truckLine(d) case final line?) TruckLine(text: line),
+          ],
+          const SizedBox(height: 6),
+          InfoRow(
+            t('পথ', 'Route'),
+            '${d.origin} → ${d.destination} · ${num1(d.km, decimals: 1)} ${t('কিমি', 'km')}',
+          ),
+          InfoRow(
+            t('সময়', 'Drive time'),
+            '${num1(d.etaHours, decimals: 1)} ${t('ঘণ্টা', 'h')}',
+          ),
+          if (d.driverName != null) InfoRow(t('চালক', 'Driver'), d.driverName!),
+          if (d.lastTemp != null)
+            InfoRow(
+              t('তাপমাত্রা', 'Temperature'),
+              '${num1(d.lastTemp!, decimals: 1)}°C · ${pct(d.lastRh, decimals: 0)} RH',
+            ),
+          if (d.shelfLifeHours != null)
+            InfoRow(
+              t('টেকসই থাকবে', 'Shelf life left'),
+              '${num1(d.shelfLifeHours!, decimals: 0)} ${t('ঘণ্টা', 'h')}',
+            ),
         ],
-        const SizedBox(height: 6),
-        InfoRow(t('পথ', 'Route'), '${d.origin} → ${d.destination} · ${num1(d.km, decimals: 1)} ${t('কিমি', 'km')}'),
-        InfoRow(t('সময়', 'Drive time'), '${num1(d.etaHours, decimals: 1)} ${t('ঘণ্টা', 'h')}'),
-        if (d.driverName != null) InfoRow(t('চালক', 'Driver'), d.driverName!),
-        if (d.lastTemp != null) InfoRow(t('তাপমাত্রা', 'Temperature'), '${num1(d.lastTemp!, decimals: 1)}°C · ${pct(d.lastRh, decimals: 0)} RH'),
-        if (d.shelfLifeHours != null) InfoRow(t('টেকসই থাকবে', 'Shelf life left'), '${num1(d.shelfLifeHours!, decimals: 0)} ${t('ঘণ্টা', 'h')}'),
-      ]),
+      ),
     );
   }
 }
@@ -882,12 +1656,18 @@ class DeliveryCard extends StatelessWidget {
 /// "Truck is 42 km from Dhaka · ETA 1 h 10 min · updated 2 min ago", from the driver's last shared position on the road.
 String? truckLine(Delivery d) {
   final left = d.kmLeft;
-  if (left == null || !(d.status == 'ASSIGNED' || d.status == 'PICKED_UP')) return null;
+  if (left == null || !(d.status == 'ASSIGNED' || d.status == 'PICKED_UP')) {
+    return null;
+  }
   final eta = d.etaLeft;
   return [
-    t('ট্রাক ${d.destination} থেকে ${num1(left)} কিমি দূরে', 'Truck is ${num1(left)} km from ${d.destination}'),
+    t(
+      'ট্রাক ${d.destination} থেকে ${num1(left)} কিমি দূরে',
+      'Truck is ${num1(left)} km from ${d.destination}',
+    ),
     if (eta != null) t('পৌঁছাতে ${hoursText(eta)}', 'ETA ${hoursText(eta)}'),
-    if (d.positionAt.isNotEmpty) t('আপডেট ${ago(d.positionAt)}', 'updated ${ago(d.positionAt)}'),
+    if (d.positionAt.isNotEmpty)
+      t('আপডেট ${ago(d.positionAt)}', 'updated ${ago(d.positionAt)}'),
   ].join(' · ');
 }
 
@@ -896,13 +1676,29 @@ class TruckLine extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(padding: const EdgeInsets.only(top: 2), child: Icon(Icons.near_me_rounded, size: 16, color: Tone.sky.fg(context))),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Tone.sky.fg(context), fontWeight: FontWeight.w600)),
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Icon(
+          Icons.near_me_rounded,
+          size: 16,
+          color: Tone.sky.fg(context),
         ),
-      ]);
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Tone.sky.fg(context),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class DisputeTile extends StatelessWidget {
@@ -917,22 +1713,46 @@ class DisputeTile extends StatelessWidget {
     final open = d.status == 'OPEN';
     return AppCard(
       tone: open ? Tone.amber : null,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(disputeKind(d.kind), style: theme.textTheme.titleSmall)),
-          Pill(open ? t('খোলা', 'Open') : t('মীমাংসিত', 'Resolved'), tone: open ? Tone.amber : Tone.green),
-        ]),
-        const SizedBox(height: 4),
-        Text('${d.raisedByName} (${roleName(d.raisedByRole)}) · ${ago(d.openedAt)}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        if (d.note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(d.note, style: theme.textTheme.bodyMedium)),
-        if (d.resolution != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text('${t('সিদ্ধান্ত', 'Decision')}: ${resolutionName(d.resolution!)}${d.resolutionNote.isNotEmpty ? ' · ${d.resolutionNote}' : ''}',
-                style: theme.textTheme.bodySmall),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  disputeKind(d.kind),
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Pill(
+                open ? t('খোলা', 'Open') : t('মীমাংসিত', 'Resolved'),
+                tone: open ? Tone.amber : Tone.green,
+              ),
+            ],
           ),
-        ?trailing,
-      ]),
+          const SizedBox(height: 4),
+          Text(
+            '${d.raisedByName} (${roleName(d.raisedByRole)}) · ${ago(d.openedAt)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (d.note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(d.note, style: theme.textTheme.bodyMedium),
+            ),
+          if (d.resolution != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '${t('সিদ্ধান্ত', 'Decision')}: ${resolutionName(d.resolution!)}${d.resolutionNote.isNotEmpty ? ' · ${d.resolutionNote}' : ''}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ?trailing,
+        ],
+      ),
     );
   }
 }
@@ -959,7 +1779,13 @@ class _DisputeSheetState extends State<DisputeSheet> {
 
   Future<void> _send() async {
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/market/lots/${widget.lotId}/disputes', {'kind': _kind, 'note': _note.text.trim()}));
+    final res = await guarded(
+      context,
+      () => Api.post('/market/lots/${widget.lotId}/disputes', {
+        'kind': _kind,
+        'note': _note.text.trim(),
+      }),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (res != null) Navigator.pop(context, res);
@@ -967,27 +1793,56 @@ class _DisputeSheetState extends State<DisputeSheet> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(t('কী সমস্যা হয়েছে?', 'What went wrong?'), style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final k in disputeKinds) ChoiceChip(label: Text(disputeKind(k)), selected: _kind == k, onSelected: (_) => setState(() => _kind = k)),
-          ]),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _note,
-            maxLength: 300,
-            maxLines: 3,
-            decoration: InputDecoration(hintText: t('একটু খুলে বলুন (নাম-নম্বর লুকিয়ে রাখা হবে)', 'Tell the bank a little more (names and numbers are hidden)')),
+    padding: EdgeInsets.fromLTRB(
+      20,
+      0,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t('কী সমস্যা হয়েছে?', 'What went wrong?'),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final k in disputeKinds)
+              ChoiceChip(
+                label: Text(disputeKind(k)),
+                selected: _kind == k,
+                onSelected: (_) => setState(() => _kind = k),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _note,
+          maxLength: 300,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: t(
+              'একটু খুলে বলুন (নাম-নম্বর লুকিয়ে রাখা হবে)',
+              'Tell the bank a little more (names and numbers are hidden)',
+            ),
           ),
-          FilledButton.icon(
+        ),
+        SizedBox(
+          height: 56,
+          child: FilledButton.icon(
             onPressed: _busy ? null : _send,
             icon: const Icon(Icons.send_rounded),
             label: Text(t('ব্যাংকে পাঠান', 'Send to the bank')),
           ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }
 
 /// List a lot on the direct market; a grade or a decision may have filled it in.
@@ -1000,11 +1855,19 @@ class SellSheet extends StatefulWidget {
 }
 
 class _SellSheetState extends State<SellSheet> {
-  late String _crop = marketCrops.contains(widget.draft?['crop']) ? widget.draft!['crop'] as String : marketCrops.first;
-  late String _grade = ['A', 'B', 'C'].contains(widget.draft?['grade']) ? widget.draft!['grade'] as String : 'B';
+  late String _crop = marketCrops.contains(widget.draft?['crop'])
+      ? widget.draft!['crop'] as String
+      : marketCrops.first;
+  late String _grade = ['A', 'B', 'C'].contains(widget.draft?['grade'])
+      ? widget.draft!['grade'] as String
+      : 'B';
   late String? _cert = widget.draft?['certificate_id'] as String?;
   String _unit = 'kg';
-  late final _qty = TextEditingController(text: numOf(widget.draft?['weight_kg']) > 0 ? numOf(widget.draft?['weight_kg']).toStringAsFixed(0) : '');
+  late final _qty = TextEditingController(
+    text: numOf(widget.draft?['weight_kg']) > 0
+        ? numOf(widget.draft?['weight_kg']).toStringAsFixed(0)
+        : '',
+  );
   final _price = TextEditingController();
   final _note = TextEditingController();
   bool _busy = false;
@@ -1017,22 +1880,53 @@ class _SellSheetState extends State<SellSheet> {
     super.dispose();
   }
 
-  double get _kg => (double.tryParse(_qty.text) ?? 0) * (_unit == 'maund' ? 40 : 1);
+  double get _kg =>
+      (double.tryParse(_qty.text) ?? 0) * (_unit == 'maund' ? 40 : 1);
 
   Future<void> _list() async {
     final user = app.user!;
     final price = double.tryParse(_price.text);
+    final asking = price != null && price > 0 ? price : null;
+    final ok = await _confirmSheet(
+      context,
+      title: t('বাজারে দেওয়ার আগে দেখে নিন', 'Check before listing'),
+      amount: asking != null ? money(asking * _kg) : kg(_kg),
+      caption: asking != null
+          ? t('চাওয়া মোট দাম', 'Asking, total')
+          : t('পরিমাণ', 'Quantity'),
+      rows: [
+        (
+          t('ফসল', 'Crop'),
+          '${cropName(_crop)} · ${t('গ্রেড', 'Grade')} $_grade',
+        ),
+        (t('পরিমাণ', 'Quantity'), kg(_kg)),
+        if (asking != null) (t('দাম', 'Price'), perKg(asking)),
+        (
+          t('টাকা', 'Payment'),
+          t('আপনি কোনো দর গ্রহণ করলে তবেই', 'Only after you accept a bid'),
+        ),
+      ],
+      action: t('বাজারে দিন', 'List it'),
+      icon: Icons.storefront_rounded,
+    );
+    if (!ok || !mounted) return;
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/market/lots', {
-          'crop': _crop,
-          'grade': _grade,
-          'weight_kg': _kg,
-          'district': (widget.draft?['district'] as String?)?.isNotEmpty == true ? widget.draft!['district'] : (user.district.isEmpty ? 'Bogura' : user.district),
-          if ((widget.draft?['upazila'] as String?)?.isNotEmpty == true) 'upazila': widget.draft!['upazila'],
-          if (price != null && price > 0) 'asking_price_tk_per_kg': price,
-          'certificate_id': ?_cert,
-          if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
-        }));
+    final res = await guarded(
+      context,
+      () => Api.post('/market/lots', {
+        'crop': _crop,
+        'grade': _grade,
+        'weight_kg': _kg,
+        'district': (widget.draft?['district'] as String?)?.isNotEmpty == true
+            ? widget.draft!['district']
+            : (user.district.isEmpty ? 'Bogura' : user.district),
+        if ((widget.draft?['upazila'] as String?)?.isNotEmpty == true)
+          'upazila': widget.draft!['upazila'],
+        if (price != null && price > 0) 'asking_price_tk_per_kg': price,
+        'certificate_id': ?_cert,
+        if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
+      }),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (res is Map) {
@@ -1046,86 +1940,161 @@ class _SellSheetState extends State<SellSheet> {
     final theme = Theme.of(context);
     final valid = _kg >= 50 && _kg <= 20000;
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(t('নতুন লট দিন', 'List a lot'), style: theme.textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(t('ক্রেতারা খোলাখুলি দর দেবেন; আপনি যেটা চান সেটা গ্রহণ করবেন।', 'Buyers bid in the open; you accept the one you want.'),
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 14),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final c in marketCrops)
-              ChoiceChip(
-                label: Text(cropName(c)),
-                selected: _crop == c,
-                onSelected: (_) => setState(() {
-                  _crop = c;
-                  _cert = null; // a certificate belongs to one crop
-                }),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t('নতুন লট দিন', 'List a lot'),
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              t(
+                'ক্রেতারা খোলাখুলি দর দেবেন; আপনি যেটা চান সেটা গ্রহণ করবেন।',
+                'Buyers bid in the open; you accept the one you want.',
               ),
-          ]),
-          const SizedBox(height: 14),
-          Row(children: [
-            Text(t('গ্রেড', 'Grade'), style: theme.textTheme.titleSmall),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SegmentedButton<String>(
-                segments: const [ButtonSegment(value: 'A', label: Text('A')), ButtonSegment(value: 'B', label: Text('B')), ButtonSegment(value: 'C', label: Text('C'))],
-                selected: {_grade},
-                onSelectionChanged: _cert == null ? (s) => setState(() => _grade = s.first) : null,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ]),
-          if (_cert != null) ...[
-            const SizedBox(height: 10),
-            InputChip(
-              avatar: const Icon(Icons.verified_rounded, size: 18),
-              label: Text(t('সনদ যুক্ত: ${shortId(_cert!, keep: 12)}', 'Certificate attached: ${shortId(_cert!, keep: 12)}')),
-              onDeleted: () => setState(() => _cert = null),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in marketCrops)
+                  ChoiceChip(
+                    label: Text(cropName(c)),
+                    selected: _crop == c,
+                    onSelected: (_) => setState(() {
+                      _crop = c;
+                      _cert = null; // a certificate belongs to one crop
+                    }),
+                  ),
+              ],
             ),
-          ],
-          const SizedBox(height: 14),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _qty,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: t('পরিমাণ', 'Quantity'),
-                  helperText: _unit == 'maund' && _kg > 0 ? '= ${kg(_kg)}' : t('কমপক্ষে ৫০ কেজি', 'At least 50 kg'),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(t('গ্রেড', 'Grade'), style: theme.textTheme.titleSmall),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'A', label: Text('A')),
+                      ButtonSegment(value: 'B', label: Text('B')),
+                      ButtonSegment(value: 'C', label: Text('C')),
+                    ],
+                    selected: {_grade},
+                    onSelectionChanged: _cert == null
+                        ? (s) => setState(() => _grade = s.first)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            if (_cert != null) ...[
+              const SizedBox(height: 10),
+              InputChip(
+                avatar: const Icon(Icons.verified_rounded, size: 18),
+                label: Text(
+                  t(
+                    'সনদ যুক্ত: ${shortId(_cert!, keep: 12)}',
+                    'Certificate attached: ${shortId(_cert!, keep: 12)}',
+                  ),
+                ),
+                onDeleted: () => setState(() => _cert = null),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _qty,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: t('পরিমাণ', 'Quantity'),
+                      helperText: _unit == 'maund' && _kg > 0
+                          ? '= ${kg(_kg)}'
+                          : t('কমপক্ষে ৫০ কেজি', 'At least 50 kg'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(value: 'kg', label: Text(t('কেজি', 'kg'))),
+                    ButtonSegment(
+                      value: 'maund',
+                      label: Text(t('মণ', 'maund')),
+                    ),
+                  ],
+                  selected: {_unit},
+                  onSelectionChanged: (s) => setState(() => _unit = s.first),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _price,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              decoration: InputDecoration(
+                labelText: t('চাওয়া দাম (ঐচ্ছিক)', 'Asking price (optional)'),
+                prefixText: '৳ ',
+                suffixText: '/${t('কেজি', 'kg')}',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _note,
+              maxLength: 200,
+              decoration: InputDecoration(
+                labelText: t('নোট (ঐচ্ছিক)', 'Note (optional)'),
+                hintText: t(
+                  'যেমন: বস্তায় ভরা, শনিবার পর্যন্ত',
+                  'e.g. bagged, ready until Saturday',
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: [ButtonSegment(value: 'kg', label: Text(t('কেজি', 'kg'))), ButtonSegment(value: 'maund', label: Text(t('মণ', 'maund')))],
-              selected: {_unit},
-              onSelectionChanged: (s) => setState(() => _unit = s.first),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: _busy || !valid ? null : _list,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.storefront_rounded),
+                label: Text(
+                  valid
+                      ? t('${kg(_kg)} বাজারে দিন', 'List ${kg(_kg)}')
+                      : t('বাজারে দিন', 'List it'),
+                ),
+              ),
             ),
-          ]),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _price,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-            decoration: InputDecoration(labelText: t('চাওয়া দাম (ঐচ্ছিক)', 'Asking price (optional)'), prefixText: '৳ ', suffixText: '/${t('কেজি', 'kg')}'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _note,
-            maxLength: 200,
-            decoration: InputDecoration(labelText: t('নোট (ঐচ্ছিক)', 'Note (optional)'), hintText: t('যেমন: বস্তায় ভরা, শনিবার পর্যন্ত', 'e.g. bagged, ready until Saturday')),
-          ),
-          FilledButton.icon(
-            onPressed: _busy || !valid ? null : _list,
-            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.storefront_rounded),
-            label: Text(valid ? t('${kg(_kg)} বাজারে দিন', 'List ${kg(_kg)}') : t('বাজারে দিন', 'List it')),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -1139,7 +2108,8 @@ class PurchasesScreen extends StatefulWidget {
   State<PurchasesScreen> createState() => _PurchasesScreenState();
 }
 
-class _PurchasesScreenState extends State<PurchasesScreen> with Polling<PurchasesScreen, List<Lot>> {
+class _PurchasesScreenState extends State<PurchasesScreen>
+    with Polling<PurchasesScreen, List<Lot>> {
   @override
   Future<List<Lot>> load() => fetchLots();
 
@@ -1148,32 +2118,86 @@ class _PurchasesScreenState extends State<PurchasesScreen> with Polling<Purchase
     final me = app.user!.id;
     final lots = data ?? const <Lot>[];
     final won = lots.where((l) => l.acceptedBid?.buyerId == me).toList();
-    final bidding = lots.where((l) => l.status == 'OPEN' && l.activeBids.any((b) => b.buyerId == me)).toList();
+    final bidding = lots
+        .where(
+          (l) => l.status == 'OPEN' && l.activeBids.any((b) => b.buyerId == me),
+        )
+        .toList();
     Future<void> open(Lot lot) async {
-      await Navigator.of(context).push(fadeRoute(LotScreen(lotId: lot.id, initial: lot)));
+      await Navigator.of(
+        context,
+      ).push(fadeRoute(LotScreen(lotId: lot.id, initial: lot)));
       refresh(quiet: true);
     }
 
+    final held = won.fold<double>(
+      0,
+      (s, l) => s + (l.escrow?.status == 'HELD' ? l.escrow!.amount : 0),
+    );
     return Scaffold(
-      appBar: AppBar(title: Text(t('আমার কেনা', 'My purchases')), actions: const [LiveDot()]),
-      body: RefreshIndicator(
-        onRefresh: refresh,
-        child: loading && data == null
-            ? const SkeletonList()
-            : error != null && data == null
-                ? ListView(children: [ErrorState(error: error!, onRetry: refresh)])
-                : ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
-                    SectionTitle(t('কেনা লট', 'Won lots'), top: 8),
-                    if (won.isEmpty)
-                      AppCard(child: Text(t('এখনো কোনো লট জেতেননি। কৃষক আপনার দর গ্রহণ করলে এখানে আসবে।', 'No lots won yet. A lot appears here when a farmer accepts your bid.')))
-                    else
-                      for (final l in won) ...[_PurchaseCard(lot: l, onTap: () => open(l)), const SizedBox(height: 12)],
-                    SectionTitle(t('যেখানে দর দিয়েছেন', 'Bidding on')),
-                    if (bidding.isEmpty)
-                      AppCard(child: Text(t('কোনো খোলা দর নেই।', 'No open bids.')))
-                    else
-                      for (final l in bidding) ...[LotCard(lot: l, onTap: () => open(l)), const SizedBox(height: 12)],
-                  ]),
+      body: Column(
+        children: [
+          HeaderBand(
+            title: t('আমার কেনা', 'My purchases'),
+            trailing: _liveBadge(),
+            child: data == null
+                ? null
+                : held > 0
+                ? AmountText(
+                    money(held),
+                    color: Colors.white,
+                    caption: t('এসক্রোতে আপনার টাকা', 'Your money in escrow'),
+                  )
+                : AmountText(
+                    digits(won.length),
+                    color: Colors.white,
+                    caption: t('জেতা লট', 'Lots won'),
+                  ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: refresh,
+              child: loading && data == null
+                  ? const SkeletonList()
+                  : error != null && data == null
+                  ? ListView(
+                      children: [ErrorState(error: error!, onRetry: refresh)],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      children: [
+                        SectionTitle(t('কেনা লট', 'Won lots'), top: 8),
+                        if (won.isEmpty)
+                          AppCard(
+                            child: Text(
+                              t(
+                                'এখনো কোনো লট জেতেননি। কৃষক আপনার দর গ্রহণ করলে এখানে আসবে।',
+                                'No lots won yet. A lot appears here when a farmer accepts your bid.',
+                              ),
+                            ),
+                          )
+                        else
+                          for (final l in won) ...[
+                            _PurchaseCard(lot: l, onTap: () => open(l)),
+                            const SizedBox(height: 12),
+                          ],
+                        SectionTitle(t('যেখানে দর দিয়েছেন', 'Bidding on')),
+                        if (bidding.isEmpty)
+                          AppCard(
+                            child: Text(
+                              t('কোনো খোলা দর নেই।', 'No open bids.'),
+                            ),
+                          )
+                        else
+                          for (final l in bidding) ...[
+                            LotCard(lot: l, onTap: () => open(l)),
+                            const SizedBox(height: 12),
+                          ],
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1187,22 +2211,81 @@ class _PurchaseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final e = lot.escrow;
+    final bid = lot.acceptedBid;
+    final amount = e?.amount ?? (bid == null ? null : bid.price * lot.kg);
+    final eTone = switch (e?.status) {
+      'RELEASED' => Tone.green,
+      'REFUNDED' => Tone.rose,
+      _ => Tone.sky,
+    };
     return AppCard(
       onTap: onTap,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text('${cropName(lot.crop)} · ${kg(lot.kg)} · ${lot.farmerName}', style: theme.textTheme.titleSmall)),
-          Pill(lotStatus(lot.status), tone: lotTone(lot.status)),
-        ]),
-        const SizedBox(height: 12),
-        RouteSteps(steps: [t('তালিকা', 'Listed'), t('বিক্রি', 'Sold'), t('পথে', 'On the road'), t('পৌঁছেছে', 'Delivered')], current: lotStage(lot)),
-        if (lot.delivery != null && truckLine(lot.delivery!) != null) ...[const SizedBox(height: 10), TruckLine(text: truckLine(lot.delivery!)!)],
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(child: Text(lot.escrow == null ? '' : escrowStatus(lot.escrow!.status), style: theme.textTheme.bodySmall)),
-          Text(money(lot.escrow?.amount), style: theme.textTheme.titleSmall?.copyWith(fontFeatures: tabular)),
-        ]),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(cropName(lot.crop), style: theme.textTheme.titleLarge),
+          Text(
+            '${kg(lot.kg)} · ${lot.farmerName}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Pill(
+                lotStatus(lot.status),
+                tone: lotTone(lot.status),
+                icon: lotIcon(lot.status),
+              ),
+              if (e != null)
+                Pill(
+                  escrowStatus(e.status),
+                  tone: eTone,
+                  icon: e.status == 'RELEASED'
+                      ? Icons.check_circle_rounded
+                      : e.status == 'REFUNDED'
+                      ? Icons.undo_rounded
+                      : Icons.lock_rounded,
+                ),
+            ],
+          ),
+          if (amount != null) ...[
+            const SizedBox(height: 12),
+            AmountText(
+              money(amount),
+              size: 30,
+              caption: t('আপনার টাকা', 'Your payment'),
+            ),
+          ],
+          const SizedBox(height: 14),
+          RouteSteps(
+            steps: [
+              t('তালিকা', 'Listed'),
+              t('বিক্রি', 'Sold'),
+              t('পথে', 'On the road'),
+              t('পৌঁছেছে', 'Delivered'),
+            ],
+            current: lotStage(lot),
+          ),
+          if (lot.delivery != null && truckLine(lot.delivery!) != null) ...[
+            const SizedBox(height: 10),
+            TruckLine(text: truckLine(lot.delivery!)!),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 56,
+            child: FilledButton.tonalIcon(
+              onPressed: onTap,
+              icon: const Icon(Icons.arrow_forward_rounded),
+              label: Text(t('বিস্তারিত দেখুন', 'See details')),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1215,7 +2298,8 @@ class VerifyScreen extends StatefulWidget {
   State<VerifyScreen> createState() => _VerifyScreenState();
 }
 
-class _VerifyScreenState extends State<VerifyScreen> with Polling<VerifyScreen, List<Lot>> {
+class _VerifyScreenState extends State<VerifyScreen>
+    with Polling<VerifyScreen, List<Lot>> {
   final _id = TextEditingController();
   Map<String, dynamic>? _result;
   bool _busy = false;
@@ -1241,7 +2325,10 @@ class _VerifyScreenState extends State<VerifyScreen> with Polling<VerifyScreen, 
     _id.text = certId;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/edge/verify-certificate', {'cert_id': certId}));
+    final res = await guarded(
+      context,
+      () => Api.post('/edge/verify-certificate', {'cert_id': certId}),
+    );
     if (!mounted) return;
     setState(() {
       _busy = false;
@@ -1252,88 +2339,184 @@ class _VerifyScreenState extends State<VerifyScreen> with Polling<VerifyScreen, 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final certified = (data ?? const <Lot>[]).where((l) => l.certId != null && l.status == 'OPEN').toList();
+    final certified = (data ?? const <Lot>[])
+        .where((l) => l.certId != null && l.status == 'OPEN')
+        .toList();
     final r = _result;
-    final ok = r != null && r['known'] == true && r['signature_valid'] == true && r['payload_hash_valid'] == true && r['tampered'] != true;
+    final ok =
+        r != null &&
+        r['known'] == true &&
+        r['signature_valid'] == true &&
+        r['payload_hash_valid'] == true &&
+        r['tampered'] != true;
     return Scaffold(
-      appBar: AppBar(title: Text(t('সনদ যাচাই', 'Verify a certificate')), actions: const [LiveDot()]),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: [
-        Text(t('কৃষকের ছবি-গ্রেডের সনদ আসল কিনা দেখুন', 'Check that a farmer\'s photo-grade certificate is genuine'), style: theme.textTheme.headlineSmall),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _id,
-          textCapitalization: TextCapitalization.characters,
-          onSubmitted: (_) => _verify(),
-          decoration: InputDecoration(
-            labelText: t('সনদ নম্বর', 'Certificate number'),
-            hintText: 'DQC-EDGE-CAR-…',
-            suffixIcon: IconButton(
-              onPressed: () async {
-                final clip = await Clipboard.getData(Clipboard.kTextPlain);
-                if (clip?.text != null) _id.text = clip!.text!.trim();
-              },
-              icon: const Icon(Icons.content_paste_rounded),
-              tooltip: t('পেস্ট', 'Paste'),
+      body: Column(
+        children: [
+          HeaderBand(
+            title: t('সনদ যাচাই', 'Verify a certificate'),
+            subtitle: t(
+              'কৃষকের ছবি-গ্রেডের সনদ আসল কিনা দেখুন',
+              'Check that a farmer\'s photo-grade certificate is genuine',
             ),
+            trailing: _liveBadge(),
           ),
-        ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: _busy ? null : _verify,
-          icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.shield_rounded),
-          label: Text(t('যাচাই করুন', 'Verify')),
-        ),
-        AnimatedSwitcher(
-          duration: Motion.of(context, Motion.medium),
-          child: r == null
-              ? const SizedBox.shrink()
-              : Padding(
-                  key: ValueKey(r['cert_id']),
-                  padding: const EdgeInsets.only(top: 16),
-                  child: AppCard(
-                    tone: ok ? Tone.green : Tone.rose,
-                    strong: true,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Icon(ok ? Icons.verified_rounded : Icons.gpp_bad_rounded, color: (ok ? Tone.green : Tone.rose).fg(context), size: 32),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(ok ? t('আসল সনদ', 'Genuine certificate') : (r['known'] == true ? t('সনদটি বদলানো হয়েছে', 'This certificate was changed') : t('এই নোডের সনদ নয়', 'Not issued by this node')),
-                              style: theme.textTheme.titleMedium),
-                        ),
-                      ]),
-                      const SizedBox(height: 8),
-                      InfoRow(t('নোডে আছে', 'Known to node'), r['known'] == true ? t('হ্যাঁ', 'Yes') : t('না', 'No')),
-                      InfoRow(t('স্বাক্ষর', 'Signature'), r['signature_valid'] == true ? t('ঠিক', 'Valid') : t('ভুল', 'Invalid')),
-                      InfoRow(t('তথ্যের হ্যাশ', 'Data hash'), r['payload_hash_valid'] == true ? t('ঠিক', 'Valid') : t('ভুল', 'Invalid')),
-                      for (final w in stringsOf(r['warnings'])) Padding(padding: const EdgeInsets.only(top: 6), child: Pill(w, tone: Tone.amber, icon: Icons.warning_amber_rounded)),
-                    ]),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              children: [
+                TextField(
+                  controller: _id,
+                  textCapitalization: TextCapitalization.characters,
+                  onSubmitted: (_) => _verify(),
+                  decoration: InputDecoration(
+                    labelText: t('সনদ নম্বর', 'Certificate number'),
+                    hintText: 'DQC-EDGE-CAR-…',
+                    suffixIcon: IconButton(
+                      onPressed: () async {
+                        final clip = await Clipboard.getData(
+                          Clipboard.kTextPlain,
+                        );
+                        if (clip?.text != null) _id.text = clip!.text!.trim();
+                      },
+                      icon: const Icon(Icons.content_paste_rounded),
+                      tooltip: t('পেস্ট', 'Paste'),
+                    ),
                   ),
                 ),
-        ),
-        if (certified.isNotEmpty) ...[
-          SectionTitle(t('বাজারে সনদওয়ালা লট', 'Certified lots on the market')),
-          for (final l in certified)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                onTap: () => _verify(l.certId),
-                padding: const EdgeInsets.all(12),
-                child: Row(children: [
-                  GradeStamp(letter: l.grade, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${cropName(l.crop)} · ${kg(l.kg)} · ${l.farmerName}', style: theme.textTheme.titleSmall),
-                      Text(shortId(l.certId!, keep: 14), style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
-                    ]),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 56,
+                  child: FilledButton.icon(
+                    onPressed: _busy ? null : _verify,
+                    icon: _busy
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.shield_rounded),
+                    label: Text(t('যাচাই করুন', 'Verify')),
                   ),
-                  const Icon(Icons.chevron_right_rounded),
-                ]),
-              ),
+                ),
+                AnimatedSwitcher(
+                  duration: Motion.of(context, Motion.medium),
+                  child: r == null
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          key: ValueKey(r['cert_id']),
+                          padding: const EdgeInsets.only(top: 16),
+                          child: AppCard(
+                            tone: ok ? Tone.green : Tone.rose,
+                            strong: true,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (ok)
+                                      const ConfirmTick(size: 56)
+                                    else
+                                      Icon(
+                                        Icons.gpp_bad_rounded,
+                                        color: Tone.rose.fg(context),
+                                        size: 48,
+                                      ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        ok
+                                            ? t(
+                                                'আসল সনদ',
+                                                'Genuine certificate',
+                                              )
+                                            : (r['known'] == true
+                                                  ? t(
+                                                      'সনদটি বদলানো হয়েছে',
+                                                      'This certificate was changed',
+                                                    )
+                                                  : t(
+                                                      'এই নোডের সনদ নয়',
+                                                      'Not issued by this node',
+                                                    )),
+                                        style: theme.textTheme.titleMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                InfoRow(
+                                  t('নোডে আছে', 'Known to node'),
+                                  r['known'] == true
+                                      ? t('হ্যাঁ', 'Yes')
+                                      : t('না', 'No'),
+                                ),
+                                InfoRow(
+                                  t('স্বাক্ষর', 'Signature'),
+                                  r['signature_valid'] == true
+                                      ? t('ঠিক', 'Valid')
+                                      : t('ভুল', 'Invalid'),
+                                ),
+                                InfoRow(
+                                  t('তথ্যের হ্যাশ', 'Data hash'),
+                                  r['payload_hash_valid'] == true
+                                      ? t('ঠিক', 'Valid')
+                                      : t('ভুল', 'Invalid'),
+                                ),
+                                for (final w in stringsOf(r['warnings']))
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Pill(
+                                      w,
+                                      tone: Tone.amber,
+                                      icon: Icons.warning_amber_rounded,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+                if (certified.isNotEmpty) ...[
+                  SectionTitle(
+                    t('বাজারে সনদওয়ালা লট', 'Certified lots on the market'),
+                  ),
+                  for (final l in certified)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: AppCard(
+                        onTap: () => _verify(l.certId),
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            GradeStamp(letter: l.grade, size: 40),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${cropName(l.crop)} · ${kg(l.kg)} · ${l.farmerName}',
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                  Text(
+                                    shortId(l.certId!, keep: 14),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ],
             ),
+          ),
         ],
-      ]),
+      ),
     );
   }
 }
