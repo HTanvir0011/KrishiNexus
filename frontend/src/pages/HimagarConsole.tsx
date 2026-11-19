@@ -1,11 +1,12 @@
 import { FileSignature, Snowflake, Timer, Warehouse } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { api, ApiError, type ChamberTelemetry, type Crop, type QuotaResult, type ShelfLifeResult, type StorageReservation } from "../api/client";
 import { Badge, Button, Panel, Spinner, Stat } from "../components/ui";
 import { cn, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
-import { pushAlert, refreshQuota, setState, useAppState } from "../state/store";
+import { pushAlert, refreshQuota, refreshTelemetry, setState, useAppState } from "../state/store";
+import { IncidentControl } from "./IncidentControl";
 
 // Three.js stays out of the main OS chunk until this panel renders.
 const ColdStorage3DTwin = lazy(() => import("../components/ColdStorage3DTwin").then((m) => ({ default: m.ColdStorage3DTwin })));
@@ -73,16 +74,23 @@ export function HimagarConsole() {
 
   const facility = quota?.facilities.find((f) => f.facility_id === facilityId) ?? null;
 
-  // Every chamber of the facility, read once when the facility changes (the focused one is polled by the app).
+  // Every chamber of the facility, polled every 10 s: a cut on the whole plant must show on every row, not only on the
+  // chamber being inspected.
+  const readChambers = useCallback(async () => {
+    if (!facility) return;
+    const ids = Array.from({ length: facility.chambers }, (_, i) => `CH-${String(i + 1).padStart(2, "0")}`);
+    setChambers(await Promise.all(ids.map((id) => api.chamberTelemetry(facility.facility_id, id).then((r) => r.data))));
+  }, [facility?.facility_id, facility?.chambers]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!facility) return;
     setChambers(null);
-    const ids = Array.from({ length: facility.chambers }, (_, i) => `CH-${String(i + 1).padStart(2, "0")}`);
-    void Promise.all(ids.map((id) => api.chamberTelemetry(facility.facility_id, id).then((r) => r.data))).then(setChambers);
+    void readChambers();
+    const timer = window.setInterval(() => void readChambers(), 10_000);
     if (focus.facilityId !== facility.facility_id) {
       setState({ focusChamber: { facilityId: facility.facility_id, chamberId: "CH-01", district: facility.district } });
     }
-  }, [facility?.facility_id]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => window.clearInterval(timer);
+  }, [readChambers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const facilities = useMemo(() => {
     const all = quota?.facilities ?? [];
@@ -140,6 +148,11 @@ export function HimagarConsole() {
           </>
         )}
       </Panel>
+
+      {facility && (
+        <IncidentControl facility={facility} rows={rows} facilities={quota?.facilities ?? []}
+          onChanged={async () => { await Promise.all([readChambers(), refreshTelemetry(), loadQuota(district), refreshQuota()]); }} />
+      )}
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-5">
         <Suspense fallback={<div className="well min-h-[420px] xl:col-span-3" aria-busy />}>

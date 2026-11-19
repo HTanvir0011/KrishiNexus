@@ -87,6 +87,21 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Owner review fixes: grading, voice, bids, bank desk, cold-store incidents, co-op desk (19 November 2026)
+
+- Photo grading: without a ruler in the photo, sizes are judged against the lot itself (the default), so an even lot
+  grades A instead of always C; slivers and specks are no longer counted as produce.
+- Voice: a photo certificate for another crop no longer blocks the question; Bangla playback waits for the browser's
+  voices and uses Bangla ones where they exist (Microsoft Edge, Chrome on Android), and says so where none do.
+- Direct market: bids ranked with Highest and You marks, earlier bids folded away, lead/outbid status, quick raises.
+- Truck driver: summary strip, a route bar with the truck's position, a shelf-life bar; deliveries start from the
+  farmer's upazila (a same-district sale was 0 km).
+- New bank desk (`/os/bank`): escrow custody, transaction history, and a dispute queue that releases, refunds or holds;
+  farmers, buyers and drivers can report a problem on any sale.
+- Himagar: incident control with whole-plant or single-chamber drills (grid lost with the generator starting, or a total
+  blackout), an alarm, a power board and a self-checking playbook; every chamber now refreshes during an incident.
+- Co-op: its own desk (how pooling works, truck pools, members' lots, dispatch), instead of the judge's command centre.
+
 ### Motion, graphics and interface polish (19 November 2026)
 
 - Overview: a new "Five hands, or one truck" card under the live decision. It draws the five-tier markup road from the

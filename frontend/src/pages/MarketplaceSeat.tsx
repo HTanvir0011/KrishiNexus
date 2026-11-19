@@ -2,6 +2,7 @@ import { BadgeCheck, Gavel, HandCoins, PackagePlus, ShieldAlert, Truck, X } from
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { api, ApiError, type Crop, type MarketBid, type MarketLot, type Wallet } from "../api/client";
+import { DisputeBox } from "../components/DisputeBox";
 import { RouteSteps } from "../components/RouteSteps";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
 import { cn, tk } from "../lib/format";
@@ -23,7 +24,10 @@ const COPY = {
     accept: "Accept", cancel: "Cancel lot", cancelled: "Lot cancelled", wallet: "Wallet", walletNo: "Wallet number",
     confirmAccept: "Accept and hold payment", belowFloor: (floor: number) => `This bid is below the Tk ${floor}/kg production cost. Sell at a loss anyway?`,
     sold: "Sold: payment held in escrow", yourBid: "Your bid", bidPrice: "Your price, Tk/kg", placeBid: "Place bid", raise: "Raise bid", bidPlaced: "Bid placed",
-    highest: "Highest bid", escrowHeld: "Payment held", escrowReleased: "Payment released to the farmer", delivery: "Delivery",
+    highest: "Highest bid", escrowHeld: "Payment held", escrowRefunded: "Refunded to the buyer", you: "You", top: "Highest", earlier: (n: number) => `Earlier bids (${n})`,
+    leading: (p: number) => `You lead at Tk ${p}/kg.`, outbid: (top: number, mine: number) => `Outbid: the highest is Tk ${top}/kg, yours Tk ${mine}/kg.`,
+    first: "No bids yet: yours will be the first.", total: (tk: string, kg: number) => `= ${tk} for ${kg.toLocaleString("en-IN")} kg`,
+    belowTop: "This is not above the highest bid.", escrowReleased: "Payment released to the farmer", delivery: "Delivery",
     route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} km · about ${h} h`,
     states: { AWAITING_DRIVER: "Waiting for a driver", ASSIGNED: "Driver assigned", PICKED_UP: "On the road", DELIVERED: "Delivered" },
     readOnly: "Read-only view: farmers list and accept, buyers bid.", simulated: "Escrows are simulated: no money moves.",
@@ -38,7 +42,10 @@ const COPY = {
     accept: "গ্রহণ", cancel: "লট বাতিল", cancelled: "লট বাতিল হয়েছে", wallet: "ওয়ালেট", walletNo: "ওয়ালেট নম্বর",
     confirmAccept: "গ্রহণ করে টাকা আটকে রাখুন", belowFloor: (floor: number) => `এই দর উৎপাদন খরচ ${floor} টাকা/কেজির নিচে। তবু লোকসানে বেচবেন?`,
     sold: "বিক্রি হয়েছে: টাকা এসক্রোতে", yourBid: "আপনার দর", bidPrice: "আপনার দাম, টাকা/কেজি", placeBid: "দর দিন", raise: "দর বাড়ান", bidPlaced: "দর দেওয়া হয়েছে",
-    highest: "সর্বোচ্চ দর", escrowHeld: "টাকা আটকে আছে", escrowReleased: "টাকা কৃষককে ছাড় হয়েছে", delivery: "ডেলিভারি",
+    highest: "সর্বোচ্চ দর", escrowHeld: "টাকা আটকে আছে", escrowRefunded: "ক্রেতাকে ফেরত দেওয়া হয়েছে", you: "আপনি", top: "সর্বোচ্চ", earlier: (n: number) => `আগের দর (${n})`,
+    leading: (p: number) => `আপনিই এগিয়ে, কেজি ${p} টাকা।`, outbid: (top: number, mine: number) => `আপনার চেয়ে বেশি দর এসেছে: সর্বোচ্চ ${top}, আপনার ${mine} টাকা/কেজি।`,
+    first: "এখনও দর নেই: আপনার দরই প্রথম হবে।", total: (tk: string, kg: number) => `= ${kg.toLocaleString("en-IN")} কেজিতে ${tk}`,
+    belowTop: "এই দর সর্বোচ্চ দরের বেশি নয়।", escrowReleased: "টাকা কৃষককে ছাড় হয়েছে", delivery: "ডেলিভারি",
     route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} কিমি · প্রায় ${h} ঘণ্টা`,
     states: { AWAITING_DRIVER: "চালকের অপেক্ষা", ASSIGNED: "চালক ঠিক হয়েছে", PICKED_UP: "পথে", DELIVERED: "পৌঁছেছে" },
     readOnly: "শুধু দেখা: কৃষক লট দেন ও গ্রহণ করেন, ক্রেতা দর দেন।", simulated: "এসক্রো সিমুলেটেড: কোনো টাকা লেনদেন হয় না।",
@@ -81,14 +88,14 @@ export function MarketplaceSeat() {
       {role === "farmer" && (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
           <SellForm onListed={load} />
-          <LotList title={c.myLots} lots={mine} render={(lot) => <FarmerLot lot={lot} onChange={load} />} />
+          <LotList title={c.myLots} lots={mine} render={(lot) => <FarmerLot lot={lot} me={user.user_id} onChange={load} />} />
         </div>
       )}
       {role === "buyer" && (
         <div className="grid gap-4 xl:grid-cols-2">
           <LotList title={c.openLots} lots={lots.filter((l) => l.status === "OPEN")} render={(lot) => <BuyerLot lot={lot} me={user.user_id} onChange={load} />} />
           <LotList title={c.myBuys} lots={lots.filter((l) => l.bids.some((b) => b.buyer_id === user.user_id && b.status === "ACCEPTED"))}
-            render={(lot) => <LotCard lot={lot} />} />
+            render={(lot) => <LotCard lot={lot} me={user.user_id} onChange={load} />} />
         </div>
       )}
       {role !== "farmer" && role !== "buyer" && (
@@ -111,9 +118,14 @@ function LotList({ title, lots, render }: { title: string; lots: MarketLot[]; re
 }
 
 /** A lot with its bids (best first), escrow and delivery progress. */
-function LotCard({ lot, bidAction, footer }: { lot: MarketLot; bidAction?: (bid: MarketBid) => ReactNode; footer?: ReactNode }) {
+function LotCard({ lot, bidAction, footer, me, onChange }: {
+  lot: MarketLot; bidAction?: (bid: MarketBid) => ReactNode; footer?: ReactNode; me?: string; onChange?: () => Promise<void>;
+}) {
   const c = useCopy(COPY);
-  const bids = [...lot.bids].sort((a, b) => Number(b.status === "ACTIVE" || b.status === "ACCEPTED") - Number(a.status === "ACTIVE" || a.status === "ACCEPTED") || b.price_tk_per_kg - a.price_tk_per_kg);
+  const lang = useAppState((s) => s.lang);
+  // Live bids (and the accepted one) are ranked best first; withdrawn and rejected ones fold away under "Earlier bids".
+  const live = lot.bids.filter((b) => b.status === "ACTIVE" || b.status === "ACCEPTED").sort((a, b) => b.price_tk_per_kg - a.price_tk_per_kg);
+  const earlier = lot.bids.filter((b) => b.status === "WITHDRAWN" || b.status === "REJECTED").sort((a, b) => b.placed_at.localeCompare(a.placed_at));
   // A bid that arrives on the 8 s poll warms its row; a payment released while you watch is acknowledged once.
   const fresh = useFreshIds(lot.bids.map((b) => b.bid_id));
   const released = useBecame(lot.escrow?.status, "RELEASED");
@@ -136,32 +148,49 @@ function LotCard({ lot, bidAction, footer }: { lot: MarketLot; bidAction?: (bid:
       )}
       {lot.note && <p className="m-0 mt-2 text-[13px] text-slate-700">“{lot.note}”</p>}
       <div className="mt-2 text-[12px] font-medium text-slate-500">{c.bids}</div>
-      {bids.length === 0 ? <p className="m-0 text-[13px] text-slate-500">{c.noBids}</p> : (
-        <ul className="m-0 mt-1 grid list-none gap-1 p-0">
-          {bids.map((b) => (
+      {live.length === 0 ? <p className="m-0 text-[13px] text-slate-500">{c.noBids}</p> : (
+        <ol className="m-0 mt-1 grid list-none gap-1 p-0">
+          {live.map((b, i) => (
             <li key={b.bid_id} className={cn("flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px]", fresh.has(b.bid_id) && "animate-flash",
-              b.status === "ACCEPTED" ? "bg-emerald-50 ring-1 ring-inset ring-emerald-700/20" : b.status === "ACTIVE" ? "bg-slate-50" : "text-slate-400 line-through")}>
-              <span className="min-w-0">
-                <span className="num font-semibold">Tk {b.price_tk_per_kg}/kg</span> · {b.buyer_name}, {b.buyer_district}
-                {b.price_tk_per_kg < lot.floor_tk_per_kg && b.status === "ACTIVE" && <Badge tone="red" className="ml-1.5">{c.floor}</Badge>}
-                {b.note && <span className="block text-[12px] text-slate-500">“{b.note}”</span>}
+              b.status === "ACCEPTED" ? "bg-emerald-50 ring-1 ring-inset ring-emerald-700/20" : b.buyer_id === me ? "bg-amber-50 ring-1 ring-inset ring-amber-600/25" : "bg-slate-50")}>
+              <span className="flex min-w-0 items-start gap-2">
+                <span className="num mt-px w-5 shrink-0 text-right text-[12px] text-slate-400">{i + 1}</span>
+                <span className="min-w-0">
+                  <span className="num font-semibold">Tk {b.price_tk_per_kg}/kg</span> · {b.buyer_name}, {b.buyer_district}
+                  {i === 0 && b.status === "ACTIVE" && <Badge tone="emerald" className="ml-1.5">{c.top}</Badge>}
+                  {b.buyer_id === me && <Badge tone="amber" className="ml-1.5">{c.you}</Badge>}
+                  {b.price_tk_per_kg < lot.floor_tk_per_kg && b.status === "ACTIVE" && <Badge tone="red" className="ml-1.5">{c.floor}</Badge>}
+                  {b.note && <span className="block text-[12px] text-slate-500">“{b.note}”</span>}
+                </span>
               </span>
               {b.status === "ACTIVE" && bidAction?.(b)}
               {b.status === "ACCEPTED" && <BadgeCheck className="size-4 text-emerald-700" aria-label="accepted" />}
             </li>
           ))}
-        </ul>
+        </ol>
+      )}
+      {earlier.length > 0 && (
+        <details className="mt-1 text-[12.5px] text-slate-500">
+          <summary className="cursor-pointer select-none py-0.5 hover:text-slate-700">{c.earlier(earlier.length)}</summary>
+          <ul className="m-0 mt-1 grid list-none gap-0.5 p-0 pl-7">
+            {earlier.map((b) => (
+              <li key={b.bid_id} className="text-slate-400"><span className="num line-through">Tk {b.price_tk_per_kg}/kg</span> · {b.buyer_name}</li>
+            ))}
+          </ul>
+        </details>
       )}
       {lot.escrow && (
         <div className={cn("mt-2 rounded-lg px-2 py-1.5 text-[12.5px] ring-1 ring-inset", released && "animate-flash",
-          lot.escrow.status === "RELEASED" ? "bg-emerald-50 text-emerald-900 ring-emerald-700/20" : "bg-amber-50/70 text-amber-900 ring-amber-600/20")}>
+          lot.escrow.status === "RELEASED" ? "bg-emerald-50 text-emerald-900 ring-emerald-700/20"
+            : lot.escrow.status === "REFUNDED" ? "bg-slate-50 text-slate-700 ring-slate-300" : "bg-amber-50/70 text-amber-900 ring-amber-600/20")}>
           {lot.escrow.status === "RELEASED"
             ? <BadgeCheck className={cn("mr-1 inline size-3.5 text-emerald-700", released && "animate-pop")} aria-hidden />
             : <HandCoins className="mr-1 inline size-3.5" aria-hidden />}
-          {lot.escrow.status === "RELEASED" ? c.escrowReleased : c.escrowHeld}: <span className="num font-semibold">{tk(lot.escrow.amount_tk, 0)}</span> · {lot.escrow.wallet} {lot.escrow.wallet_masked}
+          {lot.escrow.status === "RELEASED" ? c.escrowReleased : lot.escrow.status === "REFUNDED" ? c.escrowRefunded : c.escrowHeld}: <span className="num font-semibold">{tk(lot.escrow.amount_tk, 0)}</span> · {lot.escrow.wallet} {lot.escrow.wallet_masked}
         </div>
       )}
-      {lot.delivery && (
+      {me && <DisputeBox lot={lot} me={me} lang={lang} onChange={onChange} />}
+      {lot.delivery && lot.status !== "CANCELLED" && (
         <div className="mt-2 text-[12.5px] text-slate-700">
           <Truck className="mr-1 inline size-3.5 text-amber-600" aria-hidden />
           <span className="font-medium">{c.states[lot.delivery.status]}</span>
@@ -243,7 +272,7 @@ function SellForm({ onListed }: { onListed: () => Promise<void> }) {
   );
 }
 
-function FarmerLot({ lot, onChange }: { lot: MarketLot; onChange: () => Promise<void> }) {
+function FarmerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange: () => Promise<void> }) {
   const c = useCopy(COPY);
   const [choosing, setChoosing] = useState<MarketBid | null>(null);
   const [wallet, setWallet] = useState<Wallet>("bKash");
@@ -280,7 +309,7 @@ function FarmerLot({ lot, onChange }: { lot: MarketLot; onChange: () => Promise<
   };
 
   return (
-    <LotCard lot={lot}
+    <LotCard lot={lot} me={me} onChange={onChange}
       bidAction={lot.status === "OPEN" ? (bid) => <Button variant="primary" className="min-h-8 px-3 text-[13px]" onClick={() => setChoosing(bid)}>{c.accept}</Button> : undefined}
       footer={lot.status === "OPEN" && (
         <>
@@ -316,9 +345,13 @@ function BuyerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange:
   const myBid = active.find((b) => b.buyer_id === me);
   const highest = active[0];
   const suggested = useMemo(() => (highest ? highest.price_tk_per_kg + 0.25 : lot.asking_price_tk_per_kg ?? lot.floor_tk_per_kg + 2), [highest, lot]);
-  const [price, setPrice] = useState(String(suggested));
+  // The box follows the market (highest + 0.25) until the buyer types a price.
+  const [typed, setTyped] = useState<string | null>(null);
+  const price = typed ?? String(suggested);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const leading = myBid !== undefined && highest?.bid_id === myBid.bid_id;
+  const notAbove = highest !== undefined && Number(price) <= highest.price_tk_per_kg && !leading;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -327,6 +360,7 @@ function BuyerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange:
       await api.placeBid(lot.lot_id, Number(price), note || undefined);
       pushAlert("success", c.bidPlaced, `Tk ${price}/kg · ${lot.crop}`);
       setNote("");
+      setTyped(null);
       await onChange();
     } catch (error) {
       pushAlert("danger", c.failed, message(error));
@@ -336,10 +370,14 @@ function BuyerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange:
   };
 
   return (
-    <LotCard lot={lot} footer={
-      <form onSubmit={(e) => void submit(e)} className="mt-3 grid gap-2 sm:grid-cols-[140px_minmax(0,1fr)_auto]">
+    <LotCard lot={lot} me={me} footer={
+      <form onSubmit={(e) => void submit(e)} className="mt-3 grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)_auto]">
+        <p className={cn("m-0 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium sm:col-span-3",
+          leading ? "bg-emerald-50 text-emerald-800" : myBid ? "bg-amber-50 text-amber-900" : "bg-slate-50 text-slate-700")} role="status">
+          {leading && myBid ? c.leading(myBid.price_tk_per_kg) : myBid && highest ? c.outbid(highest.price_tk_per_kg, myBid.price_tk_per_kg) : highest ? `${c.highest}: Tk ${highest.price_tk_per_kg}/kg` : c.first}
+        </p>
         <label className="grid gap-1 text-[12.5px] font-medium text-slate-700">{c.bidPrice}
-          <input required type="number" min={0.25} max={500} step={0.25} value={price} onChange={(e) => setPrice(e.target.value)} className={FIELD} />
+          <input required type="number" min={0.25} max={500} step={0.25} value={price} onChange={(e) => setTyped(e.target.value)} className={FIELD} />
         </label>
         <label className="grid gap-1 text-[12.5px] font-medium text-slate-700">{c.note}
           <input maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} className={FIELD} />
@@ -347,8 +385,15 @@ function BuyerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange:
         <div className="flex items-end">
           <Button variant="amber" type="submit" className="min-h-10 w-full" disabled={busy}>{busy ? <Spinner /> : null} {myBid ? c.raise : c.placeBid}</Button>
         </div>
-        <div className="text-[12px] text-slate-500 sm:col-span-3">
-          {highest ? `${c.highest}: Tk ${highest.price_tk_per_kg}/kg` : c.noBids}{myBid ? ` · ${c.yourBid}: Tk ${myBid.price_tk_per_kg}/kg` : ""}
+        <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-slate-500 sm:col-span-3">
+          {highest && [0.25, 0.5, 1].map((step) => (
+            <button key={step} type="button" onClick={() => setTyped(String(highest.price_tk_per_kg + step))}
+              className="rounded-full bg-white px-2 py-0.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-600/30 transition-colors hover:bg-amber-50">
+              +{step.toFixed(2)}
+            </button>
+          ))}
+          <span className="num">{Number(price) > 0 ? c.total(tk(Number(price) * lot.weight_kg, 0), lot.weight_kg) : ""}</span>
+          {notAbove && <span className="font-medium text-amber-800">· {c.belowTop}</span>}
         </div>
       </form>
     } />

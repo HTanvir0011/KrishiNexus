@@ -43,7 +43,7 @@ const COPY = {
     recommended: "Recommended",
     trace: "View full trace in OS",
     listen: "Listen in Bangla",
-    noVoice: "This device has no Bangla voice installed, so the answer is shown but not spoken.",
+    noVoice: "This browser has no Bangla voice, so the answer is shown but not spoken. Microsoft Edge, or Chrome on an Android phone, can speak it.",
     breach: "chance the haor embankment breaks in the next 72 hours",
     sar: "SAR backscatter",
     sarNote: "simulated pass",
@@ -70,7 +70,7 @@ const COPY = {
     recommended: "সুপারিশ",
     trace: "ওএস-এ পুরো ট্রেস দেখুন",
     listen: "বাংলায় শুনুন",
-    noVoice: "এই ডিভাইসে বাংলা কণ্ঠ নেই, তাই উত্তরটি লেখা আকারে দেখানো হলো।",
+    noVoice: "এই ব্রাউজারে বাংলা কণ্ঠ নেই, তাই উত্তরটি লেখা আকারে দেখানো হলো। মাইক্রোসফট এজ বা অ্যান্ড্রয়েড ফোনের ক্রোমে শুনতে পাবেন।",
     breach: "আগামী ৭২ ঘণ্টায় হাওরের বাঁধ ভাঙার সম্ভাবনা",
     sar: "রাডার ব্যাকস্ক্যাটার",
     sarNote: "সিমুলেটেড পাস",
@@ -121,12 +121,12 @@ export function LiveDecisionCard({ onRahim }: {
     }
   };
 
-  const listen = (text: string) => {
-    if (!hasBanglaVoice()) {
+  const listen = async (text: string) => {
+    if (!(await hasBanglaVoice())) {
       setNotice(c.noVoice);
       return;
     }
-    setNotice(speak(text, "bn-BD") ? null : c.noVoice);
+    setNotice((await speak(text, "bn-BD")) ? null : c.noVoice);
   };
 
   const running = run?.status === "running";

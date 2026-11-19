@@ -644,7 +644,7 @@ export const api = {
 
   /** A real photo has no offline stand-in: errors surface instead of a fallback grade. */
   gradePhoto: (crop: GradeableCrop, imageBase64: string, district: string, frameWidthMm: number) =>
-    post<GradeCropResult>("/edge/grade-crop", { crop, image_base64: imageBase64, district, frame_width_mm: frameWidthMm }),
+    post<GradeCropResult>("/edge/grade-crop", { crop, image_base64: imageBase64, district, frame_width_mm: frameWidthMm || undefined }),
 
   orchestrate: (body: Record<string, unknown>) => post<OrchestrateResponse>("/agents/orchestrate", body),
 
@@ -670,11 +670,13 @@ export const api = {
     ),
 
   /** Facility-wide cut (all chambers) so coldchain-iot-mcp re-routes smallholder allocations elsewhere. */
-  simulatePowerCut: (facilityId: string) =>
+  /** One chamber or (no chamberId) the whole plant; generatorFailed false = grid lost but the diesel backup starts. */
+  simulatePowerCut: (facilityId: string, opts: { chamberId?: string; generatorFailed?: boolean } = {}) =>
     post<SimulateAnomalyResponse>("/mcp/simulate-anomaly", {
       anomaly_type: "cold_chamber_power_cut",
       facility_id: facilityId,
-      generator_failed: true,
+      ...(opts.chamberId ? { chamber_id: opts.chamberId } : {}),
+      generator_failed: opts.generatorFailed ?? true,
       elapsed_minutes: 300,
     }),
 
@@ -743,6 +745,11 @@ export const api = {
   reportTemperature: (lotId: string, temp_c: number, rh_pct: number) =>
     post<MarketLot>(`/market/deliveries/${encodeURIComponent(lotId)}/temperature`, { temp_c, rh_pct }),
   resetMarket: () => post<MarketLot[]>("/market/reset", {}),
+  raiseDispute: (lotId: string, kind: DisputeKind, note: string) => post<MarketLot>(`/market/lots/${encodeURIComponent(lotId)}/disputes`, { kind, note }),
+  disputes: () => request<Dispute[]>("/market/disputes"),
+  resolveDispute: (disputeId: string, resolution: Resolution, note: string) =>
+    post<MarketLot>(`/market/disputes/${encodeURIComponent(disputeId)}/resolve`, { resolution, note }),
+  ledger: () => request<LedgerRow[]>("/market/ledger"),
   adminEscrows: () => request<(EscrowReceipt & { farmer_id: string })[]>("/auth/admin/escrows"),
   anomalies: () => request<ActiveAnomaly[]>("/mcp/anomalies"),
   clearAnomaly: (anomalyId: string) => request<{ cleared: string }>(`/mcp/anomalies/${encodeURIComponent(anomalyId)}`, { method: "DELETE" }),
@@ -758,6 +765,46 @@ export interface MarketBid {
   note: string;
   placed_at: string;
   status: "ACTIVE" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+}
+
+export type DisputeKind = "PAYMENT_NOT_RECEIVED" | "WRONG_AMOUNT" | "DELIVERY_PROBLEM" | "QUALITY_MISMATCH" | "OTHER";
+export type Resolution = "RELEASE_TO_FARMER" | "REFUND_TO_BUYER" | "KEEP_HOLDING" | "NO_CHANGE";
+
+/** A problem a farmer, buyer or driver reported on a sale; the bank resolves it (marketplace.py). */
+export interface Dispute {
+  dispute_id: string;
+  lot_id: string;
+  raised_by: string;
+  raised_by_name: string;
+  raised_by_role: string;
+  kind: DisputeKind;
+  note: string;
+  status: "OPEN" | "RESOLVED";
+  opened_at: string;
+  resolution: Resolution | null;
+  resolution_note: string;
+  resolved_by: string | null;
+  resolved_at: string | null;
+}
+
+/** One payment the bank holds or held: a direct sale or a 1-tap truckload lock (both simulated). */
+export interface LedgerRow {
+  escrow_id: string;
+  kind: "Direct sale" | "Truckload lock";
+  lot_id: string | null;
+  crop: string;
+  weight_kg: number;
+  farmer: string;
+  buyer: string;
+  amount_tk: number;
+  wallet: string;
+  wallet_masked: string;
+  status: "HELD" | "RELEASED" | "REFUNDED";
+  locked_at: string;
+  settled_at: string | null;
+  open_disputes: number;
+  at_risk: boolean;
+  below_floor: boolean;
 }
 
 export interface MarketLot {
@@ -777,7 +824,8 @@ export interface MarketLot {
   status: "OPEN" | "SOLD" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
   bids: MarketBid[];
   accepted_bid_id: string | null;
-  escrow: { escrow_id: string; amount_tk: number; wallet: Wallet; wallet_masked: string; status: "HELD" | "RELEASED"; locked_at: string; released_at: string | null; signature: string } | null;
+  escrow: { escrow_id: string; amount_tk: number; wallet: Wallet; wallet_masked: string; status: "HELD" | "RELEASED" | "REFUNDED"; locked_at: string; released_at: string | null; refunded_at?: string | null; signature: string } | null;
+  disputes: Dispute[];
   delivery: {
     status: "AWAITING_DRIVER" | "ASSIGNED" | "PICKED_UP" | "DELIVERED";
     origin_district: string;

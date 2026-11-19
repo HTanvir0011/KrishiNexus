@@ -76,6 +76,28 @@ with TestClient(app) as client:
     assert done["status"] == "DELIVERED" and done["escrow"]["status"] == "RELEASED" and done["escrow"]["released_at"]
     assert client.post(f"/market/deliveries/{lot_id}/deliver", headers=driver).status_code == 409
 
+    # Disputes: a party to the sale reports a problem, the bank resolves it; a refund cancels the sale and the driver's job.
+    bank = as_("BANK-UCB-01")
+    lot2 = client.post("/market/lots", headers=farmer, json={"crop": "Brinjal", "grade": "A", "weight_kg": 300, "district": "Bogura",
+                                                             "upazila": "Shibganj"}).json()
+    bid2 = client.post(f"/market/lots/{lot2['lot_id']}/bids", headers=buyer, json={"price_tk_per_kg": 30}).json()["bids"][-1]
+    sold2 = client.post(f"/market/lots/{lot2['lot_id']}/accept", headers=farmer, json={"bid_id": bid2["bid_id"], **wallet}).json()
+    assert sold2["delivery"]["distance_km"] > 8  # driven from Shibganj, never 0 km
+    assert client.post(f"/market/lots/{lot2['lot_id']}/disputes", headers=trader, json={"kind": "OTHER"}).status_code == 403
+    d = client.post(f"/market/lots/{lot2['lot_id']}/disputes", headers=buyer,
+                    json={"kind": "DELIVERY_PROBLEM", "note": "call 01711223344"}).json()["disputes"][-1]
+    assert d["status"] == "OPEN" and "01711223344" not in d["note"]
+    assert client.post(f"/market/disputes/{d['dispute_id']}/resolve", headers=farmer, json={"resolution": "NO_CHANGE"}).status_code == 403
+    refunded = client.post(f"/market/disputes/{d['dispute_id']}/resolve", headers=bank,
+                           json={"resolution": "REFUND_TO_BUYER", "note": "No truck could reach Shibganj"}).json()
+    assert refunded["escrow"]["status"] == "REFUNDED" and refunded["status"] == "CANCELLED"
+    assert client.post(f"/market/deliveries/{lot2['lot_id']}/claim", headers=driver).status_code == 409
+    assert client.post(f"/market/disputes/{d['dispute_id']}/resolve", headers=bank, json={"resolution": "NO_CHANGE"}).status_code == 409
+    rows = client.get("/market/ledger", headers=bank).json()
+    assert any(r["escrow_id"] == refunded["escrow"]["escrow_id"] and r["status"] == "REFUNDED" for r in rows)
+    assert client.get("/market/ledger", headers=farmer).status_code == 403
+    assert [x["dispute_id"] for x in client.get("/market/disputes", headers=bank).json()][0] == "DSP-SEED06"  # open first
+
     # Cancelling: only the owner, only while open.
     open_lot = client.post("/market/lots", headers=farmer, json={"crop": "Brinjal", "grade": "B", "weight_kg": 200, "district": "Bogura"}).json()
     assert client.post(f"/market/lots/{open_lot['lot_id']}/cancel", headers=other_farmer).status_code == 403

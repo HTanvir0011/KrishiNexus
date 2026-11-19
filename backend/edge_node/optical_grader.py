@@ -158,8 +158,15 @@ class GradeCropRequest(BaseModel):
     farmer_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9\-]{3,40}$")
     sample_preset: SamplePreset | None = None
     image_base64: str | None = Field(default=None, description="JPEG/PNG photo of the sorting tray (data URI allowed).")
-    frame_width_mm: float = Field(default=600.0, gt=50, le=3_000, description="Real width covered by the camera frame.")
+    frame_width_mm: float | None = Field(default=None, gt=50, le=3_000, description=(
+        "Real width covered by the camera frame. Leave it out when the photo has no scale: sizes are then judged against "
+        "the lot itself (its median set to the crop's typical size), the way a grader eyeballs a crate."))
     lot_kg: float | None = Field(default=None, gt=0, le=100_000)
+
+    @property
+    def frame_mm(self) -> float:
+        """The frame width for paths that need an absolute scale (the sample sweep and YOLO): 60 cm unless given."""
+        return self.frame_width_mm or 600.0
 
     @field_validator("crop", mode="before")
     @classmethod
@@ -319,7 +326,7 @@ def simulate_sweep(request: GradeCropRequest, preset: SamplePreset) -> tuple[lis
     n = int(rng.integers(8, 13))
     mean = profile.typical_mm * p.size_factor
     diameters = np.clip(rng.normal(mean, mean * p.sd_fraction, n), 0.4 * mean, None)
-    px_per_mm = FRAME_W / request.frame_width_mm
+    px_per_mm = FRAME_W / request.frame_mm
     cols = 4
     boxes: list[BoundingBox] = []
     for i, d in enumerate(diameters):
@@ -424,17 +431,34 @@ def classical_cv(request: GradeCropRequest, image: Any) -> list[BoundingBox]:
     mask = _morph(_morph(mask, "erode"), "dilate")
     luminance = 0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]
     profile = CROP_PROFILES[request.crop]
-    mm_per_px = request.frame_width_mm / w
     scale_x, scale_y = original_w / w, original_h / h
     min_area = max(30, int(0.002 * h * w))
+
+    def size_px(pixels: np.ndarray) -> float:
+        # Elongated crops (chili, brinjal, banana) are judged by length, round ones by area-equivalent diameter.
+        ys, xs = pixels[:, 0], pixels[:, 1]
+        if profile.aspect < 0.5:
+            return float(max(xs.max() - xs.min() + 1, ys.max() - ys.min() + 1))
+        return float(2.0 * np.sqrt(len(pixels) / np.pi))
+
+    pieces = [p for p in sorted(_components(mask), key=len, reverse=True) if len(p) >= min_area]
+    if pieces:
+        # Specks and slivers (a split highlight, a leaf, a gap between touching pieces) are not produce: anything under a
+        # fifth of the median piece's area is dropped before measuring, so it can't drag uniformity down.
+        median_area = float(np.median([len(p) for p in pieces]))
+        pieces = [p for p in pieces if len(p) >= 0.2 * median_area]
+    if request.frame_width_mm is not None:
+        mm_per_px = request.frame_width_mm / w
+    else:
+        # No scale in the photo: the lot's median piece is taken as the crop's typical size, so "undersized" means small
+        # for this lot (under undersized_mm / typical_mm of the median), not small for a guessed frame width.
+        median_px = float(np.median([size_px(p) for p in pieces])) if pieces else 1.0
+        mm_per_px = profile.typical_mm / max(1.0, median_px)
     boxes: list[BoundingBox] = []
-    for pixels in sorted(_components(mask), key=len, reverse=True):
-        if len(pixels) < min_area:
-            continue
+    for pixels in pieces:
         ys, xs = pixels[:, 0], pixels[:, 1]
         bw, bh = int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1)
-        size_px = max(bw, bh) if profile.aspect < 0.5 else 2.0 * np.sqrt(len(pixels) / np.pi)
-        diameter = float(size_px * mm_per_px)
+        diameter = float(size_px(pixels) * mm_per_px)
         lum = luminance[ys, xs]
         defect = 100.0 * float((lum < 0.55 * np.median(lum)).mean())
         if diameter < profile.undersized_mm:
@@ -557,7 +581,7 @@ def _cascade(request: GradeCropRequest, image: Any, roi_weights: Path, defect_we
     profile = CROP_PROFILES[request.crop]
     # As in the measured per-potato rule, rot within the grade-A limit doesn't by itself make a potato rotten.
     rot_limit = float(PROMPT_REGISTRY.params("vision_grading")["a_rot"])
-    mm_per_px = request.frame_width_mm / image.size[0]
+    mm_per_px = request.frame_mm / image.size[0]
     boxes: list[BoundingBox] = []
     for outline, xyxy, conf in find_potatoes(image):
         x1, y1, x2, y2 = (int(round(v)) for v in xyxy)
@@ -644,13 +668,18 @@ class OpticalCropGrader:
                 backend = f"ultralytics-yolo two-stage ({YOLO_DIR.name}: roi_best.pt + defect_best.pt)"
                 reasons_extra.append(yolo_reason())
                 # diameter_mm came from each potato's pixel area, so this gives back its width in pixels
-                warning = size_warning([b.diameter_mm * image.size[0] / request.frame_width_mm for b in boxes])
+                warning = size_warning([b.diameter_mm * image.size[0] / request.frame_mm for b in boxes])
                 warnings += [warning] if warning else []
             if not boxes:
                 raise ToolExecutionError("No produce detected; photograph the lot spread on a plain tarp under even light.")
             moisture = sum(profile.moisture_band) / 2
             reasons_extra.append("moisture is the crop band prior: an RGB photo cannot measure moisture")
-            reasons_extra.append(f"sizes assume the photo spans {request.frame_width_mm:g} mm across: a photo carries no scale")
+            if request.frame_width_mm is not None or backend != "classical-cv":
+                reasons_extra.append(f"sizes assume the photo spans {request.frame_mm:g} mm across: a photo carries no scale")
+            else:
+                reasons_extra.append(f"no scale in the photo: sizes are judged against this lot, its median piece taken as a "
+                                     f"typical {request.crop.value} ({profile.typical_mm:g} mm); choose the frame width for "
+                                     "absolute sizes")
             source, frames, frame_size = "uploaded_image", 1, image.size
         else:
             preset = request.sample_preset or SamplePreset.FIELD_SWEEP

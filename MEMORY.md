@@ -1861,3 +1861,26 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - Checks: `tsc`, `npm run build`, marketplace self-check, Impeccable detector (no findings); frame sequences locally
   (hero run, tab pill, raised bid, full delivery), reduced motion, Bangla and 390 px.
 
+### 2026-11-19 · Owner review: 8 points fixed (the user listed them with screenshots)
+- Grading always C on photos: the classical-CV path assumed a 60 cm frame, so real photos measured everything
+  "undersized". `frame_width_mm` is now optional; without it sizes are relative to the lot (median = `typical_mm`) and
+  fragments under 0.2 x the median area are dropped. Synthetic check: even brinjal/potato lot A (was C), rot spots C,
+  mixed sizes C. The farmer app's default photo width is "No ruler: judge by the lot".
+- "Voice request rejected": a brinjal photo certificate attached to a potato question raised an error; now ignored.
+- Bangla voice: desktop Chrome/Windows have no Bangla TTS voice. `speech.ts` waits for `voiceschanged` and prefers bn-BD
+  natural voices (Edge has them); otherwise the app says to use Edge or Android Chrome. A server-side Bangla voice
+  (sending text to an online TTS) was not added: it is the owner's privacy decision.
+- Bids: ranked, Highest/You badges, earlier bids folded, lead/outbid line, +0.25/+0.50/+1 raises, live lot total.
+- Truck: `_route` starts at the farmer's upazila when known (Shibganj -> Bogura 26.2 km, was 0 km), 8 km minimum;
+  driver summary strip, route bar, shelf-life bar.
+- Bank: disputes on lots (`Lot.disputes`), escrow REFUNDED, `/market/disputes`, `/resolve`, `/market/ledger`; new seat
+  `pages/BankDesk.tsx` (`/os/bank`, bank lands there); `components/DisputeBox.tsx` on lots and driver jobs.
+- Himagar: the chamber list was read once, so a whole-plant cut showed only the inspected chamber; it polls every 10 s
+  now. `pages/IncidentControl.tsx`: drills (grid lost/generator starts, total blackout, per chamber or whole plant,
+  haor flood), alarm banner, power board, playbook, flood intake note.
+- Co-op: `pages/CoopDesk.tsx` replaces the judge command centre on `/os/coop`.
+- Checks: marketplace (with dispute flow), auth, privacy, serve self-checks; regression 100/100; `tsc`; local UI
+  screenshots of bank, co-op, driver, buyer and a Himagar blackout drill, no console errors.
+- Deploy blocker found the same day: Render's `KNX_RECEIPT_SIGNING_KEY` was set to `krishi2026` (10 chars), so every
+  new container exits (pydantic min 16). The live site still runs `cd1f613` until the owner fixes the variable.
+

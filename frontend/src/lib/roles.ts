@@ -7,10 +7,10 @@ export const ROLE_VIEWS: Record<Role, OsView[]> = {
   coop: ["coop"],
   storage: ["himagar"],
   buyer: ["trade", "market"],
-  bank: ["market"],
+  bank: ["bank", "market"],
   driver: ["driver"],
-  judge: ["judge", "field", "coop", "himagar", "trade", "driver", "market"],
-  admin: ["judge", "field", "coop", "himagar", "trade", "driver", "market"],
+  judge: ["judge", "field", "coop", "himagar", "trade", "driver", "market", "bank"],
+  admin: ["judge", "field", "coop", "himagar", "trade", "driver", "market", "bank"],
 };
 
 export function homeOf(role: Role): string {

@@ -1,4 +1,4 @@
-import { Columns2, Gavel, Landmark, LayoutDashboard, LogOut, ShieldCheck, Smartphone, Snowflake, Truck, type LucideIcon } from "lucide-react";
+import { Columns2, Gavel, Landmark, LayoutDashboard, LogOut, Scale, ShieldCheck, Smartphone, Snowflake, Truck, type LucideIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "../lib/format";
@@ -6,8 +6,10 @@ import { useCopy } from "../lib/i18n";
 import { Badge, Button } from "../components/ui";
 import { homeOf, ROLE_LABEL, ROLE_TONE, ROLE_VIEWS } from "../lib/roles";
 import { Link, navigate, type OsView } from "../lib/router";
+import { BankDesk } from "../pages/BankDesk";
 import { BuyerBankPortal } from "../pages/BuyerBankPortal";
 import { CommandCenter } from "../pages/CommandCenter";
+import { CoopDesk } from "../pages/CoopDesk";
 import { FarmerZeroUIApp } from "../pages/FarmerZeroUIApp";
 import { DriverSeat } from "../pages/DriverSeat";
 import { HimagarConsole } from "../pages/HimagarConsole";
@@ -22,13 +24,14 @@ const VIEWS: { view: OsView; to: string; icon: LucideIcon }[] = [
   { view: "trade", to: "/os/trade", icon: Gavel },
   { view: "driver", to: "/os/driver", icon: Truck },
   { view: "market", to: "/os/market", icon: Landmark },
+  { view: "bank", to: "/os/bank", icon: Scale },
 ];
 
 const COPY = {
   en: {
     title: "Live operations workspace",
     lede: "One backend, seven seats: the farmer's phone, the co-op desk, the himagar (cold storage), the direct market, the truck driver, and the buyer and bank desk. An action in one updates the others.",
-    views: { judge: "Split-screen judge mode", field: "Farmer mobile companion", coop: "Co-op and cold-chain command", himagar: "Himagar OS (cold storage)", trade: "Direct market (lots and bids)", driver: "Truck driver", market: "B2B market and bank desk" },
+    views: { judge: "Split-screen judge mode", field: "Farmer mobile companion", coop: "Co-op and cold-chain command", himagar: "Himagar OS (cold storage)", trade: "Direct market (lots and bids)", driver: "Truck driver", market: "B2B market and credit", bank: "Bank desk (payments and disputes)" },
     welcome: (name: string) => `Welcome, ${name}`,
     admin: "Admin panel",
     logout: "Log out",
@@ -38,7 +41,7 @@ const COPY = {
   bn: {
     title: "লাইভ অপারেশনস ওয়ার্কস্পেস",
     lede: "একই ব্যাকএন্ড, সাতটি আসন: কৃষকের ফোন, সমবায় ডেস্ক, হিমাগার, সরাসরি বাজার, ট্রাকচালক, আর ক্রেতা ও ব্যাংক ডেস্ক। এক জায়গার কাজ অন্যগুলোতেও দেখা যায়।",
-    views: { judge: "বিচারক স্প্লিট-স্ক্রিন", field: "কৃষকের মোবাইল", coop: "সমবায় ও কোল্ড চেইন", himagar: "হিমাগার ওএস", trade: "সরাসরি বাজার (লট ও দর)", driver: "ট্রাক চালক", market: "বাজার ও ব্যাংক ডেস্ক" },
+    views: { judge: "বিচারক স্প্লিট-স্ক্রিন", field: "কৃষকের মোবাইল", coop: "সমবায় ও কোল্ড চেইন", himagar: "হিমাগার ওএস", trade: "সরাসরি বাজার (লট ও দর)", driver: "ট্রাক চালক", market: "বাজার ও ঋণ", bank: "ব্যাংক ডেস্ক (লেনদেন ও অভিযোগ)" },
     welcome: (name: string) => `স্বাগতম, ${name}`,
     admin: "অ্যাডমিন প্যানেল",
     logout: "লগআউট",
@@ -123,11 +126,12 @@ export function OsPage({ view }: { view: OsView }) {
           </div>
         )}
         {allowed.includes(view) && view === "field" && <FarmerZeroUIApp className="mx-auto max-w-[440px]" />}
-        {allowed.includes(view) && view === "coop" && <CommandCenter />}
+        {allowed.includes(view) && view === "coop" && <CoopDesk />}
         {allowed.includes(view) && view === "himagar" && <HimagarConsole />}
         {allowed.includes(view) && view === "trade" && <MarketplaceSeat />}
         {allowed.includes(view) && view === "driver" && <DriverSeat />}
         {allowed.includes(view) && view === "market" && <BuyerBankPortal />}
+        {allowed.includes(view) && view === "bank" && <BankDesk />}
       </div>
     </main>
   );

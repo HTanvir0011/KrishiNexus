@@ -38,6 +38,7 @@ const SCAN_QUALITIES: { id: SamplePreset; label: string }[] = [
 ];
 /** How wide the photographed scene is: a photo carries no scale, and sizes (undersized, grade-A minimum) need one. */
 const PHOTO_WIDTHS = [
+  { mm: 0, label: "No ruler: judge by the lot" },   // sizes relative to the lot itself (the grader's default)
   { mm: 150, label: "Close-up, 15 cm" },
   { mm: 300, label: "Handful, 30 cm" },
   { mm: 600, label: "Crate, 60 cm" },
@@ -68,7 +69,7 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const [heard, setHeard] = useState<string | null>(null);
   const [busy, setBusy] = useState<"voice" | "scan" | "photo" | "join" | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [photoWidthMm, setPhotoWidthMm] = useState(600);
+  const [photoWidthMm, setPhotoWidthMm] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
   const [listening, setListening] = useState(false);
   const [scanCrop, setScanCrop] = useState<GradeableCrop>("Cardinal Potato");
@@ -237,13 +238,13 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     }
   };
 
-  const listen = (lang: "bn-BD" | "en-US") => {
+  const listen = async (lang: "bn-BD" | "en-US") => {
     if (!result) return;
-    if (lang === "bn-BD" && !hasBanglaVoice()) {
-      setNotice("এই ডিভাইসে বাংলা কণ্ঠ নেই। This device has no Bangla voice installed.");
+    if (lang === "bn-BD" && !(await hasBanglaVoice())) {
+      setNotice("এই ব্রাউজারে বাংলা কণ্ঠ নেই, তাই উত্তরটি উপরে লেখা আছে। This browser has no Bangla voice: open the site in Microsoft Edge, or Chrome on an Android phone, to hear it.");
       return;
     }
-    setNotice(speak(lang === "bn-BD" ? result.spoken_response_bn : englishSummary(result), lang) ? null : "Speech playback is not available in this browser.");
+    setNotice(await speak(lang === "bn-BD" ? result.spoken_response_bn : englishSummary(result), lang) ? null : "Speech playback is not available in this browser.");
   };
 
   const offer = state?.farmer_offer_tk_per_kg ?? syn?.farmer_offer_tk_per_kg ?? null;

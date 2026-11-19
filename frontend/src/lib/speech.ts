@@ -83,18 +83,49 @@ export function recordOnce(onAudio: (dataUrl: string) => void, onError: (message
   return stop;
 }
 
-/** Without an installed Bangla voice the browser would read Bangla with an English voice; callers say so instead. */
-export function hasBanglaVoice(): boolean {
-  return "speechSynthesis" in window && window.speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith("bn"));
+/** The voice list arrives late (Chrome fills it only after the first call), so wait for it, at most 1.5 s. */
+function voicesReady(): Promise<SpeechSynthesisVoice[]> {
+  if (!("speechSynthesis" in window)) return Promise.resolve([]);
+  const synth = window.speechSynthesis;
+  const now = synth.getVoices();
+  if (now.length) return Promise.resolve(now);
+  return new Promise((resolve) => {
+    const done = () => {
+      synth.removeEventListener("voiceschanged", done);
+      window.clearTimeout(timer);
+      resolve(synth.getVoices());
+    };
+    const timer = window.setTimeout(done, 1500);
+    synth.addEventListener("voiceschanged", done);
+  });
 }
 
-export function speak(text: string, lang: "bn-BD" | "en-US"): boolean {
+/** The best voice for a language: Bangladesh Bangla first, then any Bangla, and natural (neural) voices before others. */
+function pickVoice(voices: SpeechSynthesisVoice[], lang: "bn-BD" | "en-US"): SpeechSynthesisVoice | undefined {
+  const norm = (v: SpeechSynthesisVoice) => v.lang.toLowerCase().replace("_", "-");
+  const natural = (list: SpeechSynthesisVoice[]) => list.find((v) => /natural|neural|online/i.test(v.name)) ?? list[0];
+  if (lang === "bn-BD") {
+    const bangla = voices.filter((v) => norm(v).startsWith("bn") || /bangla|bengali|বাংলা/i.test(v.name));
+    return natural(bangla.filter((v) => norm(v) === "bn-bd")) ?? natural(bangla);
+  }
+  return natural(voices.filter((v) => norm(v) === "en-us")) ?? natural(voices.filter((v) => norm(v).startsWith("en")));
+}
+
+/**
+ * Without a Bangla voice the browser would read Bangla with an English one, so callers say so instead. Microsoft Edge
+ * (Nabanita, Pradeep) and Chrome on Android have Bangla voices; desktop Chrome and plain Windows do not.
+ */
+export async function hasBanglaVoice(): Promise<boolean> {
+  return pickVoice(await voicesReady(), "bn-BD") !== undefined;
+}
+
+export async function speak(text: string, lang: "bn-BD" | "en-US"): Promise<boolean> {
   if (!("speechSynthesis" in window) || !text) return false;
+  const voice = pickVoice(await voicesReady(), lang);
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang;
+  utterance.lang = voice?.lang ?? lang;
   utterance.rate = lang === "bn-BD" ? 0.9 : 1;
-  const voice = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2)));
   if (voice) utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
   return true;

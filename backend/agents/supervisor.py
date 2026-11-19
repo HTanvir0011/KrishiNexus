@@ -371,13 +371,12 @@ async def voice_interact(request: VoiceInteractRequest) -> VoiceInteractResponse
 
     grading = None
     metrics = request.harvest_metrics
-    if request.edge_certificate_id is not None:
-        linked = OPTICAL_GRADER.lookup(request.edge_certificate_id)
-        if linked is None or linked.crop.value != entities.crop.value:
-            raise ToolExecutionError(f"Certificate {request.edge_certificate_id} is not a {entities.crop.value} grade from this "
-                                     "edge node (it keeps certificates until it restarts); grade the photo again.")
+    linked = OPTICAL_GRADER.lookup(request.edge_certificate_id) if request.edge_certificate_id is not None else None
+    if linked is not None and linked.crop.value == entities.crop.value:
         # The lot's numbers come from the node's own signed record, never from the client.
         metrics = lot_metrics(GradingMetrics(**linked.payload["metrics"]), linked.cert_id)
+    # A certificate for another crop (a brinjal photo, then a question about potatoes) or one this node no longer holds is
+    # simply not used: the question is still answered, just without that photo's grade.
     elif request.grade_sample_preset is not None and entities.crop.value in {c.value for c in GradeableCrop}:
         grading = OPTICAL_GRADER.grade(GradeCropRequest(crop=GradeableCrop(entities.crop.value), district=district,
                                                         farmer_id=request.farmer_id or transcription.farmer_id,

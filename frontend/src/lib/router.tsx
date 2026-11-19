@@ -1,8 +1,8 @@
-/** Minimal history router: `/` story, `/login`, `/os[/field|/coop|/himagar|/trade|/driver|/market]` live OS, `/admin[/section]`, `/docs` whitepaper. */
+/** Minimal history router: `/` story, `/login`, `/os[/field|/coop|/himagar|/trade|/driver|/market|/bank]` live OS, `/admin[/section]`, `/docs` whitepaper. */
 
 import { useSyncExternalStore, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
-export type OsView = "judge" | "field" | "coop" | "himagar" | "trade" | "driver" | "market";
+export type OsView = "judge" | "field" | "coop" | "himagar" | "trade" | "driver" | "market" | "bank";
 export type AdminSection = "overview" | "accounts" | "pools" | "escrows" | "anomalies" | "activity" | "feedback";
 export type Route = { page: "story" } | { page: "login" } | { page: "admin"; section: AdminSection } | { page: "os"; view: OsView } | { page: "docs" };
 
@@ -32,7 +32,7 @@ export function routeOf(locationText: string): Route {
   const admin = /^\/admin\/(accounts|pools|escrows|anomalies|activity|feedback)$/.exec(path);
   if (admin) return { page: "admin", section: admin[1] as AdminSection };
   if (path === "/os") return { page: "os", view: "judge" };
-  const os = /^\/os\/(field|coop|himagar|trade|driver|market)$/.exec(path);
+  const os = /^\/os\/(field|coop|himagar|trade|driver|market|bank)$/.exec(path);
   if (os) return { page: "os", view: os[1] as OsView };
   return { page: "story" };
 }

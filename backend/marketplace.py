@@ -29,8 +29,9 @@ import auth
 from automation.workflows import ARRIVAL_SHELF_RESERVE, STATE_DIR
 from config import now_bdt, settings
 from guardrails.pii_scrubber import PII_SCRUBBER
+from market_bids import ESCROWS
 from mcp_servers.base import ToolExecutionError
-from mcp_servers.bd_geo import resolve_district, road_distance_km
+from mcp_servers.bd_geo import resolve_district, resolve_upazila, road_distance_km
 from mcp_servers.coldchain_iot_mcp import calculate_dynamic_shelf_life
 from mcp_servers.dam_market_mcp import AVG_TRUCK_SPEED_KMH, LOADING_HOURS, SEASONAL_CURVES
 from schemas.mcp_models import CalculateDynamicShelfLifeInput, Crop, Grade
@@ -58,9 +59,10 @@ class Escrow(BaseModel):
     amount_tk: float
     wallet: Wallet
     wallet_masked: str
-    status: Literal["HELD", "RELEASED"] = "HELD"
+    status: Literal["HELD", "RELEASED", "REFUNDED"] = "HELD"
     locked_at: datetime
     released_at: datetime | None = None
+    refunded_at: datetime | None = None
     simulated: Literal[True] = True
     note: str = SIMULATED_NOTE
     signature: str
@@ -87,6 +89,58 @@ class Delivery(BaseModel):
     events: list[DeliveryEvent] = Field(default_factory=list)
 
 
+DisputeKind = Literal["PAYMENT_NOT_RECEIVED", "WRONG_AMOUNT", "DELIVERY_PROBLEM", "QUALITY_MISMATCH", "OTHER"]
+Resolution = Literal["RELEASE_TO_FARMER", "REFUND_TO_BUYER", "KEEP_HOLDING", "NO_CHANGE"]
+
+
+class Dispute(BaseModel):
+    dispute_id: str
+    lot_id: str
+    raised_by: str
+    raised_by_name: str
+    raised_by_role: str
+    kind: DisputeKind
+    note: str = ""
+    status: Literal["OPEN", "RESOLVED"] = "OPEN"
+    opened_at: datetime
+    resolution: Resolution | None = None
+    resolution_note: str = ""
+    resolved_by: str | None = None
+    resolved_at: datetime | None = None
+
+
+class NewDispute(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    kind: DisputeKind
+    note: str = Field(default="", max_length=300)
+
+
+class ResolveDispute(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    resolution: Resolution
+    note: str = Field(default="", max_length=300)
+
+
+class LedgerRow(BaseModel):
+    """One payment the bank holds or held: a direct-market sale or a 1-tap truckload lock (both simulated)."""
+    escrow_id: str
+    kind: Literal["Direct sale", "Truckload lock"]
+    lot_id: str | None
+    crop: str
+    weight_kg: float
+    farmer: str
+    buyer: str
+    amount_tk: float
+    wallet: str
+    wallet_masked: str
+    status: Literal["HELD", "RELEASED", "REFUNDED"]
+    locked_at: datetime
+    settled_at: datetime | None
+    open_disputes: int
+    at_risk: bool
+    below_floor: bool
+
+
 class Lot(BaseModel):
     lot_id: str
     farmer_id: str
@@ -106,6 +160,7 @@ class Lot(BaseModel):
     accepted_bid_id: str | None = None
     escrow: Escrow | None = None
     delivery: Delivery | None = None
+    disputes: list[Dispute] = Field(default_factory=list)
 
 
 class NewLot(BaseModel):
@@ -147,9 +202,22 @@ def _id(prefix: str, *parts: object) -> str:
     return f"{prefix}-" + hashlib.sha256("|".join(map(str, (*parts, now_bdt().isoformat(), os.urandom(4).hex()))).encode()).hexdigest()[:10].upper()
 
 
-def _route(origin: str, destination: str) -> tuple[float, float]:
+MIN_HAUL_KM = 8.0   # a pickup inside the buyer's own town still drives: field to the road, then to the depot
+
+
+def _route(origin: str, destination: str, upazila: str = "") -> tuple[float, float]:
+    """Road km and hours (driving at the pools' average speed plus loading) from the farmer's upazila, when the node
+    knows it, else the district centre, to the buyer's market. Same-district sales no longer read 0 km."""
     a, b = resolve_district(origin), resolve_district(destination)
-    km = round(road_distance_km(a.lat, a.lon, b.lat, b.lon), 1)
+    lat, lon = a.lat, a.lon
+    if upazila:
+        try:
+            place = resolve_upazila(upazila)
+            if place.district == a.name:
+                lat, lon = place.lat, place.lon
+        except ToolExecutionError:
+            pass  # an upazila the node has no coordinates for starts from its district centre
+    km = round(max(MIN_HAUL_KM, road_distance_km(lat, lon, b.lat, b.lon)), 1)
     return km, round(km / AVG_TRUCK_SPEED_KMH + LOADING_HOURS, 1)
 
 
@@ -197,7 +265,7 @@ class MarketBook:
         def sold(item: Lot, buyer: tuple[str, str, str], price: float, hours: float, wallet: str) -> Lot:
             """Mark `item` sold to `buyer` `hours` ago, with a signed escrow and a delivery job (as accept() does)."""
             chosen = bid(item.lot_id, buyer, price, hours + 1).model_copy(update={"status": "ACCEPTED"})
-            km, eta = _route(item.district, buyer[2])
+            km, eta = _route(item.district, buyer[2], item.upazila)
             fields = {"escrow_id": f"MES-{item.lot_id[4:]}", "amount_tk": round(price * item.weight_kg, 2), "wallet": "bKash",
                       "wallet_masked": wallet, "locked_at": ago(hours).isoformat()}
             return item.model_copy(update={
@@ -243,6 +311,16 @@ class MarketBook:
                                  DeliveryEvent(at=ago(90), kind="PICKED_UP", detail="1000 kg loaded in Sunamganj"),
                                  DeliveryEvent(at=ago(80), kind="DELIVERED",
                                                detail=f"Weighed at {done.delivery.destination_district}; escrow released to the farmer")]
+        on_road.disputes.append(Dispute(
+            dispute_id="DSP-SEED06", lot_id="LOT-SEED06", raised_by="BUY-DHK-01", raised_by_name="Dhaka Fresh DC",
+            raised_by_role="buyer", kind="DELIVERY_PROBLEM", opened_at=ago(1),
+            note="No update from the truck since it left Rangpur; please hold the payment until it arrives."))
+        done.disputes.append(Dispute(
+            dispute_id="DSP-SEED07", lot_id="LOT-SEED07", raised_by="FARM-SUN-007", raised_by_name="Jamila Begum",
+            raised_by_role="farmer", kind="PAYMENT_NOT_RECEIVED", opened_at=ago(84),
+            note="The rice was weighed at Karwan Bazar but nothing has reached my bKash.", status="RESOLVED",
+            resolution="RELEASE_TO_FARMER", resolved_by="BANK-UCB-01", resolved_at=ago(80),
+            resolution_note="Weighbridge slip matched the 1,000 kg; escrow released to her bKash."))
         with self._lock:
             self.lots = by_id
             self._persist()
@@ -312,7 +390,7 @@ class MarketBook:
             fields = {"escrow_id": _id("MES", lot_id), "amount_tk": round(chosen.price_tk_per_kg * lot.weight_kg, 2),
                       "wallet": body.wallet, "wallet_masked": f"{body.wallet_number[:3]}•••••{body.wallet_number[-3:]}",
                       "locked_at": now.isoformat()}
-            km, eta = _route(lot.district, chosen.buyer_district)
+            km, eta = _route(lot.district, chosen.buyer_district, lot.upazila)
             lot.status, lot.accepted_bid_id = "SOLD", chosen.bid_id
             lot.escrow = Escrow(**{**fields, "locked_at": now}, signature=_sign(fields))
             lot.delivery = Delivery(origin_district=lot.district, destination_district=resolve_district(chosen.buyer_district).name,
@@ -338,6 +416,8 @@ class MarketBook:
 
     def _job(self, lot_id: str, driver: auth.User, *, need: str) -> tuple[Lot, Delivery]:
         lot = self._get(lot_id)
+        if lot.escrow is not None and lot.escrow.status == "REFUNDED":
+            raise HTTPException(status_code=409, detail="The bank refunded this sale; there is nothing to deliver.")
         if lot.delivery is None:
             raise HTTPException(status_code=404, detail="This lot has no delivery job.")
         if lot.delivery.status != need:
@@ -392,6 +472,73 @@ class MarketBook:
             return lot
 
 
+    # -- disputes: any party to a sale raises one; the bank resolves it ------------------------------------------------
+
+    @staticmethod
+    def _parties(lot: Lot) -> set[str]:
+        buyer = next((b.buyer_id for b in lot.bids if b.bid_id == lot.accepted_bid_id), None)
+        driver = lot.delivery.driver_id if lot.delivery else None
+        return {x for x in (lot.farmer_id, buyer, driver) if x}
+
+    def raise_dispute(self, lot_id: str, body: NewDispute, user: auth.User) -> Lot:
+        with self._lock:
+            lot = self._get(lot_id)
+            if lot.escrow is None:
+                raise HTTPException(status_code=409, detail="Only a sold lot (with a payment in escrow) can have a dispute.")
+            if user.user_id not in self._parties(lot):
+                raise HTTPException(status_code=403, detail="Only the farmer, the buyer or the driver of this sale can report a problem.")
+            if sum(1 for d in lot.disputes if d.status == "OPEN") >= 3:
+                raise HTTPException(status_code=409, detail="This sale already has 3 open disputes; the bank is on it.")
+            lot.disputes.append(Dispute(dispute_id=_id("DSP", lot_id, user.user_id), lot_id=lot_id, raised_by=user.user_id,
+                                        raised_by_name=user.name, raised_by_role=user.role.value, kind=body.kind,
+                                        note=_scrub(body.note), opened_at=now_bdt()))
+            self._persist()
+            return lot
+
+    def resolve_dispute(self, dispute_id: str, body: ResolveDispute, user: auth.User) -> Lot:
+        with self._lock:
+            found = next(((lot, d) for lot in self.lots.values() for d in lot.disputes if d.dispute_id == dispute_id), None)
+            if found is None:
+                raise HTTPException(status_code=404, detail=f"No dispute '{dispute_id}'.")
+            lot, dispute = found
+            if dispute.status != "OPEN":
+                raise HTTPException(status_code=409, detail="This dispute is already resolved.")
+            escrow, now = lot.escrow, now_bdt()
+            if body.resolution in ("RELEASE_TO_FARMER", "REFUND_TO_BUYER") and (escrow is None or escrow.status != "HELD"):
+                raise HTTPException(status_code=409, detail=f"The payment is {escrow.status.lower() if escrow else 'missing'}, so it can't be moved now.")
+            if body.resolution == "RELEASE_TO_FARMER":
+                escrow.status, escrow.released_at = "RELEASED", now
+            elif body.resolution == "REFUND_TO_BUYER":
+                escrow.status, escrow.refunded_at = "REFUNDED", now
+                if lot.status != "DELIVERED":
+                    lot.status = "CANCELLED"   # the sale is off; the driver's job closes with it
+            dispute.status, dispute.resolution, dispute.resolution_note = "RESOLVED", body.resolution, _scrub(body.note)
+            dispute.resolved_by, dispute.resolved_at = user.user_id, now
+            self._persist()
+            return lot
+
+    def ledger(self) -> list[LedgerRow]:
+        rows = []
+        for lot in self.lots.values():
+            if lot.escrow is None:
+                continue
+            e, bid = lot.escrow, next((b for b in lot.bids if b.bid_id == lot.accepted_bid_id), None)
+            rows.append(LedgerRow(
+                escrow_id=e.escrow_id, kind="Direct sale", lot_id=lot.lot_id, crop=lot.crop.value, weight_kg=lot.weight_kg,
+                farmer=lot.farmer_name, buyer=bid.buyer_name if bid else "-", amount_tk=e.amount_tk, wallet=e.wallet,
+                wallet_masked=e.wallet_masked, status=e.status, locked_at=e.locked_at, settled_at=e.released_at or e.refunded_at,
+                open_disputes=sum(1 for d in lot.disputes if d.status == "OPEN"),
+                at_risk=bool(lot.delivery and lot.delivery.at_risk),
+                below_floor=bool(bid and bid.price_tk_per_kg < lot.floor_tk_per_kg)))
+        for r in ESCROWS.receipts.values():
+            rows.append(LedgerRow(
+                escrow_id=r.escrow_id, kind="Truckload lock", lot_id=None, crop=r.crop.value, weight_kg=r.weight_kg,
+                farmer=r.farmer_id, buyer=r.buyer_name, amount_tk=r.amount_tk, wallet=r.wallet, wallet_masked=r.wallet_masked,
+                status=r.status, locked_at=r.locked_at, settled_at=None, open_disputes=0, at_risk=False,
+                below_floor=r.below_cost_floor))
+        return sorted(rows, key=lambda row: row.locked_at, reverse=True)
+
+
 MARKET = MarketBook()
 
 
@@ -439,7 +586,7 @@ async def cancel_lot(lot_id: str, user: User) -> Lot:
 async def deliveries(user: User) -> list[Lot]:
     """Sold lots with a delivery job: for a driver, the open ones and their own; judges (read-only) and admins see all."""
     _role(user, auth.Role.DRIVER, auth.Role.JUDGE)
-    jobs = [l for l in MARKET.lots.values() if l.delivery is not None]
+    jobs = [l for l in MARKET.lots.values() if l.delivery is not None and l.status != "CANCELLED"]
     if user.role is auth.Role.DRIVER:
         jobs = [l for l in jobs if l.delivery.status == "AWAITING_DRIVER" or l.delivery.driver_id == user.user_id]
     return sorted(jobs, key=lambda l: l.listed_at, reverse=True)
@@ -467,6 +614,34 @@ async def temperature(lot_id: str, body: TemperatureReport, user: User) -> Lot:
 async def deliver(lot_id: str, user: User) -> Lot:
     _role(user, auth.Role.DRIVER)
     return MARKET.deliver(lot_id, user)
+
+
+@router.post("/lots/{lot_id}/disputes", response_model=Lot, status_code=201)
+async def raise_dispute(lot_id: str, body: NewDispute, user: User) -> Lot:
+    """Report a problem with a sale (the farmer, the buyer or the driver of it): the bank sees it in its queue."""
+    return MARKET.raise_dispute(lot_id, body, user)
+
+
+@router.get("/disputes", response_model=list[Dispute])
+async def disputes(user: User) -> list[Dispute]:
+    """Bank, judge and admin: every dispute, open first. Anyone else: the ones on their own sales."""
+    every = [d for lot in MARKET.lots.values() for d in lot.disputes
+             if user.role in (auth.Role.BANK, auth.Role.JUDGE, auth.Role.ADMIN) or user.user_id in MARKET._parties(lot)]
+    return sorted(every, key=lambda d: (d.status != "OPEN", -d.opened_at.timestamp()))
+
+
+@router.post("/disputes/{dispute_id}/resolve", response_model=Lot)
+async def resolve_dispute(dispute_id: str, body: ResolveDispute, user: User) -> Lot:
+    """Bank: release the payment to the farmer, refund the buyer (the sale is cancelled), keep holding, or no change."""
+    _role(user, auth.Role.BANK)
+    return MARKET.resolve_dispute(dispute_id, body, user)
+
+
+@router.get("/ledger", response_model=list[LedgerRow])
+async def ledger(user: User) -> list[LedgerRow]:
+    """Bank (judges read-only): every payment held, released or refunded, newest first."""
+    _role(user, auth.Role.BANK, auth.Role.JUDGE)
+    return MARKET.ledger()
 
 
 @router.post("/reset", response_model=list[Lot])
