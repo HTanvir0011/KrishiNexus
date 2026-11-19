@@ -20,6 +20,7 @@ Run from the folder that holds main.py:  uvicorn serve:app --port 8080
 from __future__ import annotations
 
 import ipaddress
+import mimetypes
 import os
 import re
 import secrets
@@ -83,9 +84,14 @@ class _Spa(StaticFiles):
             response = await super().get_response("index.html", scope)  # a client route
         # Hashed assets never change; the shell is re-checked, so a redeploy can't leave it pointing at deleted assets.
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable" if asset else "no-cache"
+        if scope["path"].startswith("/download/") and response.status_code in (200, 206):
+            response.headers["Content-Disposition"] = f'attachment; filename="{Path(scope["path"]).name}"'
         return response
 
 
+# The Android app is served from /download/ (the repository is private, so a GitHub release can't host it). Android
+# installs only a file typed as a package, and nosniff is on, so the type is registered here, not guessed.
+mimetypes.add_type("application/vnd.android.package-archive", ".apk")
 _site = Starlette(routes=[Mount("/", _Spa(directory=STATIC_DIR, html=True))])
 
 

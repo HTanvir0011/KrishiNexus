@@ -8,7 +8,7 @@ services:
     plan: free
     region: singapore # nearest Render region to Dhaka
     dockerfilePath: ./deploy/cloudrun/Dockerfile
-    dockerContext: ./deploy/cloudrun # the Dockerfile downloads the repository itself, so the context stays small
+    dockerContext: . # Render's own checkout (the repository is private); .dockerignore keeps the context to what the image needs
     healthCheckPath: /health
     domains:
       - tanvir.health # DNS at Porkbun: ALIAS tanvir.health and CNAME www, both to krishinexus-os.onrender.com

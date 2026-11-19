@@ -1,14 +1,13 @@
 # syntax=docker/dockerfile:1
 # KrishiNexus OS public demo for Render (render.yaml at the repo root) or Google Cloud Run: one container that serves
-# the built frontend and the API on one origin (deploy/cloudrun/serve.py) on $PORT. Render, or
-# `gcloud run deploy --source deploy/cloudrun`, builds it on their side, so no local Docker is needed.
-# It downloads the public GitHub repository at KNX_REF (default: the main branch).
+# the built frontend and the API on one origin (deploy/cloudrun/serve.py) on $PORT. Render builds it on its side, so no
+# local Docker is needed (Cloud Run: build from the repository root with -f deploy/cloudrun/Dockerfile; DEPLOY.md).
+# The build context is the repository root (render.yaml dockerContext: .), Render's own checkout, since the GitHub
+# repository is private; the root .dockerignore keeps it to backend/, frontend/ and this folder.
 # Trained models are git-ignored, so the demo runs the labelled fallbacks (classical CV, modelled and offline paths).
 
 FROM python:3.14-slim AS source
-ARG KNX_REF=main
-ADD https://github.com/HTanvir0011/KrishiNexus/archive/${KNX_REF}.tar.gz /tmp/source.tar.gz
-RUN mkdir /src && tar -xzf /tmp/source.tar.gz -C /src --strip-components=1
+COPY . /src
 
 FROM node:24-bookworm-slim AS web
 WORKDIR /web

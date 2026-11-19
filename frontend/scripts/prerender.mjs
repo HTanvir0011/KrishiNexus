@@ -9,7 +9,7 @@ import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } fro
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ArrowRight, BriefcaseBusiness, Download, ExternalLink, GitBranch, Globe, Mail, MessageCircle } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Download, GitBranch, Globe, Mail, MessageCircle } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -132,7 +132,7 @@ const COPY = {
     nav: { home: "Overview", docs: "Whitepaper", guide: "User guide", team: "Team" },
     app: "Get the Android app", appMeta: `About ${site.apk_size_mb} MB · Android ${site.android_min} or newer`, older: "For older phones (32-bit)",
     congress: "International AI Builders Congress 2026 · AgriSphere AI → FarmMarket · Showcase on 26 December 2026 at Daffodil International University.",
-    source: "Source on GitHub", open: "Open KrishiNexus OS",
+    open: "Open KrishiNexus OS",
     teamTitle: "Team Heat Wave · the people behind KrishiNexus OS",
     teamLede: "The people building KrishiNexus OS: five builders in Bangladesh and an advisor who joins online.",
     teamDescription: "Team Heat Wave builds KrishiNexus OS, an AI system that helps Bangladeshi farmers sell at a fair price, find cold storage and harvest before floods.",
@@ -146,7 +146,7 @@ const COPY = {
     nav: { home: "সারসংক্ষেপ", docs: "শ্বেতপত্র", guide: "ব্যবহার নির্দেশিকা", team: "দল" },
     app: "অ্যান্ড্রয়েড অ্যাপ নিন", appMeta: `প্রায় ${bnDigits(site.apk_size_mb)} এমবি · অ্যান্ড্রয়েড ${bnDigits(site.android_min)} বা নতুন`, older: "পুরোনো ফোনের জন্য (৩২-বিট)",
     congress: "ইন্টারন্যাশনাল এআই বিল্ডার্স কংগ্রেস ২০২৬ · এগ্রিস্ফিয়ার এআই → ফার্মমার্কেট · প্রদর্শনী ২৬ ডিসেম্বর ২০২৬, ড্যাফোডিল ইন্টারন্যাশনাল ইউনিভার্সিটি।",
-    source: "গিটহাবে সোর্স", open: "কৃষিনেক্সাস ওএস খুলুন",
+    open: "কৃষিনেক্সাস ওএস খুলুন",
     teamTitle: "টিম হিট ওয়েভ · কৃষিনেক্সাস ওএসের পেছনের মানুষেরা",
     teamLede: "কৃষিনেক্সাস ওএস যাঁরা তৈরি করছেন: বাংলাদেশে পাঁচজন নির্মাতা, আর অনলাইনে যুক্ত একজন উপদেষ্টা।",
     teamDescription: "টিম হিট ওয়েভ কৃষিনেক্সাস ওএস তৈরি করছে: একটি এআই ব্যবস্থা, যা বাংলাদেশের কৃষককে ন্যায্য দামে বেচতে, হিমাগারে জায়গা পেতে আর বন্যার আগে ফসল তুলতে সাহায্য করে।",
@@ -213,7 +213,7 @@ ${main}
 </main>
 <footer><div class="wrap">
 <p>${esc(c.congress)}</p>
-<nav aria-label="Footer"><a href="/">${esc(c.nav.home)}</a><a href="/docs">${esc(c.nav.docs)}</a><a href="${pathFor("/guide/", lang)}">${esc(c.nav.guide)}</a><a href="${site.apk}">${esc(c.app)}</a><a href="${site.source}" target="_blank" rel="noopener noreferrer">${esc(c.source)} ${icon(ExternalLink, 14)}</a></nav>
+<nav aria-label="Footer"><a href="/">${esc(c.nav.home)}</a><a href="/docs">${esc(c.nav.docs)}</a><a href="${pathFor("/guide/", lang)}">${esc(c.nav.guide)}</a><a href="${site.apk}">${esc(c.app)}</a></nav>
 </div></footer>
 </body>
 </html>

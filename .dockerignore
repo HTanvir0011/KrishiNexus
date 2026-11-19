@@ -1,0 +1,16 @@
+# Context for deploy/cloudrun/Dockerfile (render.yaml dockerContext: .): only backend/, frontend/ and deploy/ are used.
+.git
+.github
+.claude
+mobile
+video
+training
+assets
+*.md
+!frontend/**/*.md
+**/node_modules
+**/.venv
+**/__pycache__
+**/.state
+backend/models
+frontend/dist

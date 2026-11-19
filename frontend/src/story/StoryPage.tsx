@@ -1,4 +1,4 @@
-import { ArrowRight, Award, CheckCircle2, Download, ExternalLink, KeyRound, Smartphone } from "lucide-react";
+import { ArrowRight, Award, CheckCircle2, Download, KeyRound, Smartphone } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "../api/client";
@@ -43,7 +43,6 @@ const COPY = {
     guide: "How to install it, step by step",
     footer: { team: "Team", guide: "User guide", docs: "Whitepaper", app: "Get the Android app" },
     congress: "International AI Builders Congress 2026 · AgriSphere AI → FarmMarket · Showcase on 26 December 2026 at Daffodil International University.",
-    source: "Source on GitHub",
   },
   bn: {
     track: "এগ্রিস্ফিয়ার এআই · ফার্মমার্কেট ট্র্যাক",
@@ -69,7 +68,6 @@ const COPY = {
     guide: "কীভাবে ইনস্টল করবেন, ধাপে ধাপে",
     footer: { team: "দল", guide: "ব্যবহার নির্দেশিকা", docs: "শ্বেতপত্র", app: "অ্যান্ড্রয়েড অ্যাপ নিন" },
     congress: "ইন্টারন্যাশনাল এআই বিল্ডার্স কংগ্রেস ২০২৬ · এগ্রিস্ফিয়ার এআই → ফার্মমার্কেট · প্রদর্শনী ২৬ ডিসেম্বর ২০২৬, ড্যাফোডিল ইন্টারন্যাশনাল ইউনিভার্সিটি।",
-    source: "গিটহাবে সোর্স",
   },
 };
 
@@ -195,9 +193,6 @@ export default function StoryPage() {
             <Link to="/docs" className="inline-flex min-h-11 items-center font-medium text-slate-700 no-underline hover:text-slate-900">{c.footer.docs}</Link>
             <a href={site.apk} className="inline-flex min-h-11 items-center gap-1 font-medium text-slate-700 no-underline hover:text-slate-900">
               <Download className="size-3.5" aria-hidden /> {c.footer.app}
-            </a>
-            <a href={site.source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-medium text-emerald-700 no-underline hover:text-emerald-800">
-              {c.source} <ExternalLink className="size-3.5" aria-hidden />
             </a>
           </nav>
         </div>

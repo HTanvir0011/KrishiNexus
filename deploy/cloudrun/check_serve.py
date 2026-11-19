@@ -18,6 +18,8 @@ static = Path(tmp.name)
 (static / "assets").mkdir()
 (static / "index.html").write_text("<!doctype html><title>spa shell</title>", encoding="utf-8")
 (static / "assets" / "app.js").write_text("export {};", encoding="utf-8")
+(static / "download").mkdir()
+(static / "download" / "KrishiNexus.apk").write_bytes(b"PK test package")
 os.environ["KNX_STATIC_DIR"] = str(static)
 sys.path[:0] = [str(HERE), str(HERE.parent.parent / "backend")]  # serve.py, then main.py in the repo layout
 
@@ -103,5 +105,12 @@ with TestClient(serve.app) as client:
 
     with client.websocket_connect("/ws/agent-trace") as ws:
         assert ws.receive_json()["type"] == "hello"
+
+    # The Android app is downloaded from the site itself: typed as a package (nosniff is on) and saved as a file.
+    apk = client.get("/download/KrishiNexus.apk")
+    assert apk.status_code == 200 and apk.content.startswith(b"PK"), apk.status_code
+    assert apk.headers["content-type"] == "application/vnd.android.package-archive", apk.headers["content-type"]
+    assert apk.headers["content-disposition"] == 'attachment; filename="KrishiNexus.apk"'
+    assert "content-disposition" not in client.get("/").headers
 
 print("serve.py: all checks passed")
