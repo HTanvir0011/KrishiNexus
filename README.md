@@ -42,6 +42,7 @@ and the heavy AI calls are rate-limited per visitor there, and every response ca
 - [Team](#team)
 - [Project overview](#project-overview)
 - [Recent changes](#recent-changes)
+- [Trained models](#trained-models)
 - [Quickstart](#quickstart)
 - [Architecture](#architecture)
 - [API at a glance](#api-at-a-glance)
@@ -71,12 +72,13 @@ Team Heat Wave.
 
 | Layer | What it does |
 |---|---|
-| **FastAPI backend** (`backend/`, port `8000`) | 51 routes (50 HTTP, 1 WebSocket); Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
+| **FastAPI backend** (`backend/`, port `8000`) | 73 routes (72 HTTP, 1 WebSocket); Pydantic v2 schemas throughout; JSON-RPC 2.0 MCP gateway; live agent trace over WebSocket `/ws/agent-trace` |
 | **3 MCP servers, 13 tools** | DAM market & syndicate anomaly (4), Open-Meteo weather + Sentinel-1 SAR flood (5), BCSA cold-storage quota & IoT telemetry (4); HTTP, SSE and stdio transports |
 | **CRAG pipeline with intent routing** | PII scrub → HyDE dialect rewrite → intent detection → hybrid BM25 + vector retrieval with RRF and reranking → GraphRAG multi-hop facts → Corrective-RAG grading → live MCP augmentation |
 | **LangGraph supervisor + 4 agents** | Vision grading, syndicate bypass (5-ton pooled trucks), cold-chain arbitrage (ΔΠ circuit-breaker), climate credit (SAR flood shield + 300–850 score) |
 | **Offline edge node** | Bangla voice pipeline, optical grader with signed certificates, local LLM manager for **Ollama** / llama.cpp / vLLM with automatic fallback when no runtime is reachable |
 | **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | A product overview at `/` with one-click live farmer decisions and live MCP cards; the live OS at `/os` (farmer zero-UI app, co-op command center with a Three.js cold-storage twin, market and bank desk); the `/docs` whitepaper with a 13-tool MCP inspector |
+| **Flutter mobile app** (`mobile/`) | Android app (iOS-ready) on the same API and accounts: Bangla voice questions, photo grading, lots and bids, driver jobs with live tracking, bank disputes. See [`mobile/README.md`](mobile/README.md) |
 | **Demo login and admin console** | Seeded accounts for six roles (farmer, co-op, buyer, bank, judge, admin), password or quick login, HMAC-signed session tokens; `/admin` manages accounts and demo state |
 | **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models; optional `data` profile adds PostgreSQL + pgvector, Neo4j, Redis and n8n, loaded with the app's own data |
 
@@ -87,116 +89,13 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
-### Mobile app in Flutter (19 November 2026)
+Latest (19 November 2026): the Flutter mobile app in `mobile/`, Bangla playback in every browser through `POST /edge/tts`,
+and review fixes to photo grading, voice, bids, the bank desk, cold-store incidents and the co-op desk.
+The full history is in [`CHANGELOG.md`](CHANGELOG.md).
 
-- `mobile/` is an Android (and iOS-ready) app on the same node and accounts: farmers ask in Bangla by voice and hear the
-  answer, photograph the harvest for a signed grade, and sell lots; buyers bid and verify certificates; drivers run
-  deliveries with temperature logs; the bank resolves disputes. See `mobile/README.md`.
+## Trained models
 
-### Bangla playback in every browser (19 November 2026)
-
-- শুনুন / Listen in Bangla now plays everywhere. The device's own Bangla voice is used where there is one (Microsoft
-  Edge, Chrome on Android); elsewhere the node reads the answer through an online voice (`POST /edge/tts`): Google
-  Translate's Bangla voice, or Microsoft's bn-BD neural voices if Google fails. Personal details are scrubbed first,
-  Offline edge mode never calls it, and `KNX_ONLINE_TTS=off` switches it off. Docs → Data safety lists it.
-
-### Owner review fixes: grading, voice, bids, bank desk, cold-store incidents, co-op desk (19 November 2026)
-
-- Photo grading: without a ruler in the photo, sizes are judged against the lot itself (the default), so an even lot
-  grades A instead of always C; slivers and specks are no longer counted as produce.
-- Voice: a photo certificate for another crop no longer blocks the question; Bangla playback waits for the browser's
-  voices and uses Bangla ones where they exist (Microsoft Edge, Chrome on Android), and says so where none do.
-- Direct market: bids ranked with Highest and You marks, earlier bids folded away, lead/outbid status, quick raises.
-- Truck driver: summary strip, a route bar with the truck's position, a shelf-life bar; deliveries start from the
-  farmer's upazila (a same-district sale was 0 km).
-- New bank desk (`/os/bank`): escrow custody, transaction history, and a dispute queue that releases, refunds or holds;
-  farmers, buyers and drivers can report a problem on any sale.
-- Himagar: incident control with whole-plant or single-chamber drills (grid lost with the generator starting, or a total
-  blackout), an alarm, a power board and a self-checking playbook; every chamber now refreshes during an incident.
-- Co-op: its own desk (how pooling works, truck pools, members' lots, dispatch), instead of the judge's command centre.
-
-### Motion, graphics and interface polish (19 November 2026)
-
-- Overview: a new "Five hands, or one truck" card under the live decision. It draws the five-tier markup road from the
-  live syndicate tool, and when you run the agents a truck drives Rahim's routed lot to the buyer and his real net
-  price lands at the end. The run now names the agent at work, and the payout bars grow in.
-- Workspace: a sliding pill on the navbar and seat tabs, a crossfade between seats, a route stepper on every lot and
-  delivery, a flash for newly arrived bids and a released payment, and themed selection, caret and scrollbars.
-- Login: the overview's dotted ground and faint farm-to-buyer routes behind the form; role-coloured icons.
-- Fix: judges can open the truck driver seat (it showed a "Request failed" alert every 8 seconds).
-- Every animation respects reduced motion; nothing loops.
-
-### Direct marketplace, truck driver seat and a voice fix (17 November 2026)
-
-- `/os/trade`: farmers list a lot and buyers bid in the open; the farmer accepts one bid, the payment is held in a
-  (simulated) escrow, and a delivery job opens. A bid under the production cost needs the farmer's confirmation.
-- `/os/driver`: a truck driver takes the job, reports the load's temperature on the road (shelf-life check), and
-  confirms delivery, which releases the escrow to the farmer.
-- Voice: Whisper now skips non-speech (a silent clip took about 2 minutes, now under a second); the farmer app has a
-  typed-question box, and falls back to the browser's speech service where the server has no speech model.
-
-### Himagar OS, cold-storage seat (17 November 2026)
-
-- `/os/himagar` gives a cold-storage manager one facility at a time: who holds the space (traders, plant owners,
-  farmers), every chamber's temperature, humidity and rot risk beside the 3D twin, a pooled slot booking that returns an
-  HMAC-signed warehouse receipt, and a shelf-life check at the chamber's live reading.
-- New role `storage` with the demo account `HIMAGAR-BOG-05`; judges and admins see the seat too.
-
-### Consent, data retention, feedback and the pilot plan (17 November 2026)
-
-- The farmer app asks for consent, in Bangla and English, before the farmer's own voice or photo is used.
-- Hidden names and phone numbers now leave the PII vault after 24 hours; nothing personal is written to disk.
-- Every decision ends with "Was this advice useful?"; comments are PII-scrubbed, and admins read them at `/admin/feedback`.
-- The whitepaper adds per-truck unit economics, a district break-even point and a dated pilot plan (`/docs#economics`),
-  and a data, consent and safety section (`/docs#data`).
-- `FIELD_TEST_KIT.md` is the plan for the first study with farmers. No study has been run yet.
-- `render.yaml` deploys the hosted demo on Render's free plan, with gzipped responses and an optional keep-awake
-  workflow (`DEMO_URL`). Deploying it is a dashboard step for the repository owner.
-
-### Demo login and admin console (15 November 2026)
-
-- `/login`: a sign-in form (account ID and password) with one-click quick-login cards, grouped by role.
-- `/admin`: an admin console with a sidebar for accounts (add, edit, disable, delete, restore the seeds), escrows and
-  overview counts. The last active admin can't be removed.
-- Passwords are stored as salted PBKDF2 hashes and never returned by the API. Session tokens are HMAC-signed and last
-  12 hours. `backend/check_auth.py` checks forged, tampered and expired tokens.
-- `deploy/cloudrun/` packages the frontend and API in one container for a hosted demo, with per-visitor limits on
-  writes that every visitor would see.
-
-### Buyer bids, 1-tap escrow, truck reroute and data services (Phase 10, 10 November 2026)
-
-- **Buyer bids** (market seat, `/os/market`).
-  - Every buyer for the lot is listed, best net payout first: supermarket DCs, wholesale arats, the 66 WFP centres
-    and four new agro-processors. The processors (potato flakes and chips, chili paste, a rice mill) buy grades that
-    retail refuses.
-  - Net payout is after pooled freight, fees and transit loss. Bids under the crop's production cost are flagged.
-  - Bids are modelled from DAM hub prices, not live offers from named buyers.
-- **1-tap escrow.**
-  - One tap locks the best bid. The amount is held for the farmer's bKash or Nagad wallet and released when the
-    delivery is weighed at the buyer's door.
-  - The node recomputes the bid itself, a second tap returns the same escrow, and the receipt is HMAC-signed with the
-    wallet number masked.
-  - **The escrow is simulated:** no money moves and no wallet API is called. A live escrow needs a merchant agreement
-    and API credentials.
-- **Truck reroute on transit heat** (co-op seat, `/os/coop`).
-  - The co-op enters the truck's temperature. If the produce would spoil before arrival (ETA over 75% of its
-    remaining shelf life), the truck is sent to the best buyer it still reaches in time, and the escrow is locked
-    again there.
-  - At 38 °C a potato truck keeps its route; a green-chili truck moves from a 7.2 h buyer to a 2.0 h one.
-- **Data services in Compose** (`docker compose --profile data up --build`).
-  - PostgreSQL + pgvector receives the 19 knowledge chunks with the vectors the app indexes.
-  - Neo4j receives the supply-chain graph.
-  - n8n runs the two cron jobs in queue mode on Redis.
-  - The app itself still answers from its in-process stores. This profile has not yet run on a Docker host.
-- **Training update.**
-  - Prompts v6 fixed storage citation (0.911 on the exported model) but store-or-sell verdicts fell to 0.895, so that
-    model was not shipped.
-  - Prompts v7, where the circuit breaker states whether today's price is below the floor, fixed those verdicts
-    (1.000 in every check). But storage citation fell to 0.85–0.89 on 14 unseen sentences, so that model was not
-    shipped either.
-  - The deployed model is unchanged. All results are in `TRAINING_PLAN.md` §6.
-
-### Trained models (Phase 9 training, 8–13 November 2026)
+Trained 8–13 November 2026 (Phase 9).
 
 Five models are trained on Kaggle and measured against targets set before training. The notebooks are in
 `training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `TRAINING_PLAN.md` §6, §7b, §8, §8b
@@ -272,7 +171,7 @@ Optional settings:
 ### Local development
 
 ```bash
-# backend (Python 3.12+)
+# backend (Python 3.12+; the Docker image runs 3.14)
 cd backend
 python -m venv .venv
 source .venv/Scripts/activate        # Windows Git Bash; use .venv/bin/activate on macOS/Linux
@@ -329,15 +228,19 @@ The full contracts are in [`AGENTS.md`](AGENTS.md).
 
 | Area | Routes |
 |---|---|
-| MCP | `GET /mcp/servers`, `GET /mcp/tools`, `POST /mcp/call`, `POST /mcp` (JSON-RPC, SSE), `POST /mcp/simulate-anomaly` |
+| Meta | `GET /`, `GET /health` |
+| MCP | `GET /mcp/servers`, `GET /mcp/tools`, `POST /mcp/call`, `POST /mcp` (JSON-RPC, SSE), `POST /mcp/servers/{server_name}` |
+| Demo anomalies | `POST /mcp/simulate-anomaly`, `GET /mcp/anomalies`, `DELETE /mcp/anomalies`, `DELETE /mcp/anomalies/{anomaly_id}` |
 | RAG | `POST /rag/query`, `POST /rag/graph-traverse`, `GET /rag/stats` |
 | Guardrails & optimisation | `POST /guardrails/verify`, `POST /optimization/compress`, `GET /optimization/route` |
 | Agents | `POST /agents/orchestrate`, `WS /ws/agent-trace`, `GET /agents/trace-history`, `GET /prompts/registry` |
-| Automation | `GET /automation/truck-pools`, `POST /automation/truck-pools/join`, `POST /automation/truck-pools/{pool_id}/transit-check`, n8n `daily-dam-sync` and `hourly-sar-flood-check` |
-| Market | `GET /market/bids`, `POST /market/bids/lock` (simulated escrow), `GET /market/price-monitor` |
-| Edge | `POST /edge/voice-interact`, `POST /edge/grade-crop`, `POST /edge/verify-certificate`, `GET /edge/local-models`, `POST /edge/local-inference`, `GET /edge/lora-dataset` |
+| Automation | `GET /automation/truck-pools`, `POST /automation/truck-pools/join`, `POST /automation/truck-pools/{pool_id}/transit-check`, `POST /automation/truck-pools/reset`, n8n `POST /automation/n8n/daily-dam-sync`, `POST /automation/n8n/hourly-sar-flood-check`, `GET /automation/n8n/workflows` |
+| Market (bids, escrow) | `GET /market/bids`, `POST /market/bids/lock` (simulated escrow), `GET /market/price-monitor` |
+| Marketplace (lots, deliveries, disputes) | `GET`/`POST /market/lots`, `POST /market/lots/{lot_id}/bids`, `.../accept`, `.../cancel`, `.../disputes`; `GET /market/deliveries` and `POST /market/deliveries/{lot_id}/claim`, `.../pickup`, `.../temperature`, `.../location`, `.../deliver`; `GET /market/disputes`, `POST /market/disputes/{dispute_id}/resolve`; `GET /market/ledger`; live feed `GET /market/stream` (SSE) and `GET /market/events`; `POST /market/reset` |
+| Edge | `POST /edge/voice-interact`, `GET /edge/voice-presets`, `POST /edge/grade-crop`, `POST /edge/verify-certificate`, `POST /edge/tts`, `GET /edge/local-models`, `POST /edge/local-inference`, `GET /edge/lora-dataset` |
 | Evals | `GET /evals/metrics`, `POST /evals/run-regression`, `GET /evals/holdout` |
-| Auth (demo) | `GET /auth/demo-users`, `POST /auth/login`, `GET /auth/me`; admin only: `/auth/admin/users` (list, create, update, delete, reset), `GET /auth/admin/escrows`, `GET /auth/admin/overview` |
+| Feedback | `POST /feedback`; admin only: `GET /auth/admin/feedback` |
+| Auth (demo) | `GET /auth/demo-users`, `POST /auth/register`, `POST /auth/login`, `GET /auth/me`; admin only: `/auth/admin/users` (list, create, update, delete, reset), `GET /auth/admin/escrows`, `GET /auth/admin/overview` |
 
 ---
 
@@ -371,11 +274,19 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 ├── docker-compose.yml          backend + frontend; ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
 ├── AGENTS.md / CLAUDE.md       architecture contract (identical copies)
 ├── MEMORY.md                   live build state and handover log
+├── CHANGELOG.md                dated change history
+├── FIELD_TEST_KIT.md           plan for the first farmer study
+├── PRESENTATION_PLAN.md  VIDEO_PLAN.md   congress presentation and demo video plans
+├── .github/workflows/          docker-smoke, deploy-render, keep-demo-awake
 ├── assets/team_animation.svg   animated team roster
 ├── backend/
 │   ├── main.py  config.py      FastAPI app, settings, multi-LLM router
 │   ├── auth.py  check_auth.py  demo accounts, login, signed session tokens, admin API, and its self-check
 │   ├── market_bids.py          buyer bids and the simulated 1-tap escrow
+│   ├── marketplace.py          lots, direct bids, deliveries, disputes, ledger, live feed
+│   ├── price_monitor.py        price monitor and margin flags
+│   ├── feedback.py             PII-scrubbed advice feedback
+│   ├── requirements.txt / .lock   minimum versions for local installs / pinned versions for Docker
 │   ├── data_seed.py            seed files for the compose data profile (pgvector SQL, Neo4j Cypher, n8n workflows)
 │   ├── mcp_servers/            3 MCP servers + JSON-RPC hub
 │   ├── rag/                    lexicon, knowledge seed, hybrid retriever, GraphRAG, CRAG pipeline
@@ -390,10 +301,13 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 ├── TRAINING_PLAN.md            recipes, split rules, pre-registered targets and measured results for every model
 ├── render.yaml                 Render Blueprint for the free hosted demo (one Docker web service)
 ├── deploy/cloudrun/            one-container hosted demo for Render or Google Cloud Run, with per-visitor write limits
+├── mobile/                     Flutter app (Android, iOS-ready); see mobile/README.md
+├── video/                      demo video workspace (assets, narration audio, renders)
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
-    └── src/                    story/ (overview and its live cards), os/ (live OS), admin/ (admin console), pages (incl. login), components, typed API client
+    ├── public/                 icons, team photos, video, and the Android APKs in download/
+    └── src/                    story/ (overview and its live cards), os/ (live OS), admin/ (admin console), pages/ (incl. login), components/, api/ (typed client), state/, data/, lib/
 ```
 
 ---
