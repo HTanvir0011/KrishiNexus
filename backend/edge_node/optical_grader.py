@@ -416,6 +416,18 @@ def _components(mask: np.ndarray) -> list[np.ndarray]:
     return components
 
 
+def not_a_lot(pieces: list[np.ndarray]) -> bool:
+    """A photo of something other than a spread-out lot (a room, a screen): its blobs are irregular (median fill of their
+    boxes under 0.65; produce, touching pieces included, sits near 0.75-0.97) AND of very different sizes (spread of
+    sqrt(area) over 0.45; even mixed lots stay near 0.33). Both must hold, so a real but messy lot is still graded.
+    shortcut: two thresholds set on synthetic lots and one emulator room photo; refit on real field photos when collected."""
+    if len(pieces) < 3:
+        return False
+    fills = [len(p) / ((p[:, 1].max() - p[:, 1].min() + 1) * (p[:, 0].max() - p[:, 0].min() + 1)) for p in pieces]
+    sizes = np.sqrt([len(p) for p in pieces])
+    return float(np.median(fills)) < 0.65 and float(sizes.std() / sizes.mean()) > 0.45
+
+
 def classical_cv(request: GradeCropRequest, image: Any) -> list[BoundingBox]:
     """Background-subtraction segmentation and per-object lesion analysis of a sorting-tray photo."""
     original_w, original_h = image.size
@@ -447,6 +459,8 @@ def classical_cv(request: GradeCropRequest, image: Any) -> list[BoundingBox]:
         # fifth of the median piece's area is dropped before measuring, so it can't drag uniformity down.
         median_area = float(np.median([len(p) for p in pieces]))
         pieces = [p for p in pieces if len(p) >= 0.2 * median_area]
+    if not_a_lot(pieces):
+        raise ToolExecutionError("No produce detected; photograph the lot spread on a plain tarp under even light.")
     if request.frame_width_mm is not None:
         mm_per_px = request.frame_width_mm / w
     else:

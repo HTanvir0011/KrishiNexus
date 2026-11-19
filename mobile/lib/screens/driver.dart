@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -503,7 +503,11 @@ class _LiveLocationSwitchState extends State<LiveLocationSwitch> with AutomaticK
       if (!allowed || !TickerMode.valuesOf(context).enabled) return;
       _sent = null;
       _positions = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 50),
+        // Android: the phone's own GPS (LocationManager), not Google's fused provider, so declining Google's
+        // "Location Accuracy" prompt does not stop sharing and phones without Play services still work.
+        locationSettings: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            ? AndroidSettings(accuracy: LocationAccuracy.high, distanceFilter: 50, forceLocationManager: true)
+            : const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 50),
       ).listen(_onPosition, onError: (Object _) {
         if (!mounted) return;
         _off();
