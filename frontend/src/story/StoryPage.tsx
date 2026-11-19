@@ -1,20 +1,23 @@
-import { ArrowRight, CheckCircle2, ExternalLink, KeyRound } from "lucide-react";
+import { ArrowRight, Award, CheckCircle2, ExternalLink, KeyRound } from "lucide-react";
+import { useState } from "react";
 
 import { api } from "../api/client";
 import { useCopy } from "../lib/i18n";
 import { Link } from "../lib/router";
 import { useAppState } from "../state/store";
+import type { RahimFacts } from "./data";
 import { HaorCard } from "./HaorCard";
 import { LiveDecisionCard } from "./LiveDecisionCard";
 import { PipelineSection } from "./PipelineSection";
 import { TEAM } from "./presets";
 import { QuotaCard } from "./QuotaCard";
+import { RouteGraphic } from "./RouteGraphic";
 import { SyndicateCard } from "./SyndicateCard";
 import { useLive } from "./useLive";
 
 const COPY = {
   en: {
-    eyebrow: "AGRISPHERE AI · FARMMARKET TRACK",
+    track: "AgriSphere AI · FarmMarket track",
     title: "Cut the 116% syndicate markup. Open the hoarded cold stores. Harvest before the flood.",
     lede: "KrishiNexus OS listens to a farmer's question in their own dialect and four agents answer it: they grade the crop, route it past five middlemen on a pooled 5-ton truck, find space in cold stores where traders and plant owners hold 77.32% of capacity, and send a Sentinel-1 radar harvest alert 72 hours before a haor embankment breaks.",
     os: "Open live OS workspace",
@@ -31,7 +34,7 @@ const COPY = {
     source: "Source on GitHub",
   },
   bn: {
-    eyebrow: "এগ্রিস্ফিয়ার এআই · ফার্মমার্কেট ট্র্যাক",
+    track: "এগ্রিস্ফিয়ার এআই · ফার্মমার্কেট ট্র্যাক",
     title: "সিন্ডিকেটের ১১৬% মুনাফা কাটুন। দখলে থাকা হিমাগার খুলুন। বন্যার আগেই ধান তুলুন।",
     lede: "কৃষিনেক্সাস ওএস কৃষকের নিজের আঞ্চলিক ভাষায় প্রশ্ন শোনে, আর চার এজেন্ট উত্তর দেয়: ফসল গ্রেড করে, পাঁচ মধ্যস্বত্বভোগীকে এড়িয়ে ৫ টনের যৌথ ট্রাকে পাঠায়, যেসব হিমাগারের ৭৭.৩২% জায়গা ব্যবসায়ী ও মালিকদের দখলে সেখানে জায়গা খুঁজে দেয়, আর হাওরের বাঁধ ভাঙার ৭২ ঘণ্টা আগে সেন্টিনেল-১ রাডারের সতর্কবার্তা পাঠায়।",
     os: "লাইভ ওএস খুলুন",
@@ -73,6 +76,9 @@ function HeroMetrics() {
         <li className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200">
           <KeyRound className="size-4 text-emerald-700" aria-hidden /><span className="num text-slate-900">0</span> {c.keys}
         </li>
+        <li className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[13px] font-medium text-emerald-800 ring-1 ring-inset ring-emerald-700/15">
+          <Award className="size-4" aria-hidden /> {c.track}
+        </li>
       </ul>
       <p className="m-0 mt-2 text-[12.5px] text-slate-500">{c.measured}</p>
     </div>
@@ -82,15 +88,16 @@ function HeroMetrics() {
 export default function StoryPage() {
   const c = useCopy(COPY);
   const lang = useAppState((s) => s.lang);
+  // Rahim's latest routed decision, shared by the live card (which runs the agents) and the route graphic (which drives it).
+  const [rahim, setRahim] = useState<{ facts: RahimFacts; run: number } | null>(null);
   return (
     <main>
-      <section className="mx-auto grid max-w-[1280px] items-start gap-10 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-12 lg:gap-12">
+      <section className="relative isolate">
+        <div className="hero-ground" aria-hidden />
+        <div className="mx-auto grid max-w-[1280px] items-start gap-10 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-12 lg:gap-12">
         <div className="min-w-0 lg:col-span-7 lg:pt-6">
-          <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-semibold tracking-[0.06em] text-emerald-800 ring-1 ring-inset ring-emerald-700/15">
-            {c.eyebrow}
-          </span>
           {/* Bangla conjuncts need more room between lines than Latin capitals. */}
-          <h1 className={`m-0 mt-5 max-w-[22ch] text-[clamp(34px,4.6vw,56px)] font-semibold text-slate-900 ${lang === "bn" ? "leading-[1.32]" : "leading-[1.08] tracking-[-0.025em]"}`}>
+          <h1 className={`m-0 mt-2 max-w-[22ch] text-[clamp(34px,4.6vw,56px)] font-semibold text-slate-900 ${lang === "bn" ? "leading-[1.32]" : "leading-[1.08] tracking-[-0.025em]"}`}>
             {c.title}
           </h1>
           <p className="m-0 mt-5 max-w-[60ch] text-[17px] leading-relaxed text-slate-600">{c.lede}</p>
@@ -104,8 +111,10 @@ export default function StoryPage() {
           </div>
           <HeroMetrics />
         </div>
-        <div className="min-w-0 lg:col-span-5">
-          <LiveDecisionCard />
+        <div className="min-w-0 space-y-4 lg:col-span-5">
+          <LiveDecisionCard onRahim={(facts) => setRahim((prev) => ({ facts, run: (prev?.run ?? 0) + 1 }))} />
+          <RouteGraphic decision={rahim?.facts ?? null} runId={rahim?.run ?? 0} />
+        </div>
         </div>
       </section>
 

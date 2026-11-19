@@ -78,12 +78,18 @@ export function Navbar() {
     { to: "/docs", label: c.links.docs, current: route.page === "docs" },
   ];
 
+  const active = links.findIndex((link) => link.current);
+  // The three columns are equal, so the white pill slides by whole columns when the route changes.
   const switcher = (className: string) => (
-    <nav aria-label="Main" className={cn("rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200", className)}>
+    <nav aria-label="Main" className={cn("relative rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200", className)}>
+      {active >= 0 && (
+        <span aria-hidden className="absolute top-0.5 bottom-0.5 left-0.5 rounded-md bg-white shadow-sm ring-1 ring-slate-200 transition-transform duration-300 ease-(--ease-out-expo)"
+          style={{ width: `calc((100% - 4px) / ${links.length})`, transform: `translateX(${active * 100}%)` }} />
+      )}
       {links.map((link) => (
         <Link key={link.label} to={link.to} aria-current={link.current ? "page" : undefined}
-          className={cn("flex min-h-8 items-center justify-center rounded-md px-3.5 text-[14px] font-medium whitespace-nowrap no-underline transition-colors max-sm:min-h-10",
-            link.current ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900")}>
+          className={cn("relative flex min-h-8 items-center justify-center rounded-md px-3.5 text-[14px] font-medium whitespace-nowrap no-underline transition-colors max-sm:min-h-10",
+            link.current ? "text-slate-900" : "text-slate-600 hover:text-slate-900")}>
           {link.label}
         </Link>
       ))}

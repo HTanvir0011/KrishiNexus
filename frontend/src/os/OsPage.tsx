@@ -1,4 +1,5 @@
 import { Columns2, Gavel, Landmark, LayoutDashboard, LogOut, ShieldCheck, Smartphone, Snowflake, Truck, type LucideIcon } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "../lib/format";
 import { useCopy } from "../lib/i18n";
@@ -46,11 +47,31 @@ const COPY = {
   },
 };
 
+/** Where the current tab sits inside its row, measured before paint and again whenever the row resizes (fonts, language). */
+function useActiveTab(view: OsView) {
+  const row = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const measure = () => {
+      const tab = el.querySelector<HTMLElement>('[aria-current="page"]');
+      setBox(tab ? { left: tab.offsetLeft, width: tab.offsetWidth } : null);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [view]);
+  return { row, box };
+}
+
 /** The live workspace for the logged-in account: only the seats its role may open (lib/roles.ts). */
 export function OsPage({ view }: { view: OsView }) {
   const c = useCopy(COPY);
   const lang = useAppState((s) => s.lang);
   const user = useAppState((s) => s.user);
+  const { row, box } = useActiveTab(view);
   if (!user) return null;
   const allowed = ROLE_VIEWS[user.role];
   const views = VIEWS.filter((v) => allowed.includes(v.view));
@@ -73,18 +94,23 @@ export function OsPage({ view }: { view: OsView }) {
         </div>
       </div>
       <nav aria-label="Workspace views" className="scroll-thin mt-4 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200">
+        <div ref={row} className="relative inline-flex gap-1 rounded-lg bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200">
+          {box && (
+            <span aria-hidden className="absolute top-0.5 bottom-0.5 left-0 rounded-md bg-white shadow-sm ring-1 ring-slate-200 transition-[transform,width] duration-300 ease-(--ease-out-expo)"
+              style={{ width: box.width, transform: `translateX(${box.left}px)` }} />
+          )}
           {views.map((v) => (
             <Link key={v.view} to={v.to} aria-current={view === v.view ? "page" : undefined}
-              className={cn("flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3.5 text-[14px] font-medium whitespace-nowrap no-underline transition-colors max-sm:min-h-10",
-                view === v.view ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900")}>
+              className={cn("relative flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3.5 text-[14px] font-medium whitespace-nowrap no-underline transition-colors max-sm:min-h-10",
+                view === v.view ? "text-slate-900" : "text-slate-600 hover:text-slate-900")}>
               <v.icon className="size-4" aria-hidden /> {c.views[v.view]}
             </Link>
           ))}
         </div>
       </nav>
 
-      <div className="mt-5">
+      {/* Each seat fades in when you switch to it; the tab pill above carries the movement. */}
+      <div key={view} className="mt-5 animate-fade-in">
         {!allowed.includes(view) && (
           <p className="m-0 rounded-xl bg-slate-50 p-4 text-[14px] text-slate-700 ring-1 ring-inset ring-slate-200">
             {c.notAllowed} <Link to={homeOf(user.role)} className="font-semibold text-emerald-700">{c.toHome}</Link>

@@ -437,10 +437,10 @@ async def cancel_lot(lot_id: str, user: User) -> Lot:
 
 @router.get("/deliveries", response_model=list[Lot])
 async def deliveries(user: User) -> list[Lot]:
-    """Sold lots with a delivery job: for a driver, the open ones and their own; for an admin, all."""
-    _role(user, auth.Role.DRIVER)
+    """Sold lots with a delivery job: for a driver, the open ones and their own; judges (read-only) and admins see all."""
+    _role(user, auth.Role.DRIVER, auth.Role.JUDGE)
     jobs = [l for l in MARKET.lots.values() if l.delivery is not None]
-    if user.role is not auth.Role.ADMIN:
+    if user.role is auth.Role.DRIVER:
         jobs = [l for l in jobs if l.delivery.status == "AWAITING_DRIVER" or l.delivery.driver_id == user.user_id]
     return sorted(jobs, key=lambda l: l.listed_at, reverse=True)
 

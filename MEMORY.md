@@ -1848,3 +1848,16 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   1-tap escrows. Truck pools keep their 5 seeds; injecting an anomaly stays a live click.
 - `check_marketplace.py` asserts the seed mix; all four self-checks pass.
 
+### 2026-11-19 · Motion, graphics and interface polish (the user asked for "elements, graphics, motion, interface")
+- Design record: `frontend/design/DESIGN_PLAN.md` §12. A refinement of the Phase 8 daylight system (Phase 7's heavy
+  motion was rejected as gimmicky), so: one authored moment, the rest feedback and continuity.
+- New: `story/RouteGraphic.tsx` (hero card: live five-tier markup road; a truck drives Rahim's routed lot when the live
+  card above finishes a run, only once its lane is on screen), `components/RouteSteps.tsx` (lot and delivery steps),
+  `lib/motion.ts` (`useBecame`, `useFreshIds`). Navbar and seat tabs have sliding pills; seats crossfade; payout bars
+  grow; the running card names the agent at work; new bids and released payments flash once; login has the hero ground
+  and faint static routes; themed selection, caret and scrollbars; the track kicker moved to a credential pill.
+- Bug found and fixed while testing: `GET /market/deliveries` refused judges (403), so JUDGE-01's truck driver seat showed
+  "Request failed" every 8 s. Judges now see every job read-only; `check_marketplace.py` covers it.
+- Checks: `tsc`, `npm run build`, marketplace self-check, Impeccable detector (no findings); frame sequences locally
+  (hero run, tab pill, raised bid, full delivery), reduced motion, Bangla and 390 px.
+

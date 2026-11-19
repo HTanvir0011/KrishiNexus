@@ -14,6 +14,21 @@ const ROLE_ORDER: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "drive
 const ROLE_ICON: Record<Role, LucideIcon> = {
   farmer: Sprout, coop: Warehouse, storage: Snowflake, buyer: ShoppingCart, bank: Landmark, driver: Truck, judge: Gavel, admin: ShieldCheck,
 };
+const TONE_TEXT = { emerald: "text-emerald-700", sky: "text-sky-600", amber: "text-amber-600", violet: "text-violet-600", slate: "text-slate-600", red: "text-rose-600" } as const;
+
+/** Faint routes behind the sign-in form: the farm-to-buyer roads every seat in the workspace works on. Static, decorative. */
+function RouteLines() {
+  return (
+    <svg aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(100vh,860px)] w-full" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" fill="none">
+      <path d="M-40 560 C 260 470, 470 640, 720 520 S 1160 300, 1480 400" stroke="#047857" strokeOpacity="0.16" strokeWidth="1.5" />
+      <path d="M-40 250 C 240 300, 430 150, 700 215 S 1100 430, 1480 300" stroke="#D97706" strokeOpacity="0.16" strokeWidth="1.5" strokeDasharray="5 7" />
+      <path d="M-40 680 C 380 630, 900 720, 1480 590" stroke="#0284C7" strokeOpacity="0.13" strokeWidth="1.5" />
+      {[[720, 520, "#047857"], [1480, 400, "#047857"], [700, 215, "#D97706"], [160, 285, "#D97706"], [300, 655, "#0284C7"], [1180, 627, "#0284C7"]].map(([x, y, c]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="4" fill="#fff" stroke={c as string} strokeOpacity="0.45" strokeWidth="1.5" />
+      ))}
+    </svg>
+  );
+}
 const DEMO_PASSWORD = "krishi2026"; // backend/auth.py DEMO_PASSWORD
 const FIELD = "min-h-11 w-full rounded-lg bg-white px-3 text-[15px] text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-700 focus:outline-none";
 
@@ -123,9 +138,12 @@ export function LoginPage() {
   };
 
   return (
+    <div className="relative isolate overflow-hidden">
+    <div className="hero-ground" aria-hidden />
+    <RouteLines />
     <main className="mx-auto max-w-[1100px] px-4 pb-16 sm:px-6">
       <section aria-labelledby="login-heading" className="flex min-h-[calc(100vh-150px)] items-center justify-center py-10">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[400px] animate-rise">
           <div className="mb-5 flex justify-center"><Wordmark /></div>
           <div className="surface rounded-2xl p-6 sm:p-7">
             <h1 id="login-heading" className="m-0 text-[22px] font-semibold tracking-[-0.02em] text-slate-900">{c.title}</h1>
@@ -178,13 +196,13 @@ export function LoginPage() {
             {ROLE_ORDER.filter((role) => accounts.some((a) => a.role === role)).map((role) => {
               const Icon = ROLE_ICON[role];
               return (
-                <Panel key={role} title={ROLE_LABEL[lang][role]} icon={<Icon className="size-4 text-slate-600" aria-hidden />}>
+                <Panel key={role} title={ROLE_LABEL[lang][role]} icon={<Icon className={cn("size-4", TONE_TEXT[ROLE_TONE[role]])} aria-hidden />}>
                   <p className="m-0 mb-3 text-[13px] text-slate-600">{c.roleHint[role]}</p>
                   <ul className="m-0 grid list-none gap-2 p-0">
                     {accounts.filter((a) => a.role === role).map((account) => (
                       <li key={account.user_id}>
                         <button type="button" onClick={() => void enter(account.user_id, account.user_id)} disabled={busy !== null}
-                          className={cn("flex min-h-14 w-full items-center gap-3 rounded-xl bg-white px-3 py-2 text-left ring-1 ring-inset ring-slate-200 transition-colors hover:bg-slate-50 disabled:opacity-60",
+                          className={cn("group flex min-h-14 w-full items-center gap-3 rounded-xl bg-white px-3 py-2 text-left ring-1 ring-inset ring-slate-200 transition-colors hover:bg-slate-50 hover:ring-slate-300 disabled:opacity-60",
                             user?.user_id === account.user_id && "ring-emerald-700/40")}>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[14.5px] font-semibold text-slate-900">{account.name}</span>
@@ -193,7 +211,7 @@ export function LoginPage() {
                             </span>
                           </span>
                           {busy === account.user_id ? <Spinner className="text-emerald-700" />
-                            : <Badge tone={ROLE_TONE[role]}>{c.login}</Badge>}
+                            : <Badge tone={ROLE_TONE[role]}>{c.login} <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden /></Badge>}
                         </button>
                       </li>
                     ))}
@@ -205,6 +223,7 @@ export function LoginPage() {
         )}
       </section>
     </main>
+    </div>
   );
 }
 

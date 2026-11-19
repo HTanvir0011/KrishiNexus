@@ -87,6 +87,17 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Motion, graphics and interface polish (19 November 2026)
+
+- Overview: a new "Five hands, or one truck" card under the live decision. It draws the five-tier markup road from the
+  live syndicate tool, and when you run the agents a truck drives Rahim's routed lot to the buyer and his real net
+  price lands at the end. The run now names the agent at work, and the payout bars grow in.
+- Workspace: a sliding pill on the navbar and seat tabs, a crossfade between seats, a route stepper on every lot and
+  delivery, a flash for newly arrived bids and a released payment, and themed selection, caret and scrollbars.
+- Login: the overview's dotted ground and faint farm-to-buyer routes behind the form; role-coloured icons.
+- Fix: judges can open the truck driver seat (it showed a "Request failed" alert every 8 seconds).
+- Every animation respects reduced motion; nothing loops.
+
 ### Direct marketplace, truck driver seat and a voice fix (17 November 2026)
 
 - `/os/trade`: farmers list a lot and buyers bid in the open; the farmer accepts one bid, the payment is held in a

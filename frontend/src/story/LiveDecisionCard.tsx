@@ -1,5 +1,5 @@
 import { ArrowRight, CloudRain, Landmark, Play, ShieldAlert, Snowflake, Truck, Volume2, Ban } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { api, ApiError } from "../api/client";
 import { Badge, Button, Segmented, SourceChip, Spinner } from "../components/ui";
@@ -31,6 +31,8 @@ const COPY = {
     run: "Run live multi-agent orchestration",
     again: "Run it again",
     running: "Four agents are working",
+    sending: "Sending the question to the agents…",
+    step: (n: number, total: number, title: string) => `Step ${n} of ${total}: ${title}`,
     idle: "Press run to send this question to the four agents on the live backend.",
     blocked: "Financial circuit breaker: Faria sale blocked",
     blockedWhy: (offer: string, floor: string) => `The Faria offers ${offer}/kg, below the ${floor}/kg it costs to grow a kilo.`,
@@ -56,6 +58,8 @@ const COPY = {
     run: "চার এজেন্টকে লাইভ চালান",
     again: "আবার চালান",
     running: "চার এজেন্ট কাজ করছে",
+    sending: "প্রশ্নটি এজেন্টদের কাছে যাচ্ছে…",
+    step: (n: number, total: number, title: string) => `ধাপ ${n}/${total}: ${title}`,
     idle: "প্রশ্নটি লাইভ ব্যাকএন্ডের চার এজেন্টের কাছে পাঠাতে চালান চাপুন।",
     blocked: "আর্থিক সার্কিট ব্রেকার: ফড়িয়ার বিক্রি আটকানো হয়েছে",
     blockedWhy: (offer: string, floor: string) => `ফড়িয়ার দাম ${offer}/কেজি, যা উৎপাদন খরচ ${floor}/কেজির নিচে।`,
@@ -77,8 +81,12 @@ const COPY = {
 
 const ALERT_TONE: Record<string, "emerald" | "amber" | "red"> = { GREEN: "emerald", YELLOW: "amber", ORANGE: "amber", RED: "red" };
 
-export function LiveDecisionCard() {
+export function LiveDecisionCard({ onRahim }: {
+  /** Called with Rahim's facts after each of his runs (live or the cached snapshot). */
+  onRahim?: (facts: RahimFacts) => void;
+} = {}) {
   const c = useCopy(COPY);
+  const lang = useAppState((s) => s.lang);
   const [persona, setPersona] = useState<PersonaId>("rahim");
   const [runs, setRuns] = useState<Partial<Record<PersonaId, Run>>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -105,6 +113,7 @@ export function LiveDecisionCard() {
         ? { rahim: (live && rahimFrom(response.data)) || RAHIM_SNAPSHOT }
         : { abdul: (live && abdulFrom(response.data)) || ABDUL_SNAPSHOT };
       if (live) setState({ lastVoice: response.data });
+      if (facts.rahim) onRahim?.(facts.rahim);
       setRuns((r) => ({ ...r, [who]: { sessionId, status: live ? "live" : "cached", ms: live ? performance.now() - started : null, ...facts } }));
     } catch (error) {
       pushAlert("danger", "The agents rejected the request", error instanceof ApiError ? error.message : String(error));
@@ -121,6 +130,8 @@ export function LiveDecisionCard() {
   };
 
   const running = run?.status === "running";
+  // The furthest node the live trace has reached: waiting shows which agent is working, not just a spinner.
+  const reached = PIPELINE.reduce<number>((at, node, i) => (seen.has(node.id) ? i : at), -1);
   return (
     <section className="surface overflow-hidden shadow-lift" aria-label={c.title}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
@@ -153,11 +164,16 @@ export function LiveDecisionCard() {
         </Button>
 
         {running && (
-          <ol className="m-0 grid list-none grid-cols-9 gap-1 p-0" aria-label="Pipeline progress">
-            {PIPELINE.map((node) => (
-              <li key={node.id} title={node.title} className={cn("h-1.5 rounded-full transition-colors", seen.has(node.id) ? "bg-emerald-600" : "bg-slate-200")} />
-            ))}
-          </ol>
+          <div>
+            <ol className="m-0 grid list-none grid-cols-9 gap-1 p-0" aria-label="Pipeline progress">
+              {PIPELINE.map((node) => (
+                <li key={node.id} title={node.title} className={cn("h-1.5 rounded-full transition-colors duration-300", seen.has(node.id) ? "bg-emerald-600" : "bg-slate-200")} />
+              ))}
+            </ol>
+            <p key={reached} className="m-0 mt-2 animate-fade-in text-[12.5px] text-slate-600" aria-live="polite">
+              {reached < 0 ? c.sending : c.step(reached + 1, PIPELINE.length, lang === "bn" ? PIPELINE[reached].title_bn : PIPELINE[reached].title)}
+            </p>
+          </div>
         )}
 
         {!run && <p className="m-0 text-[13px] text-slate-500">{c.idle}</p>}
@@ -165,7 +181,7 @@ export function LiveDecisionCard() {
         {run?.rahim && !running && (
           <div className="animate-rise space-y-4">
             {run.rahim.blocked && (
-              <div className="flex gap-3 rounded-xl bg-rose-100/70 p-3 ring-1 ring-inset ring-rose-600/15">
+              <div className="flex animate-stamp gap-3 rounded-xl bg-rose-100/70 p-3 ring-1 ring-inset ring-rose-600/15">
                 <ShieldAlert className="mt-0.5 size-5 shrink-0 text-rose-600" aria-hidden />
                 <div>
                   <div className="text-[14px] font-semibold text-rose-700">{c.blocked}</div>
@@ -223,24 +239,31 @@ function Payouts({ facts: r, copy: c }: { facts: RahimFacts; copy: (typeof COPY)
     { key: "pool", icon: <Truck className="size-4" aria-hidden />, label: c.pool, value: r.lotValueB2b, note: `${tk(r.b2bNet)}/kg after ${tk(r.freight)}/kg freight`, bar: "bg-emerald-600", struck: false },
   ];
   const max = Math.max(...rows.map((row) => row.value), 1);
+  // Bars mount empty and grow on the next frame, one after another, so the comparison reads as it arrives.
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return (
     <div>
       <div className="mb-2 text-[13px] font-medium text-slate-600">{c.worth(r.quantityKg)}</div>
       <ul className="m-0 list-none space-y-3 p-0">
-        {rows.map((row) => (
+        {rows.map((row, i) => (
           <li key={row.key}>
             <div className="flex items-baseline justify-between gap-3">
               <span className={cn("flex min-w-0 items-center gap-1.5 text-[14px]", row.key === best ? "font-semibold text-slate-900" : "text-slate-700")}>
                 <span className={row.key === "faria" ? "text-rose-600" : row.key === "store" ? "text-sky-600" : "text-emerald-700"}>{row.icon}</span>
                 <span className="truncate">{row.label}</span>
-                {row.key === best && <Badge tone="emerald">{c.recommended}</Badge>}
+                {row.key === best && <span className="animate-pop" style={{ animationDelay: "700ms" }}><Badge tone="emerald">{c.recommended}</Badge></span>}
               </span>
               <span className={cn("num text-[18px]", row.struck ? "text-rose-600 line-through decoration-2" : row.key === best ? "text-emerald-700" : "text-slate-900")}>
                 {tk(row.value, 0)}
               </span>
             </div>
             <div className="mt-1.5 h-2 rounded-full bg-slate-100">
-              <div className={cn("h-full rounded-full transition-[width] duration-700", row.bar)} style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }} />
+              <div className={cn("h-full origin-left rounded-full transition-transform duration-700 ease-(--ease-out-expo)", row.bar)}
+                style={{ width: `${Math.max(2, (row.value / max) * 100)}%`, transform: grown ? "none" : "scaleX(0)", transitionDelay: `${i * 110}ms` }} />
             </div>
             {row.note && <div className="mt-1 text-[12px] text-slate-500">{row.note}</div>}
           </li>

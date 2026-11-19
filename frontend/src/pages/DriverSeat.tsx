@@ -2,9 +2,11 @@ import { CheckCircle2, MapPinned, PackageCheck, ShieldAlert, Thermometer, Truck 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { api, ApiError, type MarketLot } from "../api/client";
+import { RouteSteps } from "../components/RouteSteps";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
-import { tk } from "../lib/format";
+import { cn, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
+import { useBecame } from "../lib/motion";
 import { pushAlert, useAppState } from "../state/store";
 
 const FIELD = "min-h-10 w-full rounded-lg bg-white px-3 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-amber-600 focus:outline-none";
@@ -19,6 +21,7 @@ const COPY = {
     buyer: "Buyer", farmer: "Farmer", payment: "Payment held", released: "Payment released to the farmer",
     states: { AWAITING_DRIVER: "Waiting for a driver", ASSIGNED: "Assigned to you", PICKED_UP: "On the road", DELIVERED: "Delivered" },
     readOnly: "Read-only view for judges and admins: only driver accounts take jobs.", failed: "Request failed", done: "Updated",
+    steps: ["Waiting", "Taken", "On the road", "Delivered"], stepsLabel: "Delivery progress",
   },
   bn: {
     available: "চালকের অপেক্ষায় কাজ", mine: "আমার ডেলিভারি", none: "এখন কোনো কাজ নেই।",
@@ -29,9 +32,11 @@ const COPY = {
     buyer: "ক্রেতা", farmer: "কৃষক", payment: "টাকা আটকে আছে", released: "টাকা কৃষককে ছাড় হয়েছে",
     states: { AWAITING_DRIVER: "চালকের অপেক্ষা", ASSIGNED: "আপনার কাজ", PICKED_UP: "পথে", DELIVERED: "পৌঁছেছে" },
     readOnly: "বিচারক ও অ্যাডমিনের জন্য শুধু দেখা: কেবল চালক কাজ নিতে পারেন।", failed: "অনুরোধ ব্যর্থ", done: "হালনাগাদ হয়েছে",
+    steps: ["অপেক্ষা", "নেওয়া হয়েছে", "পথে", "পৌঁছেছে"], stepsLabel: "ডেলিভারির অগ্রগতি",
   },
 };
 
+const STAGE = { AWAITING_DRIVER: 0, ASSIGNED: 1, PICKED_UP: 2, DELIVERED: 3 } as const;
 const message = (error: unknown) => (error instanceof ApiError ? error.message : String(error));
 
 /** The truck driver's seat: open delivery jobs, then pickup, temperature reports on the road, and delivery. */
@@ -82,6 +87,7 @@ function JobCard({ job, canAct, onChange }: { job: MarketLot; canAct: boolean; o
   const [busy, setBusy] = useState(false);
   const [temp, setTemp] = useState(String(d.last_temp_c ?? 28));
   const [rh, setRh] = useState(String(d.last_rh_pct ?? 80));
+  const released = useBecame(job.escrow?.status, "RELEASED");
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -112,9 +118,12 @@ function JobCard({ job, canAct, onChange }: { job: MarketLot; canAct: boolean; o
         <Badge tone={d.status === "DELIVERED" ? "emerald" : d.status === "PICKED_UP" ? "sky" : "amber"}>{c.states[d.status]}</Badge>
       </div>
 
+      <RouteSteps className="mt-3" steps={c.steps} at={STAGE[d.status]} label={c.stepsLabel}
+        icon={d.status === "PICKED_UP" ? <Truck className="size-3" aria-hidden /> : undefined} />
+
       {job.escrow && (
-        <div className="mt-2 text-[12.5px] text-slate-700">
-          {job.escrow.status === "RELEASED" ? <CheckCircle2 className="mr-1 inline size-3.5 text-emerald-700" aria-hidden /> : null}
+        <div className={cn("-mx-1 mt-2 rounded-md px-1 py-0.5 text-[12.5px] text-slate-700", released && "animate-flash")}>
+          {job.escrow.status === "RELEASED" ? <CheckCircle2 className={cn("mr-1 inline size-3.5 text-emerald-700", released && "animate-pop")} aria-hidden /> : null}
           {job.escrow.status === "RELEASED" ? c.released : c.payment}: <span className="num font-semibold">{tk(job.escrow.amount_tk, 0)}</span>
         </div>
       )}

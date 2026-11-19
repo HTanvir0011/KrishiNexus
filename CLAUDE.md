@@ -194,9 +194,11 @@ krishinexus-os/
         ├── api/client.ts · api/fallback.ts     # typed REST + WebSocket client, OFFLINE-PREVIEW fallbacks
         ├── state/store.ts                      # useSyncExternalStore global store + actions (lang, health, offlineMode, ...)
         ├── lib/format.ts · speech.ts · mcpExamples.ts · router.tsx (Route, navigate, Link) · summary.ts · i18n.ts (useCopy)
+        ├── lib/motion.ts                       # useBecame (acknowledge a milestone once) · useFreshIds (mark rows new since the last poll)
         ├── story/                              # the product overview at /
         │   ├── StoryPage.tsx                   # hero (live metric pills), bento, pipeline, team footer
-        │   ├── LiveDecisionCard.tsx            # Rahim / Abdul: runs the real orchestration on click
+        │   ├── LiveDecisionCard.tsx            # Rahim / Abdul: runs the real orchestration on click; names the agent at work, bars grow in
+        │   ├── RouteGraphic.tsx                # "Five hands, or one truck": live syndicate road + the truck that drives Rahim's routed lot
         │   ├── SyndicateCard.tsx · QuotaCard.tsx · HaorCard.tsx   # bento cards wired to MCP tools; HaorCard has the SAR map
         │   ├── PipelineSection.tsx · pipeline.ts   # the 9 LangGraph nodes, their state contracts and per-node timing
         │   ├── useLive.ts                      # live call with status, round trip and dated-snapshot fallback
@@ -205,6 +207,7 @@ krishinexus-os/
         ├── components/
         │   ├── Navbar.tsx · shell/Alerts.tsx   # sticky glass navbar (status, routes, বাং/EN, offline edge, CTA); toasts
         │   ├── ui.tsx · gauges.tsx             # Badge Panel Button Stat ProgressBar Spinner SourceChip Segmented LiveDot; dials
+        │   ├── RouteSteps.tsx                  # a lot's road as steps (listed/sold/on the road/delivered); the line eases forward on change
         │   ├── OpticalGraderCanvas.tsx · AgentTraceVisualizer.tsx · TruckPoolMap.tsx · ColdStorage3DTwin.tsx
         │   ├── BuyerBidsPanel.tsx              # market seat: ranked buyer bids for a lot and the 1-tap bKash/Nagad escrow lock
         │   └── docs/ProvenanceSection.tsx · McpInspectorSection.tsx · DepthMatrixSection.tsx · EvalsSection.tsx · EconomicsSection.tsx (+ per-truck unit economics, break-even, pilot plan) · DataSafetySection.tsx
@@ -284,7 +287,7 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `POST /evals/run-regression` | `RegressionRequest` (`sample_size` 1–20 per category) → `RegressionReport` | 6 |
 | `GET /evals/holdout?refresh` | → `HoldoutReport` (frozen 66-probe blind retrieval test; cached 10 min) | 9 |
 | `GET/POST /market/lots`, `POST /market/lots/{id}/bids`, `.../accept`, `.../cancel` | logged-in only; farmer lists, accepts (`{bid_id, wallet, wallet_number, accept_below_floor}`; below the crop's production-cost floor needs `accept_below_floor`, else 409) and cancels own open lots; buyer bids Tk/kg; bids are public; notes PII-scrubbed; escrow HMAC-signed, wallet masked, simulated | 13 |
-| `GET /market/deliveries`, `POST /market/deliveries/{lot_id}/claim`, `/pickup`, `/temperature`, `/deliver`, `POST /market/reset` | driver (and admin): open jobs and own; status order AWAITING_DRIVER → ASSIGNED → PICKED_UP → DELIVERED (409 out of order, 403 another driver's); temperature runs `calculate_dynamic_shelf_life` and flags `at_risk` by the pools' 25% arrival reserve; deliver releases the escrow; reset (admin) restores the seeded lots | 13 |
+| `GET /market/deliveries`, `POST /market/deliveries/{lot_id}/claim`, `/pickup`, `/temperature`, `/deliver`, `POST /market/reset` | driver: open jobs and own; judge (read-only) and admin: every job; status order AWAITING_DRIVER → ASSIGNED → PICKED_UP → DELIVERED (409 out of order, 403 another driver's); temperature runs `calculate_dynamic_shelf_life` and flags `at_risk` by the pools' 25% arrival reserve; deliver releases the escrow; reset (admin) restores the seeded lots | 13 |
 | `POST /feedback` | `{useful, comment?, session_id?, lang, context}` → `Feedback` (201); a valid session token attaches the account; the comment is PII-scrubbed before storing; rate-limited on the hosted demo | 12 |
 | `GET /auth/demo-users` | → active `User` accounts for the quick-login screen | 11 |
 | `POST /auth/login` | `{user_id, password?}` → `Session` (`token` = `user_id.expiry.HMAC`, 12 h). The id is matched in any case. With a password it must match the account's PBKDF2 hash (401 otherwise; seeded accounts use `DEMO_PASSWORD` `krishi2026`, shown on the login page); without one it is the demo quick login. Where `KNX_ADMIN_PASSWORD` is set (the hosted demo; `serve.py` defaults it to a per-boot random value), admin accounts need exactly that password: quick login and the demo password answer 401. 403 if unknown or disabled | 11 |
@@ -470,4 +473,9 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
   - Live cards use `story/useLive.ts`: they time the live call, fall back to a dated snapshot (`SNAPSHOT_DATE`) only on network or 5xx failures, and show the source with `SourceChip`.
   - Metric pills are computed on load; never type a result in.
   - Brief figures stay "cited in brief".
+- **Motion (Phase 9, `frontend/design/DESIGN_PLAN.md` §12):** one authored moment, the hero's truck drive in
+  `RouteGraphic`, played only when its lane is on screen; everything else is feedback or continuity (navbar and seat tab
+  pills, seat crossfade, bars that grow, new-bid flash, payment released). Tokens and keyframes live in `index.css`
+  (`--ease-out-expo`, `animate-draw/drive/pop/stamp/flash/fade-in`); `flash` and `stamp` have only a start state, so they
+  settle into the element's own background and ring. Reduced motion lands every animation on its end state, with no delays.
 - **Pipeline:** `story/pipeline.ts` is the single list of LangGraph nodes, with their state reads and writes, MCP tools and files. `nodeOf` maps trace events to nodes, including token compression's DAM lookup, which is recorded under the supervisor's name.

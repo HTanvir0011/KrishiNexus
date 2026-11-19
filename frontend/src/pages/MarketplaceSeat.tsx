@@ -2,9 +2,11 @@ import { BadgeCheck, Gavel, HandCoins, PackagePlus, ShieldAlert, Truck, X } from
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { api, ApiError, type Crop, type MarketBid, type MarketLot, type Wallet } from "../api/client";
+import { RouteSteps } from "../components/RouteSteps";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
 import { cn, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
+import { useBecame, useFreshIds } from "../lib/motion";
 import { pushAlert, useAppState } from "../state/store";
 
 const CROPS: Crop[] = ["Cardinal Potato", "Diamant Potato", "Green Chili", "Brinjal", "Boro Rice"];
@@ -25,7 +27,7 @@ const COPY = {
     route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} km · about ${h} h`,
     states: { AWAITING_DRIVER: "Waiting for a driver", ASSIGNED: "Driver assigned", PICKED_UP: "On the road", DELIVERED: "Delivered" },
     readOnly: "Read-only view: farmers list and accept, buyers bid.", simulated: "Escrows are simulated: no money moves.",
-    failed: "Request failed",
+    failed: "Request failed", steps: ["Listed", "Sold", "On the road", "Delivered"], stepsLabel: "Lot progress",
   },
   bn: {
     sellTitle: "সরাসরি ফসল বিক্রি", sellLede: "লট দিন; ক্রেতা ও ব্যবসায়ীরা খোলাখুলি দর দেবেন। আপনি বেছে নেবেন, আর ডেলিভারি পর্যন্ত টাকা এসক্রোতে থাকবে।",
@@ -40,11 +42,12 @@ const COPY = {
     route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} কিমি · প্রায় ${h} ঘণ্টা`,
     states: { AWAITING_DRIVER: "চালকের অপেক্ষা", ASSIGNED: "চালক ঠিক হয়েছে", PICKED_UP: "পথে", DELIVERED: "পৌঁছেছে" },
     readOnly: "শুধু দেখা: কৃষক লট দেন ও গ্রহণ করেন, ক্রেতা দর দেন।", simulated: "এসক্রো সিমুলেটেড: কোনো টাকা লেনদেন হয় না।",
-    failed: "অনুরোধ ব্যর্থ",
+    failed: "অনুরোধ ব্যর্থ", steps: ["তালিকায়", "বিক্রি", "পথে", "পৌঁছেছে"], stepsLabel: "লটের অগ্রগতি",
   },
 };
 
 const message = (error: unknown) => (error instanceof ApiError ? error.message : String(error));
+const STAGE: Record<MarketLot["status"], number> = { OPEN: 0, SOLD: 1, IN_TRANSIT: 2, DELIVERED: 3, CANCELLED: -1 };
 const activeBids = (lot: MarketLot) => lot.bids.filter((b) => b.status === "ACTIVE").sort((a, b) => b.price_tk_per_kg - a.price_tk_per_kg);
 
 /** Direct marketplace: farmers list lots and accept bids, buyers bid in the open; judges and admins watch. */
@@ -111,6 +114,9 @@ function LotList({ title, lots, render }: { title: string; lots: MarketLot[]; re
 function LotCard({ lot, bidAction, footer }: { lot: MarketLot; bidAction?: (bid: MarketBid) => ReactNode; footer?: ReactNode }) {
   const c = useCopy(COPY);
   const bids = [...lot.bids].sort((a, b) => Number(b.status === "ACTIVE" || b.status === "ACCEPTED") - Number(a.status === "ACTIVE" || a.status === "ACCEPTED") || b.price_tk_per_kg - a.price_tk_per_kg);
+  // A bid that arrives on the 8 s poll warms its row; a payment released while you watch is acknowledged once.
+  const fresh = useFreshIds(lot.bids.map((b) => b.bid_id));
+  const released = useBecame(lot.escrow?.status, "RELEASED");
   return (
     <article className="rounded-xl bg-white p-3 ring-1 ring-inset ring-slate-200">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -124,12 +130,16 @@ function LotCard({ lot, bidAction, footer }: { lot: MarketLot; bidAction?: (bid:
         </div>
         <Badge tone={STATUS_TONE[lot.status]}>{lot.status.replace("_", " ")}</Badge>
       </div>
+      {lot.status !== "CANCELLED" && (
+        <RouteSteps className="mt-3" steps={c.steps} at={STAGE[lot.status]} label={c.stepsLabel}
+          icon={lot.status === "IN_TRANSIT" ? <Truck className="size-3" aria-hidden /> : undefined} />
+      )}
       {lot.note && <p className="m-0 mt-2 text-[13px] text-slate-700">“{lot.note}”</p>}
       <div className="mt-2 text-[12px] font-medium text-slate-500">{c.bids}</div>
       {bids.length === 0 ? <p className="m-0 text-[13px] text-slate-500">{c.noBids}</p> : (
         <ul className="m-0 mt-1 grid list-none gap-1 p-0">
           {bids.map((b) => (
-            <li key={b.bid_id} className={cn("flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px]",
+            <li key={b.bid_id} className={cn("flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px]", fresh.has(b.bid_id) && "animate-flash",
               b.status === "ACCEPTED" ? "bg-emerald-50 ring-1 ring-inset ring-emerald-700/20" : b.status === "ACTIVE" ? "bg-slate-50" : "text-slate-400 line-through")}>
               <span className="min-w-0">
                 <span className="num font-semibold">Tk {b.price_tk_per_kg}/kg</span> · {b.buyer_name}, {b.buyer_district}
@@ -143,8 +153,11 @@ function LotCard({ lot, bidAction, footer }: { lot: MarketLot; bidAction?: (bid:
         </ul>
       )}
       {lot.escrow && (
-        <div className="mt-2 rounded-lg bg-amber-50/70 px-2 py-1.5 text-[12.5px] text-amber-900 ring-1 ring-inset ring-amber-600/20">
-          <HandCoins className="mr-1 inline size-3.5" aria-hidden />
+        <div className={cn("mt-2 rounded-lg px-2 py-1.5 text-[12.5px] ring-1 ring-inset", released && "animate-flash",
+          lot.escrow.status === "RELEASED" ? "bg-emerald-50 text-emerald-900 ring-emerald-700/20" : "bg-amber-50/70 text-amber-900 ring-amber-600/20")}>
+          {lot.escrow.status === "RELEASED"
+            ? <BadgeCheck className={cn("mr-1 inline size-3.5 text-emerald-700", released && "animate-pop")} aria-hidden />
+            : <HandCoins className="mr-1 inline size-3.5" aria-hidden />}
           {lot.escrow.status === "RELEASED" ? c.escrowReleased : c.escrowHeld}: <span className="num font-semibold">{tk(lot.escrow.amount_tk, 0)}</span> · {lot.escrow.wallet} {lot.escrow.wallet_masked}
         </div>
       )}

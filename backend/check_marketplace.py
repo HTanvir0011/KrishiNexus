@@ -61,6 +61,9 @@ with TestClient(app) as client:
 
     # The driver's chain: claim, pickup, temperature check, deliver -> escrow released. Others are refused.
     assert client.get("/market/deliveries", headers=buyer).status_code == 403
+    judge = as_("JUDGE-01")  # judges watch every delivery, read-only
+    assert len(client.get("/market/deliveries", headers=judge).json()) == sum(1 for l in seeded if l.delivery is not None) + 1
+    assert client.post(f"/market/deliveries/{lot_id}/claim", headers=judge).status_code == 403
     assert any(l["lot_id"] == lot_id for l in client.get("/market/deliveries", headers=driver).json())
     assert client.post(f"/market/deliveries/{lot_id}/pickup", headers=driver).status_code == 409  # claim first
     client.post(f"/market/deliveries/{lot_id}/claim", headers=driver)

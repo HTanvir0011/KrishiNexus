@@ -23,10 +23,19 @@
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px -4px rgba(15, 23, 42, 0.06);
   --shadow-lift: 0 1px 3px rgba(15, 23, 42, 0.06), 0 18px 40px -10px rgba(15, 23, 42, 0.16);
 
+  /* Motion: confident arrivals decelerate; exits are quicker than entrances. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
   --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
   --animate-sweep: sweep 4s linear infinite;
   --animate-wave: wave 1s ease-in-out infinite;
   --animate-rise: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.22s ease-out both;
+  --animate-pop: pop 0.45s var(--ease-out-expo) both;
+  --animate-stamp: stamp 0.5s var(--ease-out-expo) backwards;
+  --animate-flash: flash 1.8s ease-out;
+  --animate-draw: draw 0.7s var(--ease-out-expo) both;
+  --animate-drive: drive 1.2s var(--ease-out-expo) 0.3s both;
 
   @keyframes pulse-soft {
     0%, 100% { opacity: 1; }
@@ -43,6 +52,33 @@
   @keyframes rise {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: none; }
+  }
+  /* The circuit breaker lands like a rubber stamp: a quick settle, no bounce. Only a start state, so the element's own
+     ring and colours are untouched once it lands. */
+  @keyframes stamp {
+    from { opacity: 0; transform: scale(1.035); }
+  }
+  /* A new bid or a released payment: the row warms, then settles back to its own background (no end state on purpose). */
+  @keyframes flash {
+    from { background-color: rgb(209 250 229); }
+  }
+  /* A route line drawn from its origin; pair with origin-left. */
+  @keyframes draw {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  /* The truck rides a full-width carrier from the field (left) to the buyer (right); 1.25rem is the truck's width. */
+  @keyframes drive {
+    from { transform: translateX(calc(-100% + 1.25rem)); }
+    to { transform: none; }
   }
 }
 
@@ -70,6 +106,21 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-emerald-700);
   outline-offset: 2px;
+}
+
+/* The browser's own surfaces carry the palette too. */
+::selection {
+  background: var(--color-emerald-100);
+  color: var(--color-emerald-900);
+}
+input, textarea {
+  caret-color: var(--color-emerald-700);
+}
+a {
+  text-underline-offset: 3px;
+}
+html {
+  scrollbar-color: var(--color-slate-300) transparent;
 }
 
 [lang="bn"] {
@@ -105,6 +156,25 @@ body {
   color: var(--color-slate-200);
 }
 
+/* The landing hero's ground: a fine dot grid that fades out, and daylight pooling behind the live card. */
+.hero-ground {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 26rem at 78% 18%, rgb(16 185 129 / 0.1), transparent 70%),
+    radial-gradient(30rem 22rem at 92% 70%, rgb(251 191 36 / 0.09), transparent 70%);
+}
+.hero-ground::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgb(100 116 139 / 0.22) 1px, transparent 0);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 75% 70% at 65% 35%, #000 25%, transparent 78%);
+}
+
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--color-slate-300) transparent;
@@ -115,10 +185,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Every animation lands on its final state at once: no movement, and no staged delays holding content back. */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }

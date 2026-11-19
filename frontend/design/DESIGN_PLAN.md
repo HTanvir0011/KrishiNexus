@@ -394,3 +394,33 @@ farmers amber (booked lighter, open brighter).
   - judge mode preset run with the plain and raw trace views;
   - Bangla toggle.
 - The whitepaper sections were exercised by the restyle pass: MCP call, compression, guardrails, 100-case run.
+
+---
+
+## 12. Phase 9: motion, graphics and interface polish (2026-11-19, live)
+
+A refinement of the Phase 8 system, not a new world: same daylight surfaces, palette and type. The owner asked for more
+graphics, motion and interface; Phase 7 had been rejected as gimmicky, so the rule is one authored moment and quiet,
+purposeful feedback everywhere else.
+
+- **Motion thesis.**
+  - Focal moment: the hero's "Five hands, or one truck" card (`story/RouteGraphic.tsx`). The syndicate road draws from the
+    farm gate and each middleman lights with his live markup (`detect_syndicate_markup_anomaly`). When the live card
+    above routes Rahim's lot, an emerald road draws and a truck drives it to the buyer, then his net and the gain over the
+    Faria's offer land. The drive waits until its lane is on screen (IntersectionObserver), because a run grows the
+    card above and can push the lane below the fold.
+  - Continuity: the navbar and seat-tab pills slide to the active item (300 ms, `--ease-out-expo`); seats crossfade
+    (220 ms).
+  - Feedback: the run names the agent at work from the live trace ("Step 8 of 9: Supervisor review"); payout bars grow
+    one after another; the circuit breaker lands like a stamp; a lot or delivery advances along `RouteSteps`; a new bid
+    or a released payment warms its row once (`lib/motion.ts`); buttons acknowledge a press (scale 0.98).
+  - Budget: transforms and opacity only, plus one IntersectionObserver; no loops, no new dependencies.
+- **Graphics.** The hero and login share a ground: a fine dot grid masked to fade out, with emerald and amber daylight
+  pooling behind the live card. The login adds three faint, static farm-to-buyer routes (`RouteLines`).
+- **Browser surfaces.** Text selection emerald-100 on emerald-900, emerald caret, slate scrollbars, 3 px underline offset.
+- **Craft-floor change.** The all-caps track kicker above the hero headline became a credential pill beside the measured
+  metrics ("AgriSphere AI · FarmMarket track"); the headline now leads.
+- **Reduced motion.** Every animation and transition lands on its final state at once, delays included.
+- **Verified** (local backend and frontend, headless Chrome): frame sequences of the hero run, tab pill (0 px off the
+  active tab), raised bid, full delivery; reduced motion; Bangla; 390 px phone (no horizontal scroll); `npm run build`;
+  the Impeccable detector found nothing.

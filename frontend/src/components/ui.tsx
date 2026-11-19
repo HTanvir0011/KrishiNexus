@@ -80,7 +80,9 @@ export function Button({ variant = "ghost", className, children, ...props }: But
     <button
       type="button"
       className={cn(
-        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[14px] font-semibold transition-colors max-sm:min-h-11",
+        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[14px] font-semibold max-sm:min-h-11",
+        // A press is acknowledged at once (100 ms) and released quicker than it arrived.
+        "transition-[color,background-color,box-shadow,transform] duration-150 enabled:active:scale-[0.98] enabled:active:duration-100",
         "disabled:cursor-not-allowed",
         BUTTON_VARIANTS[variant],
         className,
