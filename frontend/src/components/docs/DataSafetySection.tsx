@@ -13,6 +13,7 @@ const DATA: { item: string; handling: string; kept: string; where: string }[] = 
   { item: "Agent trace", handling: "Masked previews only (017******44), never the raw text", kept: "Latest 2,000 events", where: "Memory; live viewers and the admin" },
   { item: "Weather lookup", handling: "Only the district's coordinates go to Open-Meteo", kept: "Not kept", where: "—" },
   { item: "Language models", handling: "No cloud LLM is called at runtime; the fine-tuned model runs on the kiosk through Ollama", kept: "—", where: "Kiosk" },
+  { item: "Spoken answer (Bangla playback)", handling: "Read by the device's own Bangla voice when it has one. Otherwise the answer text, with personal details scrubbed, is read by an online speech service (Google Translate's Bangla voice, or Microsoft's bn-BD neural voices through the open-source edge-tts library if Google fails) and the audio played back. Never in Offline edge mode; KNX_ONLINE_TTS=off switches it off", kept: "Audio of the last 48 answers in node memory; nothing on disk", where: "Node memory / Google or Microsoft speech service" },
 ];
 
 const SAFEGUARDS = [

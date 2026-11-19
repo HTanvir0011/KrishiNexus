@@ -1,4 +1,6 @@
-/** Browser speech helpers: Web Speech API recognition (bn-BD) and speech synthesis playback. */
+/** Browser speech helpers: Web Speech API recognition (bn-BD) and speech playback (device voice, else the node's online Bangla voice). */
+
+import { fetchBanglaSpeech } from "../api/client";
 
 interface RecognitionResultEvent {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -119,14 +121,37 @@ export async function hasBanglaVoice(): Promise<boolean> {
   return pickVoice(await voicesReady(), "bn-BD") !== undefined;
 }
 
-export async function speak(text: string, lang: "bn-BD" | "en-US"): Promise<boolean> {
-  if (!("speechSynthesis" in window) || !text) return false;
-  const voice = pickVoice(await voicesReady(), lang);
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = voice?.lang ?? lang;
-  utterance.rate = lang === "bn-BD" ? 0.9 : 1;
-  if (voice) utterance.voice = voice;
-  window.speechSynthesis.speak(utterance);
-  return true;
+let playing: HTMLAudioElement | null = null;
+
+/** How an answer was spoken: the device's own voice, the node's online Bangla voice, or not at all. */
+export type Spoken = "device" | "online" | "none";
+
+/**
+ * Speaks with the device's voice when it has one for the language. Bangla on a device without a Bangla voice falls back
+ * to the node's online voice (an MP3), unless `online` is false (Offline edge mode).
+ */
+export async function speak(text: string, lang: "bn-BD" | "en-US", { online = true }: { online?: boolean } = {}): Promise<Spoken> {
+  if (!text) return "none";
+  playing?.pause();
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  const voice = "speechSynthesis" in window ? pickVoice(await voicesReady(), lang) : undefined;
+  if (voice || (lang === "en-US" && "speechSynthesis" in window)) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voice?.lang ?? lang;
+    utterance.rate = lang === "bn-BD" ? 0.9 : 1;
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+    return "device";
+  }
+  if (lang !== "bn-BD" || !online) return "none";
+  try {
+    const url = URL.createObjectURL(await fetchBanglaSpeech(text));
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+    playing = audio;
+    await audio.play();
+    return "online";
+  } catch {
+    return "none";
+  }
 }

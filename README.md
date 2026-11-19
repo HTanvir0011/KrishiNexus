@@ -87,6 +87,13 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Bangla playback in every browser (19 November 2026)
+
+- শুনুন / Listen in Bangla now plays everywhere. The device's own Bangla voice is used where there is one (Microsoft
+  Edge, Chrome on Android); elsewhere the node reads the answer through an online voice (`POST /edge/tts`): Google
+  Translate's Bangla voice, or Microsoft's bn-BD neural voices if Google fails. Personal details are scrubbed first,
+  Offline edge mode never calls it, and `KNX_ONLINE_TTS=off` switches it off. Docs → Data safety lists it.
+
 ### Owner review fixes: grading, voice, bids, bank desk, cold-store incidents, co-op desk (19 November 2026)
 
 - Photo grading: without a ruler in the photo, sizes are judged against the lot itself (the default), so an even lot

@@ -8,6 +8,7 @@ websockets>=14.0
 networkx>=3.4
 langgraph>=1.0
 pillow>=11.3
+edge-tts>=7.3          # fallback online Bangla voice (edge_node/online_tts.py; Google's is tried first)
 # Optional upgrades (auto-detected; the backend runs fully without them):
 #   sentence-transformers  -> BAAI/bge-m3 dense embeddings + bge-reranker-large cross-encoder
 #                             (set KNX_EMBEDDING_MODEL / KNX_RERANKER_MODEL)

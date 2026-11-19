@@ -1886,3 +1886,13 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - Resolved the same day (the owner said "Yes, regenerate it"): Render's own "Generated secret" (32 chars, never typed or
   read) replaced `KNX_RECEIPT_SIGNING_KEY`; `33da6ab` deployed (live after ~100 s). Checked live: all seats 200, admin quick
   login 401, judge deliveries 200, bank ledger (3 rows) and disputes (1 open, 1 resolved), security headers, no console errors.
+
+### 2026-11-19 · Online Bangla voice (the owner said "Yes, add it", accepting that answer text leaves the node)
+- `backend/edge_node/online_tts.py` + `POST /edge/tts` (audio/mpeg). Google Translate TTS (`tl=bn`, `client=tw-ob`,
+  pieces of <= 180 chars cut at sentence ends, MP3s concatenated) is primary; `edge-tts` (bn-BD Nabanita/Pradeep) is the
+  fallback because it threw `NoAudioReceived` on about half the requests in testing (throttling). PII scrubbed, 1,500
+  chars max, LRU cache of 48, `KNX_ONLINE_TTS=off` disables (503). Self-check: `python -m edge_node.online_tts`.
+- Frontend: `speak()` returns "device" | "online" | "none"; farmer app and landing card show fetching/playing notices;
+  offline mode never fetches. Docs Data safety has a "Spoken answer" row.
+- Local check: a browser with no Bangla voice played the online voice in 6.4 s (200 audio/mpeg); cache replay 0.02 s.
+

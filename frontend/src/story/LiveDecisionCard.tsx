@@ -43,7 +43,9 @@ const COPY = {
     recommended: "Recommended",
     trace: "View full trace in OS",
     listen: "Listen in Bangla",
-    noVoice: "This browser has no Bangla voice, so the answer is shown but not spoken. Microsoft Edge, or Chrome on an Android phone, can speak it.",
+    noVoice: "No Bangla voice could be played here (offline, or the online voice is unreachable), so the answer is shown but not spoken.",
+    fetchingVoice: "Fetching the online Bangla voice…",
+    onlineVoice: "Playing the online Bangla voice (the device has none).",
     breach: "chance the haor embankment breaks in the next 72 hours",
     sar: "SAR backscatter",
     sarNote: "simulated pass",
@@ -70,7 +72,9 @@ const COPY = {
     recommended: "সুপারিশ",
     trace: "ওএস-এ পুরো ট্রেস দেখুন",
     listen: "বাংলায় শুনুন",
-    noVoice: "এই ব্রাউজারে বাংলা কণ্ঠ নেই, তাই উত্তরটি লেখা আকারে দেখানো হলো। মাইক্রোসফট এজ বা অ্যান্ড্রয়েড ফোনের ক্রোমে শুনতে পাবেন।",
+    noVoice: "এখানে বাংলা কণ্ঠ চালানো গেল না (অফলাইন, বা অনলাইন কণ্ঠ পাওয়া যায়নি), তাই উত্তরটি লেখা আকারে দেখানো হলো।",
+    fetchingVoice: "অনলাইন বাংলা কণ্ঠ আনা হচ্ছে…",
+    onlineVoice: "অনলাইন বাংলা কণ্ঠে শোনানো হচ্ছে (ডিভাইসে বাংলা কণ্ঠ নেই)।",
     breach: "আগামী ৭২ ঘণ্টায় হাওরের বাঁধ ভাঙার সম্ভাবনা",
     sar: "রাডার ব্যাকস্ক্যাটার",
     sarNote: "সিমুলেটেড পাস",
@@ -122,11 +126,10 @@ export function LiveDecisionCard({ onRahim }: {
   };
 
   const listen = async (text: string) => {
-    if (!(await hasBanglaVoice())) {
-      setNotice(c.noVoice);
-      return;
-    }
-    setNotice((await speak(text, "bn-BD")) ? null : c.noVoice);
+    const offline = getState().offlineMode;
+    if (!(await hasBanglaVoice()) && !offline) setNotice(c.fetchingVoice);
+    const how = await speak(text, "bn-BD", { online: !offline });
+    setNotice(how === "online" ? c.onlineVoice : how === "device" ? null : c.noVoice);
   };
 
   const running = run?.status === "running";

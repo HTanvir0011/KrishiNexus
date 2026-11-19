@@ -169,6 +169,7 @@ krishinexus-os/
 │   ├── automation/workflows.py         # TemporalTruckPoolManager (TRUCK_POOLS), N8nWebhookHandlers (N8N_HANDLERS)
 │   ├── edge_node/
 │   │   ├── bangla_voice.py             # BanglaVoicePipeline (VOICE_PIPELINE), 5 VOICE_PRESETS, SSML
+│   │   ├── online_tts.py               # bangla_speech: online Bangla voice (Google Translate TTS, edge-tts fallback), PII-scrubbed, cached
 │   │   ├── optical_grader.py           # OpticalCropGrader (OPTICAL_GRADER): YOLO potato cascade, classical CV, sweep; certificates
 │   │   ├── ollama_local.py             # LocalEdgeInferenceEngine (EDGE_ENGINE), LoRA spec, SFT dataset (v4, v5), ground_prompt
 │   │   ├── sft_wordings.py             # prompts v5: freely worded question banks per task (Bangla, dialects, Banglish, English)
@@ -276,6 +277,7 @@ Shared enums (`schemas/mcp_models.py`): `Crop` (Cardinal Potato, Diamant Potato,
 | `GET /automation/n8n/workflows` | → importable n8n workflow JSON | 3 |
 | `POST /edge/voice-interact` | `VoiceInteractRequest` (`edge_certificate_id` grades the lot by a photo grade's certificate, using the node's own signed metrics; a certificate the node no longer holds, or one for another crop, is simply not used: the question is still answered) → `VoiceInteractResponse` | 4 |
 | `GET /edge/voice-presets` | → `list[VoicePreset]` | 4 |
+| `POST /edge/tts` | `{text}` (1–1,500 chars) → `audio/mpeg`: the answer read in Bangla for browsers with no Bangla voice of their own (desktop Chrome, plain Windows); the text is PII-scrubbed, then sent to Google Translate's Bangla voice in pieces of at most 180 characters, or to Microsoft's bn-BD neural voices (`edge-tts`) if Google fails; the last 48 answers are cached in memory; 503 when `KNX_ONLINE_TTS=off`, 502 when both services fail. `lib/speech.ts` `speak()` uses the device voice first and never calls this in Offline edge mode | 13 |
 | `POST /edge/grade-crop` | `GradeCropRequest` → `GradeCropResult` | 4 |
 | `POST /edge/verify-certificate` | `VerifyCertificateRequest` → `CertificateVerification` | 4 |
 | `GET /market/price-monitor?division` | → `PriceMonitorReport` (WFP staple prices, `krishi-price-v1` forecasts beside their measured test score, Dhaka margin flags) | 9 |

@@ -62,6 +62,7 @@ from typing import Annotated, Any, Literal
 from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 import auth
 import feedback
@@ -88,6 +89,7 @@ from automation.workflows import (
 )
 from config import MODEL_ROUTER, RoutingDecision, TaskType, now_bdt, settings
 from edge_node.bangla_voice import VOICE_PRESETS, VoicePreset, speech_to_text_available
+from edge_node.online_tts import SpeechUnavailable, bangla_speech
 from evals.holdout_probe import HoldoutReport, get_holdout_report
 from evals.regression_suite import CATEGORY_RUNNERS, EVALUATION_ENGINE, RagasReport, RegressionReport, RegressionRequest
 from edge_node.ollama_local import (
@@ -586,6 +588,23 @@ async def edge_verify_certificate(body: VerifyCertificateRequest) -> Certificate
     if certificate is None:
         raise HTTPException(status_code=404, detail=f"No certificate '{body.cert_id}' was issued by this node.")
     return OPTICAL_GRADER.verify(certificate)
+
+
+class SpeechRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=1_500, description="Bangla text to read aloud (personal details are scrubbed first).")
+
+
+@app.post("/edge/tts", tags=["edge"], response_class=Response, responses={200: {"content": {"audio/mpeg": {}}}})
+async def edge_tts(body: SpeechRequest) -> Response:
+    """Online Bangla voice (MP3) for browsers without one; see edge_node/online_tts.py for what leaves the node."""
+    try:
+        audio = await bangla_speech(body.text)
+    except SpeechUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # the online service is down, slow or unreachable (an offline kiosk)
+        raise HTTPException(status_code=502, detail=f"The online Bangla voice did not answer ({type(exc).__name__}).") from exc
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=3600"})
 
 
 @app.get("/market/bids", response_model=BidBoard, tags=["market"])

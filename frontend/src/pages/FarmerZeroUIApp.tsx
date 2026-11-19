@@ -240,11 +240,15 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
 
   const listen = async (lang: "bn-BD" | "en-US") => {
     if (!result) return;
-    if (lang === "bn-BD" && !(await hasBanglaVoice())) {
-      setNotice("এই ব্রাউজারে বাংলা কণ্ঠ নেই, তাই উত্তরটি উপরে লেখা আছে। This browser has no Bangla voice: open the site in Microsoft Edge, or Chrome on an Android phone, to hear it.");
-      return;
-    }
-    setNotice(await speak(lang === "bn-BD" ? result.spoken_response_bn : englishSummary(result), lang) ? null : "Speech playback is not available in this browser.");
+    const offline = getState().offlineMode;
+    if (lang === "bn-BD" && !(await hasBanglaVoice()) && !offline) setNotice("বাংলা কণ্ঠ আনা হচ্ছে… Fetching the online Bangla voice…");
+    const how = await speak(lang === "bn-BD" ? result.spoken_response_bn : englishSummary(result), lang, { online: !offline });
+    setNotice(how === "online" ? "অনলাইন বাংলা কণ্ঠে শোনানো হচ্ছে। Playing the online Bangla voice."
+      : how === "device" ? null
+      : lang === "bn-BD"
+        ? (offline ? "অফলাইন মোডে এই ব্রাউজারে বাংলা কণ্ঠ নেই; উত্তরটি উপরে লেখা আছে। Offline, and this browser has no Bangla voice."
+          : "বাংলা কণ্ঠ পাওয়া গেল না; উত্তরটি উপরে লেখা আছে। The Bangla voice could not be reached; Microsoft Edge or Chrome on Android can speak it.")
+        : "Speech playback is not available in this browser.");
   };
 
   const offer = state?.farmer_offer_tk_per_kg ?? syn?.farmer_offer_tk_per_kg ?? null;

@@ -933,6 +933,21 @@ export interface AdminOverview {
 }
 
 /** Raw JSON-RPC 2.0 round trip for the MCP inspector: returns HTTP status, latency and the untouched body. */
+/** The node's online Bangla voice (MP3) for browsers without one; edge_node/online_tts.py says what leaves the node. */
+export async function fetchBanglaSpeech(text: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/edge/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text.slice(0, 1500) }),
+    signal: AbortSignal.timeout(40_000),
+  });
+  if (!response.ok) {
+    const detail = await response.json().then((b: { detail?: string }) => b.detail).catch(() => undefined);
+    throw new ApiError(response.status, detail ?? `HTTP ${response.status}`);
+  }
+  return response.blob();
+}
+
 export async function rawJsonRpc(payload: unknown): Promise<{ status: number; latencyMs: number; body: unknown }> {
   const started = performance.now();
   const response = await fetch(`${API_BASE}/mcp/call`, {
