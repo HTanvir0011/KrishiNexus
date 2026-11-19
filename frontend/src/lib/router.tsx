@@ -1,10 +1,13 @@
-/** Minimal history router: `/` story, `/login`, `/os[/field|/coop|/himagar|/trade|/driver|/market|/bank]` live OS, `/admin[/section]`, `/docs` whitepaper. */
+/**
+ * Minimal history router: `/` story, `/login`, `/signup`, `/guide`, `/os[/field|/coop|/himagar|/trade|/driver|/market|/bank]`
+ * live OS, `/admin[/section]`, `/docs` whitepaper. `/team/` is not a client route: it is a static page (scripts/prerender.mjs).
+ */
 
 import { useSyncExternalStore, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
 export type OsView = "judge" | "field" | "coop" | "himagar" | "trade" | "driver" | "market" | "bank";
 export type AdminSection = "overview" | "accounts" | "pools" | "escrows" | "anomalies" | "activity" | "feedback";
-export type Route = { page: "story" } | { page: "login" } | { page: "admin"; section: AdminSection } | { page: "os"; view: OsView } | { page: "docs" };
+export type Route = { page: "story" } | { page: "login" } | { page: "signup" } | { page: "guide" } | { page: "admin"; section: AdminSection } | { page: "os"; view: OsView } | { page: "docs" };
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
@@ -28,6 +31,8 @@ export function routeOf(locationText: string): Route {
   const [path, hash = ""] = locationText.split("#");
   if (path === "/docs" || hash === "docs") return { page: "docs" };
   if (path === "/login") return { page: "login" };
+  if (path === "/signup") return { page: "signup" };
+  if (path === "/guide" || path === "/guide/bn") return { page: "guide" };
   if (path === "/admin") return { page: "admin", section: "overview" };
   const admin = /^\/admin\/(accounts|pools|escrows|anomalies|activity|feedback)$/.exec(path);
   if (admin) return { page: "admin", section: admin[1] as AdminSection };

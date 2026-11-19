@@ -312,7 +312,9 @@ export interface PoolView {
 
 export type HubType = "URBAN_RETAIL_CHAIN" | "WHOLESALE_ARAT" | "WFP_AGGREGATION_CENTRE" | "AGRO_PROCESSOR";
 export type LotGrade = "A" | "B" | "C";
-export type Wallet = "bKash" | "Nagad";
+export type Wallet = "bKash" | "Nagad" | "Rocket" | "Upay";
+/** Payout wallets for a direct sale and for sign-up (the truckload lock still offers bKash and Nagad only). */
+export const WALLET_PROVIDERS: Wallet[] = ["bKash", "Nagad", "Rocket", "Upay"];
 
 export interface Bid {
   rank: number;
@@ -523,9 +525,16 @@ export interface HoldoutReport {
 // ---------------------------------------------------------------------------
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  /** `detail` is the body's raw `detail` (a FastAPI 422 sends a list of field errors). */
+  constructor(public readonly status: number, message: string, public readonly detail?: unknown) {
     super(message);
   }
+}
+
+/** A FastAPI 422 field error; `input` (what was typed, perhaps a national ID) is never shown. */
+export interface FieldError {
+  loc: (string | number)[];
+  msg: string;
 }
 
 export interface Result<T> {
@@ -568,13 +577,18 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 120_000)
   });
   if (!response.ok) {
     let detail = response.statusText;
+    let raw: unknown;
     try {
       const body = (await response.json()) as { detail?: unknown };
-      detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail ?? body);
+      raw = body.detail;
+      // Field errors read as "field: message", so the submitted value (which 422 echoes back) never reaches a toast.
+      detail = typeof raw === "string" ? raw
+        : Array.isArray(raw) ? (raw as FieldError[]).map((e) => `${e.loc?.at(-1) ?? ""}: ${e.msg}`).join("; ")
+        : JSON.stringify(raw ?? body);
     } catch {
       detail = `${response.status} ${response.statusText}`;
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, raw);
   }
   return (await response.json()) as T;
 }
@@ -714,6 +728,8 @@ export const api = {
 
   demoUsers: () => request<AuthUser[]>("/auth/demo-users", undefined, 8_000),
   login: (userId: string, password?: string) => post<AuthSession>("/auth/login", { user_id: userId, password }),
+  /** Self sign-up: farmers, buyers and drivers are ACTIVE with a session; co-op, cold-storage and bank accounts wait for an admin. */
+  register: (body: RegisterBody) => post<RegisterResult>("/auth/register", body),
   me: () => request<AuthUser>("/auth/me", undefined, 8_000),
   adminUsers: () => request<AuthUser[]>("/auth/admin/users"),
   adminOverview: () => request<AdminOverview>("/auth/admin/overview"),
@@ -744,6 +760,11 @@ export const api = {
   deliveryStep: (lotId: string, step: "claim" | "pickup" | "deliver") => post<MarketLot>(`/market/deliveries/${encodeURIComponent(lotId)}/${step}`, {}),
   reportTemperature: (lotId: string, temp_c: number, rh_pct: number) =>
     post<MarketLot>(`/market/deliveries/${encodeURIComponent(lotId)}/temperature`, { temp_c, rh_pct }),
+  /** Market events after `since` (public), for when the live stream is refused; `seq` is the latest event's number. */
+  marketEvents: (since: number) => request<{ seq: number; events: MarketEvent[] }>(`/market/events?since=${since}`, undefined, 8_000),
+  /** The job's driver, while ASSIGNED or PICKED_UP; the node keeps one position per 10 s and shows it rounded to 0.01°. */
+  shareLocation: (lotId: string, body: { lat: number; lng: number; accuracy_m?: number; speed_kmh?: number }) =>
+    post<unknown>(`/market/deliveries/${encodeURIComponent(lotId)}/location`, body),
   resetMarket: () => post<MarketLot[]>("/market/reset", {}),
   raiseDispute: (lotId: string, kind: DisputeKind, note: string) => post<MarketLot>(`/market/lots/${encodeURIComponent(lotId)}/disputes`, { kind, note }),
   disputes: () => request<Dispute[]>("/market/disputes"),
@@ -839,7 +860,36 @@ export interface MarketLot {
     shelf_life_hours: number | null;
     at_risk: boolean;
     events: { at: string; kind: string; detail: string }[];
+    /** The truck's last shared position (coarse), when the driver shares it. */
+    position?: TruckPosition | null;
   } | null;
+}
+
+export interface TruckPosition {
+  lat: number;
+  lng: number;
+  accuracy_m: number | null;
+  at: string;
+  km_to_destination: number;
+  eta_hours_left: number;
+}
+
+export type MarketEventKind =
+  | "lot_listed" | "bid_placed" | "lot_sold" | "lot_cancelled" | "job_claimed" | "picked_up" | "temperature_logged"
+  | "location" | "delivered" | "dispute_opened" | "dispute_resolved" | "market_reset";
+
+/**
+ * One `market` event from GET /market/stream (its SSE id is `seq`). Numbering starts at the node's boot time in ms and
+ * then counts up by one, so a jump means missed events; market_reset has no lot, so its lot fields are null.
+ */
+export interface MarketEvent {
+  seq: number;
+  kind: MarketEventKind;
+  lot_id: string | null;
+  crop: string | null;
+  status: string | null;
+  delivery_status: string | null;
+  at: string;
 }
 
 export interface StorageReservation {
@@ -913,6 +963,41 @@ export interface AuthUser {
   district: string;
   title: string;
   active: boolean;
+  /** Self-registered accounts only: the identity numbers are kept hashed, so only these masked forms come back. */
+  kyc?: Kyc | null;
+  pending_review?: boolean;
+  self_registered?: boolean;
+}
+
+export interface Kyc {
+  nid_last4: string;
+  phone_masked: string;
+  wallet_provider: Wallet;
+  wallet_masked: string;
+  registered_at: string;
+  verified: boolean;
+}
+
+export type SignupRole = "farmer" | "buyer" | "driver" | "coop" | "storage" | "bank";
+
+export interface RegisterBody {
+  name: string;
+  role: SignupRole;
+  district: string;
+  upazila?: string;
+  organization?: string;
+  phone: string;
+  nid: string;
+  wallet_provider: Wallet;
+  wallet_number: string;
+  password: string;
+  consent: true;
+}
+
+export interface RegisterResult {
+  status: "ACTIVE" | "PENDING_REVIEW";
+  user: AuthUser;
+  session: AuthSession | null;
 }
 
 export interface AuthSession {

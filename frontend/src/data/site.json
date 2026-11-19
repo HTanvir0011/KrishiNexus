@@ -1,0 +1,9 @@
+{
+  "note": "Shared by the app and the build-time pages (scripts/prerender.mjs). The release is made by hand; these are its stable latest-download links.",
+  "origin": "https://tanvir.health",
+  "source": "https://github.com/HTanvir0011/KrishiNexus",
+  "apk": "https://github.com/HTanvir0011/KrishiNexus/releases/latest/download/KrishiNexus.apk",
+  "apk_armv7": "https://github.com/HTanvir0011/KrishiNexus/releases/latest/download/KrishiNexus-armv7.apk",
+  "apk_size_mb": 21,
+  "android_min": "7"
+}

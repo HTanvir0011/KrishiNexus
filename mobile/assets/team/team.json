@@ -1,0 +1,80 @@
+{
+  "team": "Team Heat Wave",
+  "project": "KrishiNexus OS",
+  "updated": "2026-11-19",
+  "note": "Single source for the team on the website (/ and the pre-rendered /team/ page) and in the mobile app (fetched from /team/team.json, with a bundled copy). Bios are short drafts; add links as {\"type\": \"github\" | \"linkedin\" | \"facebook\" | \"website\" | \"email\", \"url\": ...}.",
+  "members": [
+    {
+      "slug": "tanvir-hossin",
+      "name": { "en": "Tanvir Hossin", "bn": "তানভীর হোসেন" },
+      "role": { "en": "Team lead · Product and architecture", "bn": "দলনেতা · প্রোডাক্ট ও আর্কিটেকচার" },
+      "bio": {
+        "en": "Leads Team Heat Wave and the KrishiNexus build, from the agents' pipeline to the hosted demo, with the farmer's decision at the centre.",
+        "bn": "টিম হিট ওয়েভ ও কৃষিনেক্সাসের নেতৃত্বে; এজেন্টদের কাজের ধারা থেকে চালু ডেমো পর্যন্ত, কৃষকের সিদ্ধান্তকে কেন্দ্রে রেখে।"
+      },
+      "photo": "/team/tanvir-hossin.webp",
+      "photo_small": "/team/tanvir-hossin-320.webp",
+      "links": [{ "type": "github", "url": "https://github.com/HTanvir0011" }]
+    },
+    {
+      "slug": "md-omar-faruk",
+      "name": { "en": "Md. Omar Faruk", "bn": "মো. ওমর ফারুক" },
+      "role": { "en": "AI and ML engineer", "bn": "এআই ও এমএল ইঞ্জিনিয়ার" },
+      "bio": {
+        "en": "Works on the models behind each decision: dialect speech, retrieval and crop grading, and the tests that measure them.",
+        "bn": "প্রতিটি সিদ্ধান্তের পেছনের মডেল নিয়ে কাজ করেন: আঞ্চলিক ভাষা, তথ্য খোঁজা ও ফসল গ্রেডিং, আর সেগুলোর মাপজোখ।"
+      },
+      "photo": "/team/md-omar-faruk.webp",
+      "photo_small": "/team/md-omar-faruk-320.webp",
+      "links": []
+    },
+    {
+      "slug": "md-abdur-rahman",
+      "name": { "en": "Md. Abdur Rahman", "bn": "মো. আবদুর রহমান" },
+      "role": { "en": "Full-stack and backend developer", "bn": "ফুল-স্ট্যাক ও ব্যাকএন্ড ডেভেলপার" },
+      "bio": {
+        "en": "Builds the node's APIs and data flow: the marketplace, escrow and the services the agents call.",
+        "bn": "নোডের এপিআই ও তথ্যপ্রবাহ তৈরি করেন: বাজার, এসক্রো আর এজেন্টরা যেসব সেবা ব্যবহার করে।"
+      },
+      "photo": "/team/md-abdur-rahman.webp",
+      "photo_small": "/team/md-abdur-rahman-320.webp",
+      "links": []
+    },
+    {
+      "slug": "mohammed-mahmud-parvez",
+      "name": { "en": "Mohammed Mahmud Parvez", "bn": "মোহাম্মদ মাহমুদ পারভেজ" },
+      "role": { "en": "Full-stack developer", "bn": "ফুল-স্ট্যাক ডেভেলপার" },
+      "bio": {
+        "en": "Builds the screens farmers, buyers and drivers use, on the web and on the phone.",
+        "bn": "কৃষক, ক্রেতা ও চালকেরা যে স্ক্রিন ব্যবহার করেন, ওয়েবে ও ফোনে, সেগুলো তৈরি করেন।"
+      },
+      "photo": "/team/mohammed-mahmud-parvez.webp",
+      "photo_small": "/team/mohammed-mahmud-parvez-320.webp",
+      "links": []
+    },
+    {
+      "slug": "md-morsalin",
+      "name": { "en": "Md. Morsalin", "bn": "মো. মোরসালিন" },
+      "role": { "en": "Full-stack and backend developer", "bn": "ফুল-স্ট্যাক ও ব্যাকএন্ড ডেভেলপার" },
+      "bio": {
+        "en": "Works across the stack on integrations, deployment and the checks that keep the demo honest.",
+        "bn": "পুরো সিস্টেম জুড়ে কাজ করেন: সংযোগ, ডিপ্লয়মেন্ট আর ডেমোকে সৎ রাখার পরীক্ষাগুলো।"
+      },
+      "photo": "/team/md-morsalin.webp",
+      "photo_small": "/team/md-morsalin-320.webp",
+      "links": []
+    },
+    {
+      "slug": "md-rifat",
+      "name": { "en": "Md Rifat", "bn": "মো. রিফাত" },
+      "role": { "en": "Advisor · Domain and network expert", "bn": "উপদেষ্টা · কৃষি ও নেটওয়ার্ক বিশেষজ্ঞ" },
+      "bio": {
+        "en": "Advises on Bangladesh's farm supply chain and on networks for rural deployment; joins the team online.",
+        "bn": "বাংলাদেশের কৃষি সরবরাহ ব্যবস্থা ও গ্রামে নেটওয়ার্ক স্থাপন নিয়ে পরামর্শ দেন; অনলাইনে দলের সাথে যুক্ত।"
+      },
+      "photo": "/team/md-rifat.webp",
+      "photo_small": "/team/md-rifat-320.webp",
+      "links": []
+    }
+  ]
+}

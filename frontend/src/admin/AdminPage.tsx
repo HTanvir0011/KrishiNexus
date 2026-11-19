@@ -7,7 +7,7 @@ import { useCopy } from "../lib/i18n";
 import { ROLE_LABEL } from "../lib/roles";
 import { Link, navigate, type AdminSection } from "../lib/router";
 import { logout, useAppState } from "../state/store";
-import { AccountsSection, ROLES } from "./AccountsSection";
+import { AccountsSection, PendingAccounts, ROLES } from "./AccountsSection";
 import { ActivitySection, AnomaliesSection, EscrowsSection, FeedbackSection, PoolsSection } from "./OperationsSections";
 import { useAdmin } from "./useAdmin";
 
@@ -139,7 +139,7 @@ export function AdminPage({ section }: { section: AdminSection }) {
       <section className="mt-5 min-w-0 lg:mt-0" aria-labelledby="admin-heading">
         <h1 id="admin-heading" className="m-0 text-[24px] font-semibold tracking-[-0.02em] text-slate-900">{c.menu[section]}</h1>
         <p className="m-0 mt-1 mb-5 max-w-[52rem] text-[14px] text-slate-600">{c.lede[section]}</p>
-        {section === "overview" && <OverviewSection />}
+        {section === "overview" && <div className="grid gap-5"><PendingAccounts /><OverviewSection /></div>}
         {section === "accounts" && <AccountsSection />}
         {section === "pools" && <PoolsSection />}
         {section === "escrows" && <EscrowsSection />}

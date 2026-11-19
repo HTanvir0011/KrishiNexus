@@ -10,26 +10,35 @@ The chain, all role-checked:
 A bid below the crop's production-cost floor can only be accepted with `accept_below_floor`, the marketplace's own
 circuit breaker. The escrow is SIMULATED like the 1-tap escrow in market_bids.py: no money moves and no wallet API is
 called. State lives in .state/marketplace.json; a fresh node seeds three demo lots so every seat has something to do.
+
+Every change is also a numbered market event (GET /market/stream as server-sent events, GET /market/events to poll):
+lot, crop and status only, no names or numbers. While a job is on the road its driver reports the truck's location;
+lots show it rounded to 0.01 degree (about 1 km), and the precise fix stays in this process's memory.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
 import os
 import threading
+import time
+from collections import deque
+from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 import auth
 from automation.workflows import ARRIVAL_SHELF_RESERVE, STATE_DIR
 from config import now_bdt, settings
 from guardrails.pii_scrubber import PII_SCRUBBER
-from market_bids import ESCROWS
+from market_bids import ESCROWS, Wallet
 from mcp_servers.base import ToolExecutionError
 from mcp_servers.bd_geo import resolve_district, resolve_upazila, road_distance_km
 from mcp_servers.coldchain_iot_mcp import calculate_dynamic_shelf_life
@@ -39,8 +48,16 @@ from schemas.mcp_models import CalculateDynamicShelfLifeInput, Crop, Grade
 MARKET_FILE = STATE_DIR / "marketplace.json"
 MAX_LOTS = 300
 MAX_BIDS_PER_LOT = 50
-Wallet = Literal["bKash", "Nagad"]
-SIMULATED_NOTE = "Simulated escrow: no money moves and no bKash or Nagad API is called."
+SIMULATED_NOTE = "Simulated escrow: no money moves and no bKash, Nagad, Rocket or Upay API is called."
+LotStatus = Literal["OPEN", "SOLD", "IN_TRANSIT", "DELIVERED", "CANCELLED"]
+DeliveryStatus = Literal["AWAITING_DRIVER", "ASSIGNED", "PICKED_UP", "DELIVERED"]
+EventKind = Literal["lot_listed", "bid_placed", "lot_sold", "lot_cancelled", "job_claimed", "picked_up", "temperature_logged",
+                    "location", "delivered", "dispute_opened", "dispute_resolved", "market_reset"]
+EVENT_BUFFER = 200      # events a reconnecting client can catch up on
+STREAM_POLL_S = 0.5     # how often an open stream looks for new events
+PING_S = 15.0           # a quiet stream sends ": ping" this often, so proxies keep it open
+MAX_STREAMS = 200       # open streams per process; beyond it clients poll GET /market/events
+LOCATION_EVERY_S = 10   # one accepted truck location per job per this many seconds
 
 
 class MarketBid(BaseModel):
@@ -74,8 +91,26 @@ class DeliveryEvent(BaseModel):
     detail: str
 
 
+class LocationReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    accuracy_m: float | None = Field(default=None, ge=0, le=10_000)
+    speed_kmh: float | None = Field(default=None, ge=0, le=200)
+
+
+class Position(BaseModel):
+    """The truck's last reported location, rounded to 0.01 degree (about 1 km); the precise fix is never exposed."""
+    lat: float
+    lng: float
+    accuracy_m: float | None = None
+    at: datetime
+    km_to_destination: float = Field(description="Road km from the reported point to the buyer's market.")
+    eta_hours_left: float
+
+
 class Delivery(BaseModel):
-    status: Literal["AWAITING_DRIVER", "ASSIGNED", "PICKED_UP", "DELIVERED"] = "AWAITING_DRIVER"
+    status: DeliveryStatus = "AWAITING_DRIVER"
     origin_district: str
     destination_district: str
     distance_km: float
@@ -87,6 +122,8 @@ class Delivery(BaseModel):
     shelf_life_hours: float | None = None
     at_risk: bool = False
     events: list[DeliveryEvent] = Field(default_factory=list)
+    position: Position | None = None
+    _fix: LocationReport | None = PrivateAttr(default=None)  # the precise last fix: memory only, never dumped or saved
 
 
 DisputeKind = Literal["PAYMENT_NOT_RECEIVED", "WRONG_AMOUNT", "DELIVERY_PROBLEM", "QUALITY_MISMATCH", "OTHER"]
@@ -155,7 +192,7 @@ class Lot(BaseModel):
     certificate_id: str | None = None
     note: str = ""
     listed_at: datetime
-    status: Literal["OPEN", "SOLD", "IN_TRANSIT", "DELIVERED", "CANCELLED"] = "OPEN"
+    status: LotStatus = "OPEN"
     bids: list[MarketBid] = Field(default_factory=list)
     accepted_bid_id: str | None = None
     escrow: Escrow | None = None
@@ -187,6 +224,8 @@ class AcceptBid(BaseModel):
     wallet: Wallet
     wallet_number: str = Field(pattern=r"^01[3-9]\d{8}$", description="Only a masked form is stored.")
     accept_below_floor: bool = False
+
+    ascii_number = field_validator("wallet_number", mode="before")(auth.plain_number)
 
 
 class TemperatureReport(BaseModel):
@@ -221,9 +260,59 @@ def _route(origin: str, destination: str, upazila: str = "") -> tuple[float, flo
     return km, round(km / AVG_TRUCK_SPEED_KMH + LOADING_HOURS, 1)
 
 
+def _market_node(district: str) -> str:
+    """The market a buyer's lots are driven to: their district's node, or Dhaka for a district the node can't route
+    (sign-ups may name any district)."""
+    try:
+        return resolve_district(district).name
+    except ToolExecutionError:
+        return resolve_district("Dhaka").name
+
+
 def _sign(fields: dict[str, object]) -> str:
     canonical = json.dumps(fields, sort_keys=True, ensure_ascii=False, default=str)
     return hmac.new(settings.receipt_signing_key.encode(), f"market|{canonical}".encode(), hashlib.sha256).hexdigest()
+
+
+class MarketEvent(BaseModel):
+    """One market change, public: no names, wallet or location. market_reset has no lot, so its lot fields are null."""
+    seq: int
+    kind: EventKind
+    lot_id: str | None
+    crop: Crop | None
+    status: LotStatus | None
+    delivery_status: DeliveryStatus | None
+    at: datetime
+
+
+class EventPage(BaseModel):
+    seq: int = Field(description="The latest event number; poll again with since=seq.")
+    events: list[MarketEvent] = Field(description="Events after `since`, oldest first (at most the last 200).")
+
+
+class MarketEvents:
+    """The last 200 market events. Numbering starts at the boot time in milliseconds, so it keeps rising across restarts
+    and a Last-Event-ID from before one replays everything since."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.seq = time.time_ns() // 1_000_000
+        self.buffer: deque[MarketEvent] = deque(maxlen=EVENT_BUFFER)
+        self.streams = 0
+
+    def publish(self, kind: EventKind, lot: Lot | None = None) -> None:
+        with self._lock:
+            self.seq += 1
+            self.buffer.append(MarketEvent(
+                seq=self.seq, kind=kind, lot_id=lot and lot.lot_id, crop=lot and lot.crop, status=lot and lot.status,
+                delivery_status=lot.delivery.status if lot and lot.delivery else None, at=now_bdt()))
+
+    def page(self, since: int) -> EventPage:
+        with self._lock:
+            return EventPage(seq=self.seq, events=[e for e in self.buffer if e.seq > since] if since < self.seq else [])
+
+
+EVENTS = MarketEvents()
 
 
 class MarketBook:
@@ -324,6 +413,7 @@ class MarketBook:
         with self._lock:
             self.lots = by_id
             self._persist()
+            EVENTS.publish("market_reset")
             return list(self.lots.values())
 
     def _get(self, lot_id: str) -> Lot:
@@ -351,6 +441,7 @@ class MarketBook:
                 del self.lots[min(finished, key=lambda l: l.listed_at).lot_id]
             self.lots[lot.lot_id] = lot
             self._persist()
+            EVENTS.publish("lot_listed", lot)
         return lot
 
     def bid(self, lot_id: str, body: NewBid, buyer: auth.User) -> Lot:
@@ -367,6 +458,7 @@ class MarketBook:
                                       buyer_district=buyer.district or "Dhaka", price_tk_per_kg=round(body.price_tk_per_kg, 2),
                                       note=_scrub(body.note), placed_at=now_bdt()))
             self._persist()
+            EVENTS.publish("bid_placed", lot)
             return lot
 
     def accept(self, lot_id: str, body: AcceptBid, farmer: auth.User) -> Lot:
@@ -376,6 +468,10 @@ class MarketBook:
                 raise HTTPException(status_code=403, detail="Only the farmer who listed this lot can accept a bid.")
             if lot.status != "OPEN":
                 raise HTTPException(status_code=409, detail="This lot is no longer open.")
+            if not auth.USERS.payout_wallet_matches(farmer, body.wallet, body.wallet_number):
+                raise HTTPException(status_code=409, detail=(
+                    "Payouts go only to the wallet registered with this account "
+                    f"({farmer.kyc.wallet_provider} {farmer.kyc.wallet_masked})."))
             chosen = next((b for b in lot.bids if b.bid_id == body.bid_id and b.status == "ACTIVE"), None)
             if chosen is None:
                 raise HTTPException(status_code=404, detail="That bid is not active on this lot.")
@@ -390,14 +486,16 @@ class MarketBook:
             fields = {"escrow_id": _id("MES", lot_id), "amount_tk": round(chosen.price_tk_per_kg * lot.weight_kg, 2),
                       "wallet": body.wallet, "wallet_masked": f"{body.wallet_number[:3]}•••••{body.wallet_number[-3:]}",
                       "locked_at": now.isoformat()}
-            km, eta = _route(lot.district, chosen.buyer_district, lot.upazila)
+            destination = _market_node(chosen.buyer_district)
+            km, eta = _route(lot.district, destination, lot.upazila)
             lot.status, lot.accepted_bid_id = "SOLD", chosen.bid_id
             lot.escrow = Escrow(**{**fields, "locked_at": now}, signature=_sign(fields))
-            lot.delivery = Delivery(origin_district=lot.district, destination_district=resolve_district(chosen.buyer_district).name,
+            lot.delivery = Delivery(origin_district=lot.district, destination_district=destination,
                                     distance_km=km, eta_hours=eta,
                                     events=[DeliveryEvent(at=now, kind="CREATED",
                                                           detail=f"Sold to {chosen.buyer_name} at Tk {chosen.price_tk_per_kg:g}/kg")])
             self._persist()
+            EVENTS.publish("lot_sold", lot)
             return lot
 
     def cancel(self, lot_id: str, farmer: auth.User) -> Lot:
@@ -412,43 +510,65 @@ class MarketBook:
                 if b.status == "ACTIVE":
                     b.status = "REJECTED"
             self._persist()
+            EVENTS.publish("lot_cancelled", lot)
             return lot
 
-    def _job(self, lot_id: str, driver: auth.User, *, need: str) -> tuple[Lot, Delivery]:
+    def _job(self, lot_id: str, driver: auth.User, *need: DeliveryStatus) -> tuple[Lot, Delivery]:
+        """The lot and its delivery job, if the job is in one of the `need` states and (once claimed) is this driver's."""
         lot = self._get(lot_id)
         if lot.escrow is not None and lot.escrow.status == "REFUNDED":
             raise HTTPException(status_code=409, detail="The bank refunded this sale; there is nothing to deliver.")
         if lot.delivery is None:
             raise HTTPException(status_code=404, detail="This lot has no delivery job.")
-        if lot.delivery.status != need:
+        if lot.delivery.status not in need:
             raise HTTPException(status_code=409, detail=f"The delivery is {lot.delivery.status.replace('_', ' ').lower()}.")
-        if need != "AWAITING_DRIVER" and lot.delivery.driver_id != driver.user_id:
+        if need != ("AWAITING_DRIVER",) and lot.delivery.driver_id != driver.user_id:
             raise HTTPException(status_code=403, detail="This delivery belongs to another driver.")
         return lot, lot.delivery
 
     def claim(self, lot_id: str, driver: auth.User) -> Lot:
         with self._lock:
-            lot, job = self._job(lot_id, driver, need="AWAITING_DRIVER")
+            lot, job = self._job(lot_id, driver, "AWAITING_DRIVER")
             job.status, job.driver_id, job.driver_name = "ASSIGNED", driver.user_id, driver.name
             job.events.append(DeliveryEvent(at=now_bdt(), kind="CLAIMED", detail=f"{driver.name} took the job"))
             self._persist()
+            EVENTS.publish("job_claimed", lot)
             return lot
 
     def pickup(self, lot_id: str, driver: auth.User) -> Lot:
         with self._lock:
-            lot, job = self._job(lot_id, driver, need="ASSIGNED")
+            lot, job = self._job(lot_id, driver, "ASSIGNED")
             job.status, lot.status = "PICKED_UP", "IN_TRANSIT"
             job.events.append(DeliveryEvent(at=now_bdt(), kind="PICKED_UP", detail=f"{lot.weight_kg:g} kg loaded in {lot.district}"))
             self._persist()
+            EVENTS.publish("picked_up", lot)
+            return lot
+
+    def location(self, lot_id: str, body: LocationReport, driver: auth.User) -> Lot:
+        """The truck's position while the job is on the road. One fix per LOCATION_EVERY_S is kept; a faster one returns
+        the lot unchanged. Lots show it rounded to 0.01 degree; the precise fix stays in memory only."""
+        with self._lock:
+            lot, job = self._job(lot_id, driver, "ASSIGNED", "PICKED_UP")
+            now = now_bdt()
+            if job.position is not None and 0 <= (now - job.position.at).total_seconds() < LOCATION_EVERY_S:
+                return lot
+            market = resolve_district(job.destination_district)
+            km = road_distance_km(body.lat, body.lng, market.lat, market.lon)  # the same coordinates and road factor as _route
+            job._fix = body
+            # Whole km, like the 0.01-degree point: a finer distance would pinpoint the truck along its road.
+            job.position = Position(lat=round(body.lat, 2), lng=round(body.lng, 2), accuracy_m=body.accuracy_m, at=now,
+                                    km_to_destination=float(round(km)), eta_hours_left=round(km / AVG_TRUCK_SPEED_KMH, 1))
+            self._persist()
+            EVENTS.publish("location", lot)
             return lot
 
     async def temperature(self, lot_id: str, body: TemperatureReport, driver: auth.User) -> Lot:
         with self._lock:
-            lot, _ = self._job(lot_id, driver, need="PICKED_UP")
+            lot, _ = self._job(lot_id, driver, "PICKED_UP")
         life = await calculate_dynamic_shelf_life(CalculateDynamicShelfLifeInput(
             crop=lot.crop, grade=lot.grade, transit_temp_c=body.temp_c, rh_pct=body.rh_pct))
         with self._lock:
-            lot, job = self._job(lot_id, driver, need="PICKED_UP")
+            lot, job = self._job(lot_id, driver, "PICKED_UP")
             job.last_temp_c, job.last_rh_pct = body.temp_c, body.rh_pct
             job.shelf_life_hours = life.remaining_shelf_life_hours
             # The same rule as the truck pools' transit check: arrive with at least a quarter of the shelf life left.
@@ -457,18 +577,21 @@ class MarketBook:
                 f"{body.temp_c:g} °C, {body.rh_pct:g}% RH: {life.remaining_shelf_life_hours:.0f} h of shelf life"
                 + (" — at risk, cool the load or deliver sooner" if job.at_risk else ""))))
             self._persist()
+            EVENTS.publish("temperature_logged", lot)
             return lot
 
     def deliver(self, lot_id: str, driver: auth.User) -> Lot:
         with self._lock:
-            lot, job = self._job(lot_id, driver, need="PICKED_UP")
+            lot, job = self._job(lot_id, driver, "PICKED_UP")
             now = now_bdt()
             job.status, lot.status = "DELIVERED", "DELIVERED"
+            job._fix = None  # the trip is over; keep no precise location
             if lot.escrow is not None:
                 lot.escrow.status, lot.escrow.released_at = "RELEASED", now
             job.events.append(DeliveryEvent(at=now, kind="DELIVERED",
                                             detail=f"Weighed at {job.destination_district}; escrow released to the farmer"))
             self._persist()
+            EVENTS.publish("delivered", lot)
             return lot
 
 
@@ -493,6 +616,7 @@ class MarketBook:
                                         raised_by_name=user.name, raised_by_role=user.role.value, kind=body.kind,
                                         note=_scrub(body.note), opened_at=now_bdt()))
             self._persist()
+            EVENTS.publish("dispute_opened", lot)
             return lot
 
     def resolve_dispute(self, dispute_id: str, body: ResolveDispute, user: auth.User) -> Lot:
@@ -515,6 +639,7 @@ class MarketBook:
             dispute.status, dispute.resolution, dispute.resolution_note = "RESOLVED", body.resolution, _scrub(body.note)
             dispute.resolved_by, dispute.resolved_at = user.user_id, now
             self._persist()
+            EVENTS.publish("dispute_resolved", lot)
             return lot
 
     def ledger(self) -> list[LedgerRow]:
@@ -551,11 +676,28 @@ User = Annotated[auth.User, Depends(auth.current_user)]
 router = APIRouter(prefix="/market", tags=["marketplace"])
 
 
+def _sees_position(user: auth.User, lot: Lot) -> bool:
+    """A truck's position is for the people in that sale (its farmer, buyer and driver) and the desks that oversee
+    sales (judge, admin, bank), not for every signed-in account: anyone can sign up now."""
+    if user.role in (auth.Role.JUDGE, auth.Role.ADMIN, auth.Role.BANK) or user.user_id == lot.farmer_id:
+        return True
+    if lot.delivery is not None and lot.delivery.driver_id == user.user_id:
+        return True
+    return any(b.bid_id == lot.accepted_bid_id and b.buyer_id == user.user_id for b in lot.bids)
+
+
+def _view(user: auth.User, lot: Lot) -> Lot:
+    if lot.delivery is None or lot.delivery.position is None or _sees_position(user, lot):
+        return lot
+    return lot.model_copy(update={"delivery": lot.delivery.model_copy(update={"position": None})})
+
+
 @router.get("/lots", response_model=list[Lot])
 async def lots(user: User, status: str | None = None) -> list[Lot]:
-    """Every lot, newest first (any logged-in account): bids are public, so buyers compete in the open."""
+    """Every lot, newest first (any logged-in account): bids are public, so buyers compete in the open; a truck's
+    position only reaches the people in that sale (`_sees_position`)."""
     items = sorted(MARKET.lots.values(), key=lambda l: l.listed_at, reverse=True)
-    return [l for l in items if status is None or l.status == status]
+    return [_view(user, l) for l in items if status is None or l.status == status]
 
 
 @router.post("/lots", response_model=Lot, status_code=201)
@@ -589,7 +731,7 @@ async def deliveries(user: User) -> list[Lot]:
     jobs = [l for l in MARKET.lots.values() if l.delivery is not None and l.status != "CANCELLED"]
     if user.role is auth.Role.DRIVER:
         jobs = [l for l in jobs if l.delivery.status == "AWAITING_DRIVER" or l.delivery.driver_id == user.user_id]
-    return sorted(jobs, key=lambda l: l.listed_at, reverse=True)
+    return [_view(user, l) for l in sorted(jobs, key=lambda l: l.listed_at, reverse=True)]
 
 
 @router.post("/deliveries/{lot_id}/claim", response_model=Lot)
@@ -614,6 +756,52 @@ async def temperature(lot_id: str, body: TemperatureReport, user: User) -> Lot:
 async def deliver(lot_id: str, user: User) -> Lot:
     _role(user, auth.Role.DRIVER)
     return MARKET.deliver(lot_id, user)
+
+
+@router.post("/deliveries/{lot_id}/location", response_model=Lot)
+async def location(lot_id: str, body: LocationReport, user: User) -> Lot:
+    """The job's driver reports the truck's location while it is ASSIGNED or PICKED_UP (one kept per 10 s; a faster
+    report returns the lot unchanged). Lots show it as `delivery.position`, rounded to 0.01 degree."""
+    _role(user, auth.Role.DRIVER)
+    return MARKET.location(lot_id, body, user)
+
+
+async def _sse(after: int) -> AsyncIterator[str]:
+    EVENTS.streams += 1
+    try:
+        yield "retry: 5000\n\n"
+        last, quiet_since = after, time.monotonic()
+        while True:
+            for event in EVENTS.page(last).events:
+                yield f"id: {event.seq}\nevent: market\ndata: {event.model_dump_json()}\n\n"
+                last, quiet_since = event.seq, time.monotonic()
+            if time.monotonic() - quiet_since >= PING_S:
+                yield ": ping\n\n"
+                quiet_since = time.monotonic()
+            await asyncio.sleep(STREAM_POLL_S)
+    finally:
+        EVENTS.streams -= 1
+
+
+@router.get("/stream", response_class=StreamingResponse, responses={200: {"content": {"text/event-stream": {}}}})
+async def stream(since: Annotated[int | None, Query(ge=0)] = None,
+                 last_event_id: Annotated[str | None, Header()] = None) -> StreamingResponse:
+    """Live market events as server-sent events (public, no personal data): `retry: 5000`, then `id: <seq>`,
+    `event: market`, `data: MarketEvent` per change and `: ping` every 15 s when quiet. Missed events (the last 200)
+    are replayed after the Last-Event-ID header or ?since=<seq>; with neither, the stream starts from now."""
+    if EVENTS.streams >= MAX_STREAMS:
+        raise HTTPException(status_code=503, detail="The live feed is full; poll GET /market/events instead.",
+                            headers={"Retry-After": "30"})
+    resume = last_event_id.strip() if last_event_id else ""
+    after = int(resume) if resume.isdigit() else since if since is not None else EVENTS.seq
+    return StreamingResponse(_sse(after), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.get("/events", response_model=EventPage)
+async def events(since: Annotated[int, Query(ge=0)] = 0) -> EventPage:
+    """The same events for clients that cannot stream (public): those after `since`, oldest first, and the latest seq."""
+    return EVENTS.page(since)
 
 
 @router.post("/lots/{lot_id}/disputes", response_model=Lot, status_code=201)

@@ -18,6 +18,16 @@ export function useBecame<T>(value: T, target: T, ms = 1800): boolean {
   return on;
 }
 
+/** The current time, re-read every `ms`, for labels such as "updated 30 s ago". */
+export function useNow(ms: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), ms);
+    return () => window.clearInterval(timer);
+  }, [ms]);
+  return now;
+}
+
 /** Ids that appeared since the last render (none on the first), held for `ms`, so polled lists can mark what is new. */
 export function useFreshIds(ids: string[], ms = 1800): Set<string> {
   const known = useRef<Set<string> | null>(null);

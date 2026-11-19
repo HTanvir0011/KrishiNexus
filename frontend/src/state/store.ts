@@ -9,6 +9,7 @@ import {
   api,
   hasSessionToken,
   setSessionToken,
+  type AuthSession,
   type AuthUser,
   type ChamberTelemetry,
   type GradeCropResult,
@@ -60,6 +61,10 @@ export interface AppState {
   floodReport: SarFloodReport | null;
   reservationPulse: number;
   alerts: AlertItem[];
+  /** GET /market/stream while an account is signed in: "open" is live; otherwise the seats poll every 8 s. */
+  marketLive: "open" | "connecting" | "off";
+  /** Bumped (debounced) by each market event; the seats on screen reload their lots, deliveries, ledger and disputes. */
+  marketTick: number;
 }
 
 const MAX_TRACES = 600;
@@ -86,6 +91,8 @@ let state: AppState = {
   floodReport: null,
   reservationPulse: 0,
   alerts: [],
+  marketLive: "off",
+  marketTick: 0,
 };
 
 const listeners = new Set<() => void>();
@@ -130,12 +137,16 @@ export function pushAlert(tone: AlertTone, title: string, detail?: string): void
   window.setTimeout(() => setState((s) => ({ alerts: s.alerts.filter((a) => a.id !== id) })), 7_000);
 }
 
-/** Log in with a password, or without one for the demo quick login. */
-export async function loginAs(userId: string, password?: string): Promise<AuthUser> {
-  const session = await api.login(userId, password);
+/** Keep a session from login or sign-up: the token for every request, the account for every pane. */
+export function startSession(session: AuthSession): AuthUser {
   setSessionToken(session.token);
   setState({ user: session.user, authChecked: true });
   return session.user;
+}
+
+/** Log in with a password, or without one for the demo quick login. */
+export async function loginAs(userId: string, password?: string): Promise<AuthUser> {
+  return startSession(await api.login(userId, password));
 }
 
 export function logout(): void {

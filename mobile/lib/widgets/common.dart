@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
 import '../core/format.dart';
+import '../core/live.dart';
 import '../core/state.dart';
 import '../core/theme.dart';
 
@@ -180,18 +182,64 @@ String friendlyError(Object error) {
   return '$error';
 }
 
-void snack(BuildContext context, String message, {Tone tone = Tone.slate, IconData? icon}) {
+void snack(BuildContext context, String message, {Tone tone = Tone.slate, IconData? icon, SnackBarAction? action}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
+      action: action,
       content: Row(children: [
         if (icon != null) ...[Icon(icon, color: Theme.of(context).colorScheme.onInverseSurface, size: 20), const SizedBox(width: 10)],
         Expanded(child: Text(message)),
       ]),
     ));
   if (tone == Tone.rose) HapticFeedback.heavyImpact();
+}
+
+/// Opens [url] in the browser or the app that handles it (mail, a social app).
+Future<void> openLink(BuildContext context, String url) async {
+  final uri = Uri.tryParse(url);
+  final ok = uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
+  if (!ok && context.mounted) snack(context, t('ব্রাউজার খোলা গেল না।', 'Could not open the browser.'), tone: Tone.rose);
+}
+
+/// A page of the KrishiNexus website, served by the node the app talks to.
+Future<void> openWeb(BuildContext context, String path) => openLink(context, '${Api.base}$path');
+
+/// The live feed's state for the app bar: a green dot and "Live" while market events stream in, a quiet grey dot
+/// while it reconnects (screens then keep polling on their own).
+class LiveDot extends StatelessWidget {
+  const LiveDot({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: live,
+        builder: (context, _) {
+          final on = live.connected;
+          final color = on ? Tone.green.fg(context) : Theme.of(context).colorScheme.outline;
+          return Semantics(
+            label: on ? t('লাইভ: বাজারের খবর সাথে সাথে আসছে', 'Live: market updates arrive as they happen') : t('লাইভ সংযোগ আবার চেষ্টা হচ্ছে', 'Reconnecting to live updates'),
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AnimatedContainer(
+                    duration: Motion.of(context, Motion.medium),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  if (on) ...[
+                    const SizedBox(width: 6),
+                    Text(t('লাইভ', 'Live'), style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600)),
+                  ],
+                ]),
+              ),
+            ),
+          );
+        },
+      );
 }
 
 /// Stages of a sale or a delivery, filled up to [current] (index), drawing on when it advances.

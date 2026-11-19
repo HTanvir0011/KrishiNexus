@@ -184,6 +184,24 @@ html {
   scrollbar-color: var(--color-slate-700) transparent;
 }
 
+/* Notched phones in landscape: the page (viewport-fit=cover) keeps clear of the cut-outs. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Printing (the user guide): paper white, no navigation or toasts (print:hidden), and each link's address after it. */
+@media print {
+  html, body {
+    background: #fff;
+  }
+  .guide a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: var(--color-slate-600);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Every animation lands on its final state at once: no movement, and no staged delays holding content back. */
   *, *::before, *::after {

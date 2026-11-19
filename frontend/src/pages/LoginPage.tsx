@@ -2,12 +2,13 @@ import { ArrowRight, Eye, EyeOff, Gavel, KeyRound, Landmark, LogIn, LogOut, Shie
 import { useEffect, useState, type FormEvent } from "react";
 
 import { api, ApiError, type AuthUser, type Role } from "../api/client";
+import { AppDownload } from "../components/AppDownload";
 import { Wordmark } from "../components/Navbar";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
 import { cn } from "../lib/format";
 import { useCopy } from "../lib/i18n";
 import { homeOf, ROLE_LABEL, ROLE_TONE } from "../lib/roles";
-import { navigate } from "../lib/router";
+import { Link, navigate } from "../lib/router";
 import { loginAs, logout, pushAlert, useAppState } from "../state/store";
 
 const ROLE_ORDER: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "driver", "judge", "admin"];
@@ -62,6 +63,10 @@ const COPY = {
     loading: "Loading demo accounts…",
     down: "The backend is not reachable, so login is unavailable. Start the backend and reload.",
     failed: "Login failed",
+    noAccount: "New to KrishiNexus?",
+    create: "Create an account",
+    appTitle: "On an Android phone?",
+    appLede: "The app uses the same account, with voice in Bangla and the phone's camera.",
   },
   bn: {
     title: "লগইন",
@@ -92,6 +97,10 @@ const COPY = {
     loading: "ডেমো অ্যাকাউন্ট লোড হচ্ছে…",
     down: "ব্যাকএন্ডে পৌঁছানো যাচ্ছে না, তাই লগইন বন্ধ। ব্যাকএন্ড চালু করে আবার লোড করুন।",
     failed: "লগইন হয়নি",
+    noAccount: "কৃষিনেক্সাসে নতুন?",
+    create: "অ্যাকাউন্ট খুলুন",
+    appTitle: "অ্যান্ড্রয়েড ফোন আছে?",
+    appLede: "অ্যাপে একই অ্যাকাউন্ট চলে, বাংলায় কথা বলে আর ফোনের ক্যামেরা দিয়ে।",
   },
 };
 
@@ -178,8 +187,19 @@ export function LoginPage() {
                 <p className="m-0 flex gap-2 text-[12.5px] text-slate-500">
                   <KeyRound className="mt-0.5 size-3.5 shrink-0" aria-hidden /> <span>{c.demo(DEMO_PASSWORD)}</span>
                 </p>
+                <p className="m-0 flex flex-wrap items-center justify-center gap-x-1.5 border-t border-slate-200 pt-3 text-[14px] text-slate-600">
+                  {c.noAccount}
+                  <Link to="/signup" className="inline-flex min-h-11 items-center gap-1 font-semibold text-emerald-700 no-underline hover:text-emerald-800">
+                    {c.create} <ArrowRight className="size-4" aria-hidden />
+                  </Link>
+                </p>
               </form>
             )}
+          </div>
+          <div className="mt-4 rounded-2xl bg-white/70 p-4 ring-1 ring-inset ring-slate-200">
+            <h2 className="m-0 text-[15px] font-semibold text-slate-900">{c.appTitle}</h2>
+            <p className="m-0 mt-0.5 text-[13.5px] text-slate-600">{c.appLede}</p>
+            <AppDownload className="mt-3" quiet />
           </div>
         </div>
       </section>

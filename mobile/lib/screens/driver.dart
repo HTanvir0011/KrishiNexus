@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/api.dart';
 import '../core/format.dart';
@@ -51,7 +55,7 @@ class _JobsScreenState extends State<JobsScreen> with Polling<JobsScreen, List<L
     final done = jobs.where((l) => l.delivery!.status == 'DELIVERED' && (!_driver || l.delivery!.driverId == me)).toList();
     final others = _driver ? const <Lot>[] : jobs.where((l) => l.delivery!.status != 'AWAITING_DRIVER' && l.delivery!.status != 'DELIVERED').toList();
     return Scaffold(
-      appBar: AppBar(title: Text(_driver ? t('ডেলিভারির কাজ', 'Delivery jobs') : t('সব ডেলিভারি', 'All deliveries'))),
+      appBar: AppBar(title: Text(_driver ? t('ডেলিভারির কাজ', 'Delivery jobs') : t('সব ডেলিভারি', 'All deliveries')), actions: const [LiveDot()]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: loading && data == null
@@ -106,6 +110,7 @@ class JobCard extends StatelessWidget {
         const SizedBox(height: 10),
         RouteLine(delivery: d, height: 44),
         const SizedBox(height: 8),
+        if (truckLine(d) case final line?) ...[TruckLine(text: line), const SizedBox(height: 4)],
         Row(children: [
           Expanded(
             child: Text('${num1(d.km, decimals: 1)} ${t('কিমি', 'km')} · ${num1(d.etaHours, decimals: 1)} ${t('ঘণ্টা', 'h')} · ${lot.farmerName} → ${lot.acceptedBid?.buyerName ?? ''}',
@@ -120,7 +125,8 @@ class JobCard extends StatelessWidget {
   }
 }
 
-/// Origin and destination with the truck placed by the job's stage; it drives on when the stage advances.
+/// Origin and destination with the truck placed by the distance it has covered (its last shared position), else by
+/// the job's stage; it drives on as either advances.
 class RouteLine extends StatelessWidget {
   const RouteLine({super.key, required this.delivery, this.height = 64});
   final Delivery delivery;
@@ -130,7 +136,7 @@ class RouteLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stage = jobStage(delivery.status);
-    final p = switch (stage) { 0 || 1 => 0.0, 2 => 0.55, _ => 1.0 };
+    final p = stage == 3 ? 1.0 : delivery.progress ?? switch (stage) { 0 || 1 => 0.0, 2 => 0.55, _ => 1.0 };
     final fg = (delivery.atRisk ? Tone.rose : Tone.green).fg(context);
     return SizedBox(
       height: height,
@@ -197,6 +203,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> with Polling<ActiveJo
     return Scaffold(
       appBar: AppBar(
         title: Text(t('চলতি ডেলিভারি', 'On the road')),
+        actions: const [LiveDot()],
         bottom: active.length < 2
             ? null
             : PreferredSize(
@@ -255,6 +262,9 @@ class JobScreen extends StatefulWidget {
 
 class _JobScreenState extends State<JobScreen> with Polling<JobScreen, Lot> {
   @override
+  bool relevant(MarketEvent e) => e.lotId == null || e.lotId == widget.lotId;
+
+  @override
   void initState() {
     data = widget.initial;
     super.initState();
@@ -269,7 +279,7 @@ class _JobScreenState extends State<JobScreen> with Polling<JobScreen, Lot> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(data == null ? '' : '${cropName(data!.crop)} · ${kg(data!.kg)}')),
+        appBar: AppBar(title: Text(data == null ? '' : '${cropName(data!.crop)} · ${kg(data!.kg)}'), actions: const [LiveDot()]),
         body: data == null
             ? (error != null ? ErrorState(error: error!, onRetry: refresh) : const SkeletonList(count: 3, height: 140))
             : JobView(lot: data!, onChanged: (lot) => setState(() => data = lot), onRefresh: refresh),
@@ -346,12 +356,18 @@ class _JobViewState extends State<JobView> {
             const SizedBox(height: 18),
             RouteSteps(steps: [t('অপেক্ষা', 'Waiting'), t('নিয়েছেন', 'Assigned'), t('তোলা', 'Picked up'), t('পৌঁছেছে', 'Delivered')], current: stage, tone: d.atRisk ? Tone.rose : Tone.green),
             const SizedBox(height: 12),
+            if (truckLine(d) case final line?) ...[TruckLine(text: line), const SizedBox(height: 6)],
             InfoRow(t('দূরত্ব', 'Distance'), '${num1(d.km, decimals: 1)} ${t('কিমি', 'km')} · ${num1(d.etaHours, decimals: 1)} ${t('ঘণ্টা', 'h')}'),
             InfoRow(t('কৃষক', 'Farmer'), '${lot.farmerName} · ${[lot.upazila, lot.district].where((s) => s.isNotEmpty).join(', ')}'),
             InfoRow(t('ক্রেতা', 'Buyer'), lot.acceptedBid?.buyerName ?? '–'),
             if (d.driverName != null) InfoRow(t('চালক', 'Driver'), d.driverName!),
           ]),
         ),
+        if (_mine && (d.status == 'ASSIGNED' || d.status == 'PICKED_UP')) ...[
+          const SizedBox(height: 12),
+          // Removed with the job's end (delivered), so sharing stops with it.
+          LiveLocationSwitch(key: ValueKey(lot.id), lotId: lot.id, onChanged: widget.onChanged),
+        ],
         if (_mine && d.status == 'ASSIGNED') ...[
           const SizedBox(height: 16),
           FilledButton.icon(
@@ -420,6 +436,180 @@ class _JobViewState extends State<JobView> {
             ]),
           ),
         ],
+      ]),
+    );
+  }
+}
+
+/// The driver's opt-in: while on, the truck's position goes to the node (a 50 m move at most every 15 s), which shows the
+/// buyer and the farmer of this sale a coarse position (rounded to about 1 km) and the time left. Off by default; it
+/// stops when switched off, on delivery (the job leaves this screen) and when the driver leaves the screen.
+class LiveLocationSwitch extends StatefulWidget {
+  const LiveLocationSwitch({super.key, required this.lotId, required this.onChanged});
+  final String lotId;
+  final void Function(Lot lot) onChanged;
+
+  @override
+  State<LiveLocationSwitch> createState() => _LiveLocationSwitchState();
+}
+
+class _LiveLocationSwitchState extends State<LiveLocationSwitch> with AutomaticKeepAliveClientMixin {
+  StreamSubscription<Position>? _positions;
+  Position? _next;
+  DateTime _sentAt = DateTime(0);
+  Timer? _later;
+  String? _sent; // when the node last took a position
+  bool _asking = false;
+
+  bool get _on => _positions != null;
+
+  // The job's list builds lazily: while sharing, scrolling down to log a temperature must not end it.
+  @override
+  bool get wantKeepAlive => _on;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Another tab or a screen on top of this one: the driver has left it.
+    if (!TickerMode.valuesOf(context).enabled) _stop();
+  }
+
+  @override
+  void dispose() {
+    _stop();
+    super.dispose();
+  }
+
+  void _stop() {
+    _positions?.cancel();
+    _positions = null;
+    _later?.cancel();
+    _later = null;
+    _next = null;
+  }
+
+  void _off() {
+    setState(_stop);
+    updateKeepAlive();
+  }
+
+  Future<void> _toggle(bool on) async {
+    if (!on) return _off();
+    setState(() => _asking = true);
+    final allowed = await _allowed();
+    if (!mounted) return;
+    setState(() {
+      _asking = false;
+      if (!allowed || !TickerMode.valuesOf(context).enabled) return;
+      _sent = null;
+      _positions = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 50),
+      ).listen(_onPosition, onError: (Object _) {
+        if (!mounted) return;
+        _off();
+        _explain(t('লোকেশন পাওয়া যাচ্ছে না, শেয়ার বন্ধ হলো।', 'The location stopped coming; sharing is off.'));
+      });
+    });
+    updateKeepAlive();
+  }
+
+  /// Location on and permitted: asks once; a refusal for good points to the phone's settings.
+  Future<bool> _allowed() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _explain(t('ফোনের লোকেশন (GPS) বন্ধ। চালু করে আবার চেষ্টা করুন।', 'Location (GPS) is off on this phone. Turn it on and try again.'),
+            settings: Geolocator.openLocationSettings);
+        return false;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever) {
+        _explain(
+            t('লোকেশনের অনুমতি বন্ধ করা আছে। ফোনের সেটিংসে KrishiNexus-কে লোকেশনের অনুমতি দিন।',
+                'Location permission is turned off. Allow it for KrishiNexus in the phone settings.'),
+            settings: Geolocator.openAppSettings);
+        return false;
+      }
+      if (permission == LocationPermission.denied) {
+        _explain(t('অনুমতি ছাড়া ট্রাকের অবস্থান জানানো যায় না।', 'Without location permission the truck\'s position cannot be shared.'));
+        return false;
+      }
+      return true;
+    } catch (_) {
+      _explain(t('এই ফোনে লোকেশন পড়া গেল না।', 'This phone\'s location could not be read.'));
+      return false;
+    }
+  }
+
+  void _explain(String message, {Future<bool> Function()? settings}) {
+    if (!mounted) return;
+    snack(context, message,
+        icon: Icons.location_off_rounded,
+        tone: Tone.amber,
+        action: settings == null || kIsWeb ? null : SnackBarAction(label: t('সেটিংস', 'Settings'), onPressed: () => settings()));
+  }
+
+  // At most one position every 15 s: a newer one waits for the slot (the node keeps one per 10 s).
+  void _onPosition(Position p) {
+    _next = p;
+    final wait = const Duration(seconds: 15) - DateTime.now().difference(_sentAt);
+    if (wait <= Duration.zero) {
+      _send();
+    } else {
+      _later ??= Timer(wait, _send);
+    }
+  }
+
+  Future<void> _send() async {
+    _later = null;
+    final p = _next;
+    if (p == null || !_on) return;
+    _next = null;
+    _sentAt = DateTime.now();
+    try {
+      final res = await Api.post('/market/deliveries/${widget.lotId}/location', {
+        'lat': p.latitude,
+        'lng': p.longitude,
+        'accuracy_m': p.accuracy,
+        if (p.speed > 0) 'speed_kmh': p.speed * 3.6,
+      }, const Duration(seconds: 20));
+      if (!mounted) return;
+      setState(() => _sent = DateTime.now().toIso8601String());
+      if (res is Map && res['lot_id'] is String) widget.onChanged(Lot(res.cast<String, dynamic>()));
+    } on ApiError catch (e) {
+      // No signal or a busy node: the next position tries again. A refusal (delivered, not this driver's job) ends it.
+      if (!mounted || e.unreachable || e.status == 429 || e.status >= 500) return;
+      _off();
+      _explain(friendlyError(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final theme = Theme.of(context);
+    return AppCard(
+      tone: _on ? Tone.sky : null,
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SwitchListTile(
+          value: _on,
+          onChanged: _asking ? null : _toggle,
+          secondary: Icon(_on ? Icons.share_location_rounded : Icons.location_off_outlined),
+          title: Text(t('লাইভ লোকেশন জানান', 'Share live location')),
+          subtitle: Text(t(
+            'চালু করলে এই বিক্রির ক্রেতা ও কৃষক (এবং ব্যাংক, বিচারক ও অ্যাডমিন ডেস্ক) ট্রাকের আনুমানিক অবস্থান (প্রায় ১ কিমি) আর পৌঁছানোর সময় দেখবেন; অন্য কেউ পান না। বন্ধ করলে, পৌঁছে দিলে বা এই স্ক্রিন ছাড়লে থেমে যায়।',
+            'While on, the buyer and the farmer of this sale (and the bank, judge and admin desks) see the truck\'s rough position (to about 1 km) and the time left; nobody else gets it. It stops when you switch it off, deliver, or leave this screen.',
+          )),
+        ),
+        if (_on)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              _sent == null ? t('প্রথম অবস্থান খোঁজা হচ্ছে…', 'Finding the first position…') : t('শেষ পাঠানো: ${ago(_sent!)}', 'Last sent ${ago(_sent!)}'),
+              style: theme.textTheme.bodySmall?.copyWith(color: Tone.sky.fg(context)),
+            ),
+          ),
       ]),
     );
   }

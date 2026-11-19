@@ -22,6 +22,9 @@ class _DisputesScreenState extends State<DisputesScreen> with Polling<DisputesSc
   @override
   Future<List<Dispute>> load() async => mapsOf(await Api.get('/market/disputes')).map(Dispute.new).toList();
 
+  @override
+  bool relevant(MarketEvent e) => e.lotId == null || e.kind.startsWith('dispute');
+
   Future<void> _resolve(Dispute d) async {
     final done = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, builder: (_) => _ResolveSheet(dispute: d));
     if (done == true) refresh(quiet: true);
@@ -34,7 +37,7 @@ class _DisputesScreenState extends State<DisputesScreen> with Polling<DisputesSc
     final closed = all.where((d) => d.status != 'OPEN').toList();
     final canResolve = app.user?.role == 'bank' || app.user?.role == 'admin';
     return Scaffold(
-      appBar: AppBar(title: Text(t('অভিযোগ', 'Disputes'))),
+      appBar: AppBar(title: Text(t('অভিযোগ', 'Disputes')), actions: const [LiveDot()]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: loading && data == null
@@ -131,12 +134,15 @@ class _LedgerScreenState extends State<LedgerScreen> with Polling<LedgerScreen, 
   Future<List<Map<String, dynamic>>> load() async => mapsOf(await Api.get('/market/ledger'));
 
   @override
+  bool relevant(MarketEvent e) => e.kind != 'location';
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final rows = data ?? const <Map<String, dynamic>>[];
     double sum(String status) => rows.where((r) => r['status'] == status).fold(0.0, (a, r) => a + numOf(r['amount_tk']));
     return Scaffold(
-      appBar: AppBar(title: Text(t('লেনদেন', 'Ledger'))),
+      appBar: AppBar(title: Text(t('লেনদেন', 'Ledger')), actions: const [LiveDot()]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: loading && data == null

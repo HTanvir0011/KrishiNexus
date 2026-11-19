@@ -1,13 +1,15 @@
-import { CheckCircle2, MapPinned, PackageCheck, ShieldAlert, Thermometer, Truck } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { CheckCircle2, LocateFixed, MapPinned, PackageCheck, ShieldAlert, Thermometer, Truck } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
 import { api, ApiError, type MarketLot } from "../api/client";
 import { DisputeBox } from "../components/DisputeBox";
+import { RouteBar } from "../components/RouteBar";
 import { RouteSteps } from "../components/RouteSteps";
 import { Badge, Button, Panel, Spinner, Stat } from "../components/ui";
 import { cn, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
-import { useBecame } from "../lib/motion";
+import { useBecame, useNow } from "../lib/motion";
+import { useMarketRefresh } from "../state/marketStream";
 import { pushAlert, useAppState } from "../state/store";
 
 const FIELD = "min-h-10 w-full rounded-lg bg-white px-3 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-amber-600 focus:outline-none";
@@ -18,14 +20,12 @@ const COPY = {
     take: "Take this job", pickedUp: "Loaded: start the trip", delivered: "Delivered: release payment",
     temp: "Load temperature °C", rh: "Humidity %", report: "Report", shelf: (h: number) => `${Math.round(h)} h of shelf life left at this temperature`,
     atRisk: "At risk: the load may spoil before arrival. Cool it, or deliver sooner.", safe: "Safe to arrive.",
-    route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} km · about ${h} h`,
     buyer: "Buyer", farmer: "Farmer", payment: "Payment held", released: "Payment released to the farmer",
     states: { AWAITING_DRIVER: "Waiting for a driver", ASSIGNED: "Assigned to you", PICKED_UP: "On the road", DELIVERED: "Delivered" },
     readOnly: "Read-only view for judges and admins: only driver accounts take jobs.", failed: "Request failed", done: "Updated",
     steps: ["Waiting", "Taken", "On the road", "Delivered"], stepsLabel: "Delivery progress",
     stats: { waiting: "Jobs waiting", road: "On the road", delivered: "Delivered", paid: "Payments released" },
     statHints: { waiting: "sold lots without a driver", road: "taken or loaded", delivered: "weighed at the buyer", paid: "to farmers, on delivery" },
-    trip: (km: number, h: number) => `${km} km · about ${h} h`,
     shelfBar: (eta: number, life: number) => `Trip ${eta} h of ${Math.round(life)} h shelf life (arrive with at least a quarter left)`,
   },
   bn: {
@@ -33,20 +33,128 @@ const COPY = {
     take: "কাজটি নিন", pickedUp: "মাল তোলা হয়েছে: রওনা", delivered: "পৌঁছে দিয়েছি: টাকা ছাড়",
     temp: "মালের তাপমাত্রা °সে", rh: "আর্দ্রতা %", report: "জানান", shelf: (h: number) => `এই তাপমাত্রায় আর ${Math.round(h)} ঘণ্টা ভালো থাকবে`,
     atRisk: "ঝুঁকি: পৌঁছানোর আগে মাল নষ্ট হতে পারে। ঠান্ডা রাখুন বা দ্রুত পৌঁছান।", safe: "নিরাপদে পৌঁছাবে।",
-    route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} কিমি · প্রায় ${h} ঘণ্টা`,
     buyer: "ক্রেতা", farmer: "কৃষক", payment: "টাকা আটকে আছে", released: "টাকা কৃষককে ছাড় হয়েছে",
     states: { AWAITING_DRIVER: "চালকের অপেক্ষা", ASSIGNED: "আপনার কাজ", PICKED_UP: "পথে", DELIVERED: "পৌঁছেছে" },
     readOnly: "বিচারক ও অ্যাডমিনের জন্য শুধু দেখা: কেবল চালক কাজ নিতে পারেন।", failed: "অনুরোধ ব্যর্থ", done: "হালনাগাদ হয়েছে",
     steps: ["অপেক্ষা", "নেওয়া হয়েছে", "পথে", "পৌঁছেছে"], stepsLabel: "ডেলিভারির অগ্রগতি",
     stats: { waiting: "অপেক্ষমাণ কাজ", road: "পথে", delivered: "পৌঁছেছে", paid: "ছাড় হওয়া টাকা" },
     statHints: { waiting: "বিক্রি হয়েছে, চালক নেই", road: "নেওয়া বা লোড করা", delivered: "ক্রেতার কাছে ওজন হয়েছে", paid: "ডেলিভারিতে কৃষকের কাছে" },
-    trip: (km: number, h: number) => `${km} কিমি · প্রায় ${h} ঘণ্টা`,
     shelfBar: (eta: number, life: number) => `যাত্রা ${eta} ঘণ্টা, মাল ভালো থাকবে ${Math.round(life)} ঘণ্টা (অন্তত এক-চতুর্থাংশ সময় হাতে রেখে পৌঁছাতে হবে)`,
+  },
+};
+
+const SHARE = {
+  en: {
+    title: "Share live location",
+    explain: "Off by default. While one of your jobs is taken or on the road, a coarse position (about 1 km) is shared at most every 15 seconds with the buyer and the farmer of that sale (this demo's judges and admins see every seat). It stops when the crop is delivered or when you switch it off.",
+    noJob: "Take a job to share your location.",
+    waiting: "Waiting for your position…",
+    sent: (ago: string, metres: number) => `Shared ${ago} · accurate to about ${metres} m`,
+    ago: (s: number) => (s < 60 ? `${s} s ago` : `${Math.round(s / 60)} min ago`),
+    denied: "Location is blocked for this site. Allow location in your browser's site settings, then switch this on again.",
+    unavailable: "Your position could not be found yet; sharing keeps trying.",
+    unsupported: "This browser cannot share a location.",
+    failed: (why: string) => `Not shared: ${why}`,
+  },
+  bn: {
+    title: "লাইভ অবস্থান জানান",
+    explain: "শুরুতে বন্ধ থাকে। আপনার কোনো কাজ নেওয়া বা পথে থাকলে মোটামুটি অবস্থান (প্রায় ১ কিমি) সর্বোচ্চ ১৫ সেকেন্ডে একবার সেই বিক্রির ক্রেতা ও কৃষককে জানানো হয় (এই ডেমোর বিচারক ও অ্যাডমিন সব আসনই দেখেন)। ফসল পৌঁছালে বা আপনি বন্ধ করলে থেমে যায়।",
+    noJob: "অবস্থান জানাতে আগে একটি কাজ নিন।",
+    waiting: "আপনার অবস্থানের অপেক্ষা…",
+    sent: (ago: string, metres: number) => `${ago} জানানো হয়েছে · প্রায় ${metres} মিটার নির্ভুল`,
+    ago: (s: number) => (s < 60 ? `${s} সেকেন্ড আগে` : `${Math.round(s / 60)} মিনিট আগে`),
+    denied: "এই সাইটের জন্য অবস্থান বন্ধ করা আছে। ব্রাউজারের সাইট সেটিংসে অবস্থানের অনুমতি দিয়ে আবার চালু করুন।",
+    unavailable: "এখনো অবস্থান পাওয়া যায়নি; চেষ্টা চলছে।",
+    unsupported: "এই ব্রাউজার অবস্থান জানাতে পারে না।",
+    failed: (why: string) => `জানানো যায়নি: ${why}`,
   },
 };
 
 const STAGE = { AWAITING_DRIVER: 0, ASSIGNED: 1, PICKED_UP: 2, DELIVERED: 3 } as const;
 const message = (error: unknown) => (error instanceof ApiError ? error.message : String(error));
+const round = (value: number, places: number) => Math.round(value * 10 ** places) / 10 ** places;
+
+type ShareState = { kind: "idle" | "waiting" | "unavailable" } | { kind: "sent"; at: number; metres: number }
+  | { kind: "denied" | "unsupported" } | { kind: "failed"; why: string };
+
+/**
+ * The driver's "Share live location" switch: off by default; while on and a job is ASSIGNED or PICKED_UP, the phone's
+ * position goes to each active job at most every 15 s. Delivery (no active job left) or the switch stops it.
+ */
+function LocationShare({ active }: { active: MarketLot[] }) {
+  const c = useCopy(SHARE);
+  const now = useNow(5_000);
+  const [on, setOn] = useState(false);
+  const [state, setShare] = useState<ShareState>({ kind: "idle" });
+  const lastSent = useRef(0);
+  const lots = active.map((job) => job.lot_id).join(" ");
+
+  // Nothing left to deliver: sharing stops, and stays off for the next job until the driver turns it on again.
+  useEffect(() => {
+    if (!lots) setOn(false);
+  }, [lots]);
+
+  useEffect(() => {
+    if (!on || !lots) return;
+    if (!("geolocation" in navigator)) {
+      setOn(false);
+      setShare({ kind: "unsupported" });
+      return;
+    }
+    setShare({ kind: "waiting" });
+    lastSent.current = 0;
+    const send = async (p: GeolocationPosition) => {
+      if (Date.now() - lastSent.current < 15_000) return;
+      lastSent.current = Date.now();
+      // About 100 m leaves the phone; the node keeps 0.01° (about 1 km) for the buyer and the farmer.
+      // The node takes an accuracy up to 10 km; a desktop's network fix can claim more.
+      const body = { lat: round(p.coords.latitude, 3), lng: round(p.coords.longitude, 3), accuracy_m: Math.min(10_000, Math.round(p.coords.accuracy)),
+                     ...(p.coords.speed !== null ? { speed_kmh: round(p.coords.speed * 3.6, 1) } : {}) };
+      const results = await Promise.allSettled(lots.split(" ").map((lotId) => api.shareLocation(lotId, body)));
+      const failure = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      setShare(failure ? { kind: "failed", why: message(failure.reason) } : { kind: "sent", at: Date.now(), metres: body.accuracy_m });
+    };
+    const watch = navigator.geolocation.watchPosition((p) => void send(p), (error) => {
+      if (error.code === error.PERMISSION_DENIED) {
+        setOn(false);
+        setShare({ kind: "denied" });
+      } else setShare((s) => (s.kind === "sent" ? s : { kind: "unavailable" }));
+    }, { enableHighAccuracy: false, maximumAge: 15_000, timeout: 30_000 });
+    return () => navigator.geolocation.clearWatch(watch);
+  }, [on, lots]);
+
+  const note = !lots ? c.noJob
+    : !on ? null
+    : state.kind === "sent" ? c.sent(c.ago(Math.max(0, Math.round((now - state.at) / 1000))), state.metres)
+    : state.kind === "failed" ? c.failed(state.why)
+    : state.kind === "unavailable" ? c.unavailable
+    : c.waiting;
+  return (
+    <section className="surface p-4 xl:col-span-2" aria-labelledby="share-title">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 id="share-title" className="m-0 flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+            <LocateFixed className="size-4 text-sky-600" aria-hidden /> {c.title}
+          </h2>
+          <p className="m-0 mt-1 max-w-[52rem] text-[13px] text-slate-600">{c.explain}</p>
+        </div>
+        <button type="button" role="switch" aria-checked={on} aria-labelledby="share-title" disabled={!lots}
+          onClick={() => { setOn(!on); if (!on) setShare({ kind: "idle" }); }}
+          className="group grid h-11 w-16 shrink-0 place-items-center rounded-full disabled:cursor-not-allowed disabled:opacity-50">
+          <span className={cn("relative h-7 w-12 rounded-full transition-colors duration-200", on ? "bg-emerald-700" : "bg-slate-300")}>
+            <span className={cn("absolute top-1 left-1 size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-(--ease-out-expo)", on && "translate-x-5")} />
+          </span>
+        </button>
+      </div>
+      {note && <p className={cn("m-0 mt-2 text-[12.5px]", state.kind === "failed" ? "text-rose-700" : "text-slate-600")}>{note}</p>}
+      {(state.kind === "denied" || state.kind === "unsupported") && (
+        <p role="alert" className="m-0 mt-2 rounded-lg bg-rose-50 px-3 py-2 text-[13px] text-rose-800 ring-1 ring-inset ring-rose-600/20">
+          {state.kind === "denied" ? c.denied : c.unsupported}
+        </p>
+      )}
+    </section>
+  );
+}
 
 /** The truck driver's seat: open delivery jobs, then pickup, temperature reports on the road, and delivery. */
 export function DriverSeat() {
@@ -62,11 +170,7 @@ export function DriverSeat() {
     }
   }, [c.failed]);
 
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), 8_000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+  useMarketRefresh(load);
 
   if (!user) return null;
   if (!jobs) return <Spinner />;
@@ -87,6 +191,7 @@ export function DriverSeat() {
         <Stat label={c.stats.delivered} value={delivered.length} hint={c.statHints.delivered} tone="emerald" />
         <Stat label={c.stats.paid} value={tk(paid, 0)} hint={c.statHints.paid} tone="emerald" />
       </section>
+      {driver && <LocationShare active={onRoad} />}
       <Panel title={`${c.available} (${waiting.length})`} icon={<MapPinned className="size-4 text-amber-600" aria-hidden />}>
         {waiting.length === 0 ? <p className="m-0 text-[14px] text-slate-600">{c.none}</p>
           : <div className="grid gap-3">{waiting.map((job) => <JobCard key={job.lot_id} job={job} canAct={driver} onChange={load} />)}</div>}
@@ -138,22 +243,8 @@ function JobCard({ job, canAct, onChange }: { job: MarketLot; canAct: boolean; o
         <Badge tone={d.status === "DELIVERED" ? "emerald" : d.status === "PICKED_UP" ? "sky" : "amber"}>{c.states[d.status]}</Badge>
       </div>
 
-      {/* The road itself: the truck sits at the start until loaded, mid-way on the road, at the buyer once delivered. */}
-      <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-inset ring-slate-200" aria-label={c.route(d.origin_district, d.destination_district, d.distance_km, d.eta_hours)}>
-        <div className="flex items-center gap-3">
-          <span className="max-w-[35%] truncate text-[12.5px] font-medium text-slate-800">{job.upazila ? `${job.upazila}, ` : ""}{d.origin_district}</span>
-          <span aria-hidden className="relative h-1 flex-1 rounded-full bg-slate-200">
-            <span className="absolute inset-y-0 left-0 rounded-full bg-emerald-500 transition-[width] duration-700 ease-(--ease-out-expo)"
-              style={{ width: `${d.status === "DELIVERED" ? 100 : d.status === "PICKED_UP" ? 50 : 0}%` }} />
-            <span className="absolute top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md bg-amber-600 text-white shadow-sm transition-[left] duration-700 ease-(--ease-out-expo)"
-              style={{ left: `${d.status === "DELIVERED" ? 100 : d.status === "PICKED_UP" ? 50 : 0}%` }}>
-              <Truck className="size-3.5" />
-            </span>
-          </span>
-          <span className="max-w-[35%] truncate text-right text-[12.5px] font-medium text-slate-800">{d.destination_district}</span>
-        </div>
-        <div className="num mt-1.5 text-center text-[12px] text-slate-500">{c.trip(d.distance_km, d.eta_hours)}</div>
-      </div>
+      {/* The road itself: the truck moves by distance covered once the driver shares a position, else by stage. */}
+      <RouteBar lot={job} className="mt-3" />
 
       <RouteSteps className="mt-3" steps={c.steps} at={STAGE[d.status]} label={c.stepsLabel}
         icon={d.status === "PICKED_UP" ? <Truck className="size-3" aria-hidden /> : undefined} />

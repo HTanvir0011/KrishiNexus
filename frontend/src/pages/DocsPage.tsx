@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, ExternalLink, FlaskConical, LayoutGrid, Plug, ShieldCheck, Sprout } from "lucide-react";
+import { BarChart3, BookOpen, ExternalLink, FlaskConical, LayoutGrid, Plug, ShieldCheck, Smartphone, Sprout } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { DataSafetySection } from "../components/docs/DataSafetySection";
@@ -6,6 +6,7 @@ import { DepthMatrixSection } from "../components/docs/DepthMatrixSection";
 import { EconomicsSection } from "../components/docs/EconomicsSection";
 import { EvalsSection } from "../components/docs/EvalsSection";
 import { McpInspectorSection } from "../components/docs/McpInspectorSection";
+import { MobileAppSection } from "../components/docs/MobileAppSection";
 import { ProvenanceSection } from "../components/docs/ProvenanceSection";
 import { cn } from "../lib/format";
 
@@ -17,6 +18,7 @@ const SECTIONS: { id: string; nav: string; title: string; icon: ReactNode; body:
   { id: "evals", nav: "Evaluation and regression", title: "Live computed evaluation and the 100-case regression runner", icon: <FlaskConical className="size-4" />, body: <EvalsSection /> },
   { id: "economics", nav: "Unit economics", title: "B2B unit economics and national impact simulator", icon: <BarChart3 className="size-4" />, body: <EconomicsSection /> },
   { id: "data", nav: "Data, consent and safety", title: "Data, consent and safety: what the node keeps and why", icon: <ShieldCheck className="size-4" />, body: <DataSafetySection /> },
+  { id: "mobile", nav: "Mobile app", title: "The Android app: voice and camera in the field", icon: <Smartphone className="size-4" />, body: <MobileAppSection /> },
 ];
 
 // Same origin in dev (Vite proxy), compose (nginx) and the hosted demo (serve.py) all rewrite /api to the backend.

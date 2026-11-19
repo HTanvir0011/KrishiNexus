@@ -1,13 +1,78 @@
-import { RotateCcw, Trash2, UserPlus, Users } from "lucide-react";
+import { RotateCcw, Trash2, UserCheck, UserPlus, Users, UserX } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { api, type Role } from "../api/client";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
-import { cn } from "../lib/format";
+import { cn, kycLine } from "../lib/format";
 import { useCopy } from "../lib/i18n";
 import { ROLE_LABEL, ROLE_TONE } from "../lib/roles";
 import { useAppState } from "../state/store";
-import { TABLE, TD, TH, useAdmin } from "./useAdmin";
+import { TABLE, TD, TH, useAdmin, when } from "./useAdmin";
+
+const PENDING = {
+  en: {
+    title: (n: number) => `Waiting for approval (${n})`,
+    lede: "Co-op, cold-storage and bank accounts that signed themselves up. Identity numbers are shown masked only.",
+    none: "No accounts are waiting for approval.",
+    approve: "Approve", reject: "Reject",
+    approved: (name: string) => `${name} can log in now`,
+    rejected: (name: string) => `${name}'s sign-up was rejected`,
+    confirmReject: (name: string) => `Reject and delete the sign-up of "${name}"? This cannot be undone.`,
+    signedUp: (at: string) => `Signed up ${at}`,
+  },
+  bn: {
+    title: (n: number) => `অনুমোদনের অপেক্ষায় (${n})`,
+    lede: "নিজে নিবন্ধন করা সমবায়, হিমাগার ও ব্যাংক অ্যাকাউন্ট। পরিচয়ের নম্বর শুধু ঢাকা রূপে দেখানো হয়।",
+    none: "কোনো অ্যাকাউন্ট অনুমোদনের অপেক্ষায় নেই।",
+    approve: "অনুমোদন দিন", reject: "বাতিল",
+    approved: (name: string) => `${name} এখন লগইন করতে পারবেন`,
+    rejected: (name: string) => `${name}-এর নিবন্ধন বাতিল হয়েছে`,
+    confirmReject: (name: string) => `"${name}"-এর নিবন্ধন বাতিল করে মুছে ফেলবেন? এটি ফেরানো যাবে না।`,
+    signedUp: (at: string) => `নিবন্ধন ${at}`,
+  },
+};
+
+/** Self-registered desk accounts waiting for an admin: approve (PATCH active) or reject (DELETE). */
+export function PendingAccounts() {
+  const c = useCopy(PENDING);
+  const lang = useAppState((s) => s.lang);
+  const { data: users, busy, run } = useAdmin(api.adminUsers);
+  const pending = (users ?? []).filter((u) => u.pending_review);
+  return (
+    <Panel title={c.title(pending.length)} icon={<UserCheck className="size-4 text-amber-600" aria-hidden />}>
+      <p className="m-0 mb-3 text-[13px] text-slate-600">{c.lede}</p>
+      {!users ? <Spinner /> : pending.length === 0 ? <p className="m-0 text-[14px] text-slate-600">{c.none}</p> : (
+        <ul className="m-0 grid list-none gap-2.5 p-0">
+          {pending.map((u) => (
+            <li key={u.user_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50/60 p-3 ring-1 ring-inset ring-amber-600/20">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[15px] font-semibold text-slate-900">{u.name}</span>
+                  <Badge tone={ROLE_TONE[u.role]}>{ROLE_LABEL[lang][u.role]}</Badge>
+                </div>
+                <div className="text-[13px] text-slate-700">{[u.title, u.district].filter(Boolean).join(" · ")}</div>
+                <div className="text-[12.5px] text-slate-600">
+                  <span className="font-mono">{u.user_id}</span>
+                  {u.kyc && <> · {kycLine(u.kyc)} · {u.kyc.phone_masked} · {c.signedUp(when(u.kyc.registered_at))}</>}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" disabled={busy !== null}
+                  onClick={() => void run(`approve-${u.user_id}`, () => api.adminUpdateUser(u.user_id, { active: true }), c.approved(u.name))}>
+                  {busy === `approve-${u.user_id}` ? <Spinner /> : <UserCheck className="size-4" aria-hidden />} {c.approve}
+                </Button>
+                <Button variant="quiet" className="text-rose-700" disabled={busy !== null}
+                  onClick={() => window.confirm(c.confirmReject(u.name)) && void run(`reject-${u.user_id}`, () => api.adminDeleteUser(u.user_id), c.rejected(u.name))}>
+                  <UserX className="size-4" aria-hidden /> {c.reject}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
 
 export const ROLES: Role[] = ["farmer", "coop", "storage", "buyer", "bank", "driver", "judge", "admin"];
 const FIELD = "min-h-10 w-full rounded-lg bg-white px-3 text-[14px] text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none";
@@ -26,6 +91,8 @@ const COPY = {
     headers: ["Account", "Role", "District", "Status", ""],
     active: "Active",
     disabled: "Disabled",
+    pending: "Waiting for approval",
+    approve: "Approve",
     enable: "Enable",
     disable: "Disable",
     remove: "Delete",
@@ -50,6 +117,8 @@ const COPY = {
     headers: ["অ্যাকাউন্ট", "ভূমিকা", "জেলা", "অবস্থা", ""],
     active: "সক্রিয়",
     disabled: "বন্ধ",
+    pending: "অনুমোদনের অপেক্ষায়",
+    approve: "অনুমোদন দিন",
     enable: "চালু",
     disable: "বন্ধ করুন",
     remove: "মুছুন",
@@ -108,12 +177,15 @@ export function AccountsSection() {
                         </select>
                       </td>
                       <td className={TD}>{u.district || "—"}</td>
-                      <td className={TD}><Badge tone={u.active ? ROLE_TONE[u.role] : "slate"}>{u.active ? c.active : c.disabled}</Badge></td>
+                      <td className={TD}>
+                        {u.pending_review ? <Badge tone="amber">{c.pending}</Badge>
+                          : <Badge tone={u.active ? ROLE_TONE[u.role] : "slate"}>{u.active ? c.active : c.disabled}</Badge>}
+                      </td>
                       <td className={TD}>
                         <div className="flex justify-end gap-1">
                           <Button variant="quiet" className="min-h-9" disabled={busy !== null || self}
-                            onClick={() => void run(`active-${u.user_id}`, () => api.adminUpdateUser(u.user_id, { active: !u.active }), c.saved)}>
-                            {u.active ? c.disable : c.enable}
+                            onClick={() => void run(`active-${u.user_id}`, () => api.adminUpdateUser(u.user_id, { active: u.pending_review ? true : !u.active }), c.saved)}>
+                            {u.pending_review ? c.approve : u.active ? c.disable : c.enable}
                           </Button>
                           <Button variant="quiet" className="min-h-9 text-rose-700" disabled={busy !== null || self} aria-label={`${c.remove}: ${u.name}`}
                             onClick={() => window.confirm(c.confirmDelete(u.name)) && void run(`del-${u.user_id}`, () => api.adminDeleteUser(u.user_id), c.deleted)}>

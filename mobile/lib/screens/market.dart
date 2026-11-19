@@ -5,41 +5,84 @@ import 'package:flutter/services.dart';
 
 import '../core/api.dart';
 import '../core/format.dart';
+import '../core/live.dart';
 import '../core/models.dart';
 import '../core/state.dart';
 import '../core/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/grade_view.dart';
+import 'driver.dart' show RouteLine;
 import 'scan.dart' show fadeRoute;
 
 Future<List<Lot>> fetchLots() async => mapsOf(await Api.get('/market/lots')).map(Lot.new).toList();
 
-/// Polls [load] every [every] while the tab or screen is on show (TickerMode), and on pull-to-refresh.
+/// Loads [load], then reloads it at once (debounced) on each [relevant] live market event and on pull-to-refresh.
+/// Polls every [every] while the tab or screen is on show (TickerMode) and the live feed is down, every 30 s while it
+/// is up. A hidden tab that missed an event catches up when it comes back into view.
 mixin Polling<T extends StatefulWidget, D> on State<T> {
   D? data;
   Object? error;
   Timer? _timer;
+  Timer? _soon;
+  StreamSubscription<MarketEvent>? _events;
+  DateTime _loadedAt = DateTime(0);
+  bool _stale = false;
   bool loading = true;
 
   Future<D> load();
   Duration get every => const Duration(seconds: 12);
+
+  /// Whether a live market event can change what this screen shows.
+  bool relevant(MarketEvent e) => true;
+
+  /// Screens whose data the market feed does not cover keep polling at [every].
+  bool get followsMarket => true;
+
+  bool get _visible => TickerMode.valuesOf(context).enabled;
 
   @override
   void initState() {
     super.initState();
     refresh();
     _timer = Timer.periodic(every, (_) {
-      if (mounted && TickerMode.valuesOf(context).enabled) refresh(quiet: true);
+      if (!mounted || !_visible) return;
+      if (followsMarket && live.connected && DateTime.now().difference(_loadedAt) < const Duration(seconds: 30)) return;
+      refresh(quiet: true);
     });
+    if (followsMarket) {
+      _events = live.events.where(relevant).listen((_) {
+        _soon?.cancel();
+        _soon = Timer(const Duration(milliseconds: 400), () {
+          if (!mounted) return;
+          if (_visible) {
+            refresh(quiet: true);
+          } else {
+            _stale = true;
+          }
+        });
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_stale && _visible) {
+      _stale = false;
+      refresh(quiet: true);
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _soon?.cancel();
+    _events?.cancel();
     super.dispose();
   }
 
   Future<void> refresh({bool quiet = false}) async {
+    _loadedAt = DateTime.now();
     if (!quiet && mounted && data == null) setState(() => loading = true);
     try {
       final next = await load();
@@ -86,6 +129,9 @@ class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, 
   @override
   Future<List<Lot>> load() => fetchLots();
 
+  @override
+  bool relevant(MarketEvent e) => !e.quiet;
+
   String get _role => app.user?.role ?? '';
 
   @override
@@ -131,7 +177,7 @@ class _MarketScreenState extends State<MarketScreen> with Polling<MarketScreen, 
       _ => t('সব লট', 'All lots'),
     };
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(title: Text(title), actions: const [LiveDot()]),
       floatingActionButton: _role == 'farmer'
           ? FloatingActionButton.extended(onPressed: _sell, icon: const Icon(Icons.add_rounded), label: Text(t('নতুন লট', 'List a lot')))
           : null,
@@ -284,6 +330,9 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
   Duration get every => const Duration(seconds: 8);
 
   @override
+  bool relevant(MarketEvent e) => e.lotId == null || e.lotId == widget.lotId;
+
+  @override
   void initState() {
     data = widget.initial;
     super.initState();
@@ -357,6 +406,7 @@ class _LotScreenState extends State<LotScreen> with Polling<LotScreen, Lot> {
       appBar: AppBar(
         title: Text('${cropName(lot.crop)} · ${kg(lot.kg)}'),
         actions: [
+          const LiveDot(),
           if (isOwner && lot.status == 'OPEN')
             IconButton(onPressed: _cancel, icon: const Icon(Icons.delete_outline_rounded), tooltip: t('লট বাতিল', 'Cancel the lot')),
         ],
@@ -654,7 +704,9 @@ class AcceptSheet extends StatefulWidget {
 }
 
 class _AcceptSheetState extends State<AcceptSheet> {
-  String _wallet = 'bKash';
+  // A signed-up account is paid only to the wallet it registered (the node refuses any other).
+  final _kyc = app.user?.kyc;
+  late String _wallet = walletProviders.contains(_kyc?.walletProvider) ? _kyc!.walletProvider : 'bKash';
   final _number = TextEditingController();
   bool _belowOk = false;
   bool _busy = false;
@@ -666,12 +718,9 @@ class _AcceptSheetState extends State<AcceptSheet> {
   }
 
   // Bangla digits typed on a Bangla keyboard count too.
-  String get _ascii => _number.text.trim().split('').map((c) {
-        final i = '০১২৩৪৫৬৭৮৯'.indexOf(c);
-        return i >= 0 ? '$i' : c;
-      }).join();
+  String get _ascii => bdMobile(_number.text);
 
-  bool get _valid => RegExp(r'^01[3-9]\d{8}$').hasMatch(_ascii);
+  bool get _valid => isBdMobile(_ascii);
 
   Future<void> _confirm() async {
     setState(() => _busy = true);
@@ -725,10 +774,19 @@ class _AcceptSheetState extends State<AcceptSheet> {
           Text(t('টাকা কোন ওয়ালেটে আসবে?', 'Which wallet should receive the money?'), style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
           SegmentedButton<String>(
-            segments: const [ButtonSegment(value: 'bKash', label: Text('bKash')), ButtonSegment(value: 'Nagad', label: Text('Nagad'))],
+            showSelectedIcon: false,
+            segments: [for (final w in walletProviders) ButtonSegment(value: w, label: Text(w))],
             selected: {_wallet},
             onSelectionChanged: (s) => setState(() => _wallet = s.first),
           ),
+          if (_kyc != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              t('টাকা যাবে শুধু এই অ্যাকাউন্টে নিবন্ধিত ওয়ালেটে: ${_kyc.walletProvider} ${digits(_kyc.walletMasked)}। সেই নম্বরটি পুরো লিখুন।',
+                  'Payouts go only to the wallet registered with this account: ${_kyc.walletProvider} ${_kyc.walletMasked}. Type that number in full.'),
+              style: theme.textTheme.bodySmall?.copyWith(color: Tone.violet.fg(context)),
+            ),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _number,
@@ -804,6 +862,12 @@ class DeliveryCard extends StatelessWidget {
           Expanded(child: Text(deliveryStatus(d.status), style: theme.textTheme.titleSmall)),
           if (d.atRisk) Pill(t('পচনের ঝুঁকি', 'Spoilage risk'), tone: Tone.rose, icon: Icons.warning_rounded),
         ]),
+        if (d.status == 'ASSIGNED' || d.status == 'PICKED_UP') ...[
+          const SizedBox(height: 12),
+          RouteLine(delivery: d, height: 56),
+          const SizedBox(height: 10),
+          if (truckLine(d) case final line?) TruckLine(text: line),
+        ],
         const SizedBox(height: 6),
         InfoRow(t('পথ', 'Route'), '${d.origin} → ${d.destination} · ${num1(d.km, decimals: 1)} ${t('কিমি', 'km')}'),
         InfoRow(t('সময়', 'Drive time'), '${num1(d.etaHours, decimals: 1)} ${t('ঘণ্টা', 'h')}'),
@@ -813,6 +877,32 @@ class DeliveryCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// "Truck is 42 km from Dhaka · ETA 1 h 10 min · updated 2 min ago", from the driver's last shared position on the road.
+String? truckLine(Delivery d) {
+  final left = d.kmLeft;
+  if (left == null || !(d.status == 'ASSIGNED' || d.status == 'PICKED_UP')) return null;
+  final eta = d.etaLeft;
+  return [
+    t('ট্রাক ${d.destination} থেকে ${num1(left)} কিমি দূরে', 'Truck is ${num1(left)} km from ${d.destination}'),
+    if (eta != null) t('পৌঁছাতে ${hoursText(eta)}', 'ETA ${hoursText(eta)}'),
+    if (d.positionAt.isNotEmpty) t('আপডেট ${ago(d.positionAt)}', 'updated ${ago(d.positionAt)}'),
+  ].join(' · ');
+}
+
+class TruckLine extends StatelessWidget {
+  const TruckLine({super.key, required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.only(top: 2), child: Icon(Icons.near_me_rounded, size: 16, color: Tone.sky.fg(context))),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Tone.sky.fg(context), fontWeight: FontWeight.w600)),
+        ),
+      ]);
 }
 
 class DisputeTile extends StatelessWidget {
@@ -1065,7 +1155,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> with Polling<Purchase
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('আমার কেনা', 'My purchases'))),
+      appBar: AppBar(title: Text(t('আমার কেনা', 'My purchases')), actions: const [LiveDot()]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: loading && data == null
@@ -1106,6 +1196,7 @@ class _PurchaseCard extends StatelessWidget {
         ]),
         const SizedBox(height: 12),
         RouteSteps(steps: [t('তালিকা', 'Listed'), t('বিক্রি', 'Sold'), t('পথে', 'On the road'), t('পৌঁছেছে', 'Delivered')], current: lotStage(lot)),
+        if (lot.delivery != null && truckLine(lot.delivery!) != null) ...[const SizedBox(height: 10), TruckLine(text: truckLine(lot.delivery!)!)],
         const SizedBox(height: 8),
         Row(children: [
           Expanded(child: Text(lot.escrow == null ? '' : escrowStatus(lot.escrow!.status), style: theme.textTheme.bodySmall)),
@@ -1136,6 +1227,9 @@ class _VerifyScreenState extends State<VerifyScreen> with Polling<VerifyScreen, 
   Future<List<Lot>> load() => fetchLots();
 
   @override
+  bool relevant(MarketEvent e) => !e.quiet;
+
+  @override
   void dispose() {
     _id.dispose();
     super.dispose();
@@ -1162,7 +1256,7 @@ class _VerifyScreenState extends State<VerifyScreen> with Polling<VerifyScreen, 
     final r = _result;
     final ok = r != null && r['known'] == true && r['signature_valid'] == true && r['payload_hash_valid'] == true && r['tampered'] != true;
     return Scaffold(
-      appBar: AppBar(title: Text(t('সনদ যাচাই', 'Verify a certificate'))),
+      appBar: AppBar(title: Text(t('সনদ যাচাই', 'Verify a certificate')), actions: const [LiveDot()]),
       body: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: [
         Text(t('কৃষকের ছবি-গ্রেডের সনদ আসল কিনা দেখুন', 'Check that a farmer\'s photo-grade certificate is genuine'), style: theme.textTheme.headlineSmall),
         const SizedBox(height: 16),

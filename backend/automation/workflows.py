@@ -34,7 +34,8 @@ from mcp_servers.coldchain_iot_mcp import calculate_dynamic_shelf_life
 from mcp_servers.dam_market_mcp import TRUCK_CAPACITY_KG, find_optimal_selling_hub
 from schemas.mcp_models import CalculateDynamicShelfLifeInput, Crop, CropField, FindOptimalSellingHubInput, Grade
 
-STATE_DIR = Path(__file__).resolve().parent.parent / ".state"
+# KNX_STATE_DIR lets a second node on this machine keep its own state instead of overwriting the first one's files.
+STATE_DIR = Path(os.getenv("KNX_STATE_DIR") or Path(__file__).resolve().parent.parent / ".state")
 POOL_STATE_FILE = STATE_DIR / "truck_pools.json"
 UNION_RADIUS_KM = 5.0
 DISPATCH_DEADLINE_HOURS = 8

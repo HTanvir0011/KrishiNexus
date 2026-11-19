@@ -13,7 +13,8 @@ const TONE: Record<AlertTone, string> = {
 export function Alerts() {
   const alerts = useAppState((s) => s.alerts);
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite">
+    // On phones the workspace has a bottom navigation bar, so toasts sit above it (and above the home indicator).
+    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-sm:bottom-[calc(5rem_+_env(safe-area-inset-bottom))] print:hidden" aria-live="polite">
       {alerts.map((alert) => (
         <div key={alert.id} className={cn("pointer-events-auto animate-rise rounded-xl border border-l-4 border-slate-200 bg-white p-3 text-[13px] shadow-lift", TONE[alert.tone])}>
           <div className="flex items-start justify-between gap-2">

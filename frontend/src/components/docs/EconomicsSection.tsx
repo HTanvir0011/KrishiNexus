@@ -212,7 +212,7 @@ export function EconomicsSection() {
             ].map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-1.5">
                 <dt className="text-slate-600">{label}</dt>
-                <dd className="num m-0 shrink-0 font-semibold text-slate-900">{value}</dd>
+                <dd className="num m-0 max-w-[60%] text-right font-semibold text-slate-900">{value}</dd>
               </div>
             ))}
           </dl>

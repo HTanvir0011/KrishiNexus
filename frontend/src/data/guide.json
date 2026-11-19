@@ -1,0 +1,272 @@
+{
+  "note": "The user guide: rendered by src/pages/GuidePage.tsx at /guide and written to dist/guide/ (and /guide/bn/) by scripts/prerender.mjs. Blocks: p, ul, ol, faq, link, app (the Android download buttons). Keep every claim true to the app.",
+  "updated": "2026-11-19",
+  "en": {
+    "title": "KrishiNexus user guide",
+    "lede": "Plain steps for farmers, buyers, truck drivers, co-ops, cold stores and banks. KrishiNexus is a demonstration: no real money moves.",
+    "contents": "On this page",
+    "print": "Print this guide",
+    "updated": "Updated",
+    "sections": [
+      {
+        "id": "what",
+        "title": "What KrishiNexus does",
+        "blocks": [
+          { "p": "KrishiNexus helps a farmer decide what to do with a harvest: sell now, keep it in cold storage, or send it with neighbours on a shared truck to a better buyer. You ask in your own words and dialect; the answer comes back in Bangla, with the money each choice brings." },
+          { "ul": [
+            "Grade a crop from a photo and get a signed quality certificate that buyers and banks can check.",
+            "See the fair price, and how much the middlemen add on the way to the market.",
+            "Find space in a cold store, and credit against the stored crop.",
+            "Get a warning when a haor embankment is likely to break, in time to harvest.",
+            "Sell directly to buyers. The buyer's money is held safely until the crop is delivered."
+          ] },
+          { "p": "The decision is always yours: KrishiNexus recommends and shows its working; it never sells, stores or borrows for you." }
+        ]
+      },
+      {
+        "id": "farmers",
+        "title": "For farmers",
+        "blocks": [
+          { "ol": [
+            "Create a farmer account (it works at once), or ask someone to help you. Then open My workspace.",
+            "Ask your question: tap a sample question, tap the microphone and speak in Bangla, or type it.",
+            "Scan the harvest: tap Take a photo and hold the crop inside the frame, or choose a photo you already have. The grade and a certificate appear.",
+            "Read the decision cards: the middleman's offer, the shared truck and cold storage, each with the money it brings. Tap শুনুন to hear the answer.",
+            "To sell directly, open Direct market, list your lot and wait for bids. Accept the bid you like and type your wallet number to confirm: payouts go only to the wallet you registered.",
+            "Follow the truck on the lot card. When the crop is delivered, the payment is released to your wallet.",
+            "If something goes wrong, tap Report a problem on the lot; the bank desk decides."
+          ] }
+        ]
+      },
+      {
+        "id": "buyers",
+        "title": "For buyers and traders",
+        "blocks": [
+          { "ol": [
+            "Create a buyer account; it works at once.",
+            "Open Direct market to see the lots open for bids, with grade, weight and place.",
+            "Place a bid. Others can bid higher: you get a message if you are outbid, and you can raise your bid.",
+            "When a farmer accepts your bid, your payment is held until delivery. Follow the truck on the lot.",
+            "If the crop is not as graded, tap Report a problem on the lot; the bank desk decides."
+          ] }
+        ]
+      },
+      {
+        "id": "drivers",
+        "title": "For truck drivers",
+        "blocks": [
+          { "ol": [
+            "Create a driver account; it works at once.",
+            "Open your seat: a job appears, with a message, as soon as a lot is sold.",
+            "Tap Take this job, load the crop, then tap Loaded: start the trip.",
+            "If you agree, switch on Share live location: the farmer and the buyer of that sale see roughly where the truck is and when it will arrive.",
+            "On the road, report the load's temperature; the app warns you if the crop may spoil before it arrives.",
+            "At the buyer, tap Delivered: release payment. The farmer is paid."
+          ] }
+        ]
+      },
+      {
+        "id": "desks",
+        "title": "For co-ops, cold stores and banks",
+        "blocks": [
+          { "p": "These accounts work for many farmers and handle storage or money, so an admin approves them before first use. Give the name of your organisation when you sign up." },
+          { "ul": [
+            "Co-op: pool members' lots into full 5-ton trucks, and watch the cold chambers and the agents' work.",
+            "Cold storage (himagar): chamber health, the share kept for small farmers, signed slot bookings and shelf life.",
+            "Bank: hold every payment until delivery, settle disputes, and give credit backed by signed certificates."
+          ] }
+        ]
+      },
+      {
+        "id": "account",
+        "title": "Your account and what we keep",
+        "blocks": [
+          { "p": "Sign up with your name, district, mobile number, national ID (NID) and a mobile wallet for payouts: bKash, Nagad, Rocket or Upay. Bangla digits are fine. After sign-up you get an account ID; log in with it and your password." },
+          { "link": { "href": "/signup", "text": "Create an account" } },
+          { "ul": [
+            "Your NID, phone and wallet numbers are kept only as a one-way code (a hash) and a masked form, such as bKash 017••••5678 and NID …1234. Nobody sees them in full again, not even an admin.",
+            "They are used to stop duplicate accounts and to make sure payouts go only to your registered wallet.",
+            "Your password is kept as a salted hash and never leaves the server.",
+            "Your voice and photos are used for that answer only and are not saved; names and numbers are hidden from the agents."
+          ] },
+          { "link": { "href": "/docs#data", "text": "The full list: data, consent and safety" } }
+        ]
+      },
+      {
+        "id": "live",
+        "title": "Live tracking",
+        "blocks": [
+          { "p": "Bids, sales, deliveries and disputes appear on screen as they happen. The Live sign at the top of your workspace shows the connection; when it says Reconnecting, the page still refreshes every few seconds." },
+          { "ul": [
+            "You get a message when something concerns you: a new bid on your lot, you were outbid, your lot is sold, a job is waiting for drivers, the crop is picked up, it is delivered and paid, or a dispute is opened or settled.",
+            "When the driver shares a location, the lot shows, for example: Truck is 42 km from Dhaka · ETA 1.2 h · updated 30 s ago.",
+            "The position is rounded to about a kilometre and shown only to the farmer, the buyer and the driver of that sale, and to the bank, judge and admin desks; other accounts never receive it. It stops when the crop is delivered or the driver switches it off."
+          ] }
+        ]
+      },
+      {
+        "id": "app",
+        "title": "The Android app",
+        "blocks": [
+          { "p": "The KrishiNexus app uses the same account and the same market. It listens and speaks in Bangla, and grades a crop with the phone's camera." },
+          { "app": true },
+          { "ol": [
+            "Download KrishiNexus.apk (about 21 MB, Android 7 or newer). On an older 32-bit phone, take the version for older phones.",
+            "Open the downloaded file. If Android asks, allow installing apps from your browser or file manager.",
+            "Tap Install, open KrishiNexus and log in with your account ID and password."
+          ] },
+          { "p": "You can also keep this website on your phone like an app: in Chrome, open the menu and choose Install app or Add to Home screen." }
+        ]
+      },
+      {
+        "id": "faq",
+        "title": "Questions people ask",
+        "blocks": [
+          { "faq": [
+            { "q": "Does it cost anything?", "a": "No. This is a demonstration: there is no fee and no real money moves; payments are simulated." },
+            { "q": "Why does a co-op, cold-storage or bank account wait?", "a": "Those accounts act for many farmers and handle storage or money, so an admin checks them first. You can log in once it is approved." },
+            { "q": "I forgot my account ID.", "a": "It is shown when you sign up and at the top of your workspace. An admin can look it up for you." },
+            { "q": "Can I change my payout wallet?", "a": "Not from the app yet: payouts go only to the wallet registered with your account." },
+            { "q": "Who sees my location?", "a": "Only drivers share a location, and only when they switch it on. The farmer and the buyer of that sale see it, rounded to about a kilometre, and so do the bank, judge and admin desks; other accounts never receive it." },
+            { "q": "Does it work without the internet?", "a": "A village kiosk running KrishiNexus can answer questions offline (Offline edge in the top bar). The market, payments and live tracking need a connection." },
+            { "q": "Is my voice recorded?", "a": "Your question is used for that answer and not saved. Online, your browser's speech service hears it; offline, the kiosk writes it down itself." }
+          ] }
+        ]
+      }
+    ]
+  },
+  "bn": {
+    "title": "কৃষিনেক্সাস ব্যবহার নির্দেশিকা",
+    "lede": "কৃষক, ক্রেতা, ট্রাকচালক, সমবায়, হিমাগার ও ব্যাংকের জন্য সহজ ধাপ। কৃষিনেক্সাস একটি প্রদর্শনী: সত্যিকারের কোনো টাকা লেনদেন হয় না।",
+    "contents": "এই পাতায়",
+    "print": "নির্দেশিকা প্রিন্ট করুন",
+    "updated": "হালনাগাদ",
+    "sections": [
+      {
+        "id": "what",
+        "title": "কৃষিনেক্সাস কী করে",
+        "blocks": [
+          { "p": "ফসল নিয়ে কী করবেন, সেই সিদ্ধান্তে কৃষিনেক্সাস কৃষককে সাহায্য করে: এখনই বেচবেন, হিমাগারে রাখবেন, নাকি প্রতিবেশীদের সাথে যৌথ ট্রাকে ভালো ক্রেতার কাছে পাঠাবেন। আপনি নিজের ভাষায় প্রশ্ন করেন; উত্তর আসে বাংলায়, প্রতিটি পথে কত টাকা আসবে তা সহ।" },
+          { "ul": [
+            "ছবি থেকে ফসল গ্রেড করুন, আর পান স্বাক্ষরিত মান সনদ, যা ক্রেতা ও ব্যাংক যাচাই করতে পারেন।",
+            "ন্যায্য দাম দেখুন, আর বাজারে পৌঁছাতে মধ্যস্বত্বভোগীরা কত যোগ করেন তাও।",
+            "হিমাগারে জায়গা খুঁজুন, আর রাখা ফসলের বিপরীতে ঋণ।",
+            "হাওরের বাঁধ ভাঙার আশঙ্কা থাকলে আগেই সতর্কবার্তা পান, যাতে সময়মতো ধান কাটা যায়।",
+            "সরাসরি ক্রেতার কাছে বেচুন। ফসল পৌঁছানো পর্যন্ত ক্রেতার টাকা নিরাপদে আটকে থাকে।"
+          ] },
+          { "p": "সিদ্ধান্ত সবসময় আপনার: কৃষিনেক্সাস পরামর্শ দেয় ও হিসাব দেখায়; আপনার হয়ে কখনো বেচে না, রাখে না, ঋণও নেয় না।" }
+        ]
+      },
+      {
+        "id": "farmers",
+        "title": "কৃষকের জন্য",
+        "blocks": [
+          { "ol": [
+            "কৃষক অ্যাকাউন্ট খুলুন (সাথে সাথে চালু হয়), বা কারও সাহায্য নিন। তারপর ‘আমার কাজের জায়গা’ খুলুন।",
+            "প্রশ্ন করুন: নমুনা প্রশ্নে চাপুন, মাইকে চেপে বাংলায় বলুন, বা লিখে পাঠান।",
+            "ফসল স্ক্যান করুন: ‘ছবি তুলুন’ চেপে ফসল ফ্রেমের ভেতরে রাখুন, বা আগে তোলা ছবি বেছে নিন। গ্রেড ও সনদ দেখা যাবে।",
+            "সিদ্ধান্তের কার্ড পড়ুন: ফড়িয়ার দাম, যৌথ ট্রাক আর হিমাগার, প্রতিটিতে কত টাকা আসবে। উত্তর শুনতে ‘শুনুন’ চাপুন।",
+            "সরাসরি বেচতে ‘সরাসরি বাজার’ খুলুন, লট দিন ও দরের অপেক্ষা করুন। পছন্দের দর গ্রহণ করে ওয়ালেট নম্বর লিখে নিশ্চিত করুন: টাকা যাবে শুধু আপনার নিবন্ধিত ওয়ালেটে।",
+            "লটের কার্ডে ট্রাকের অবস্থান দেখুন। ফসল পৌঁছালে টাকা আপনার ওয়ালেটে ছাড় হয়।",
+            "কোনো সমস্যা হলে লটে ‘সমস্যা জানান’ চাপুন; ব্যাংক ডেস্ক সিদ্ধান্ত দেয়।"
+          ] }
+        ]
+      },
+      {
+        "id": "buyers",
+        "title": "ক্রেতা ও ব্যবসায়ীর জন্য",
+        "blocks": [
+          { "ol": [
+            "ক্রেতা অ্যাকাউন্ট খুলুন; সাথে সাথে চালু হয়।",
+            "‘সরাসরি বাজার’ খুলে দর দেওয়ার মতো লটগুলো দেখুন, গ্রেড, ওজন ও জায়গা সহ।",
+            "দর দিন। অন্যরা বেশি দর দিতে পারেন: কেউ আপনার দর ছাড়িয়ে গেলে বার্তা পাবেন, তখন দর বাড়াতে পারেন।",
+            "কৃষক আপনার দর গ্রহণ করলে ডেলিভারি পর্যন্ত আপনার টাকা আটকে থাকে। লটে ট্রাকের অবস্থান দেখুন।",
+            "ফসল গ্রেডের সাথে না মিললে লটে ‘সমস্যা জানান’ চাপুন; ব্যাংক ডেস্ক সিদ্ধান্ত দেয়।"
+          ] }
+        ]
+      },
+      {
+        "id": "drivers",
+        "title": "ট্রাকচালকের জন্য",
+        "blocks": [
+          { "ol": [
+            "চালক অ্যাকাউন্ট খুলুন; সাথে সাথে চালু হয়।",
+            "আপনার আসন খুলুন: কোনো লট বিক্রি হলেই কাজটি দেখা যায়, সাথে বার্তাও আসে।",
+            "‘কাজটি নিন’ চাপুন, মাল তুলুন, তারপর ‘মাল তোলা হয়েছে: রওনা’ চাপুন।",
+            "রাজি থাকলে ‘লাইভ অবস্থান জানান’ চালু করুন: সেই বিক্রির কৃষক ও ক্রেতা দেখবেন ট্রাক মোটামুটি কোথায় আর কখন পৌঁছাবে।",
+            "পথে মালের তাপমাত্রা জানান; পৌঁছানোর আগে ফসল নষ্টের ঝুঁকি থাকলে অ্যাপ সতর্ক করবে।",
+            "ক্রেতার কাছে পৌঁছে ‘পৌঁছে দিয়েছি: টাকা ছাড়’ চাপুন। কৃষক টাকা পান।"
+          ] }
+        ]
+      },
+      {
+        "id": "desks",
+        "title": "সমবায়, হিমাগার ও ব্যাংকের জন্য",
+        "blocks": [
+          { "p": "এই অ্যাকাউন্টগুলো অনেক কৃষকের হয়ে কাজ করে এবং গুদাম বা টাকা সামলায়, তাই প্রথম ব্যবহারের আগে একজন অ্যাডমিন অনুমোদন দেন। নিবন্ধনের সময় আপনার প্রতিষ্ঠানের নাম দিন।" },
+          { "ul": [
+            "সমবায়: সদস্যদের লট মিলিয়ে পূর্ণ ৫ টনের ট্রাক বানান, আর হিমাগারের চেম্বার ও এজেন্টদের কাজ দেখুন।",
+            "হিমাগার: চেম্বারের অবস্থা, ছোট কৃষকের জন্য রাখা অংশ, স্বাক্ষরিত বুকিং ও সংরক্ষণকাল।",
+            "ব্যাংক: ডেলিভারি পর্যন্ত সব টাকা আটকে রাখা, অভিযোগের মীমাংসা, আর স্বাক্ষরিত সনদের ভিত্তিতে ঋণ।"
+          ] }
+        ]
+      },
+      {
+        "id": "account",
+        "title": "আপনার অ্যাকাউন্ট ও আমরা কী রাখি",
+        "blocks": [
+          { "p": "নাম, জেলা, মোবাইল নম্বর, জাতীয় পরিচয়পত্র (এনআইডি) নম্বর আর টাকা পাওয়ার জন্য একটি মোবাইল ওয়ালেট দিয়ে নিবন্ধন করুন: বিকাশ, নগদ, রকেট বা উপায়। বাংলা অঙ্কে লিখলেও চলবে। নিবন্ধনের পর একটি অ্যাকাউন্ট আইডি পাবেন; সেটি আর পাসওয়ার্ড দিয়ে লগইন করুন।" },
+          { "link": { "href": "/signup", "text": "অ্যাকাউন্ট খুলুন" } },
+          { "ul": [
+            "আপনার এনআইডি, ফোন ও ওয়ালেট নম্বর রাখা হয় শুধু এক-মুখী সংকেত (হ্যাশ) আর ঢাকা রূপে, যেমন bKash 017••••5678 ও NID …1234। পুরো নম্বর আর কেউ দেখতে পান না, অ্যাডমিনও না।",
+            "এগুলো দিয়ে একই মানুষের দুটি অ্যাকাউন্ট ঠেকানো হয়, আর নিশ্চিত করা হয় যে টাকা শুধু আপনার নিবন্ধিত ওয়ালেটেই যায়।",
+            "আপনার পাসওয়ার্ড হ্যাশ করে রাখা হয়, যা উল্টে পড়া যায় না; এটি কখনো সার্ভারের বাইরে যায় না।",
+            "আপনার কণ্ঠ ও ছবি শুধু সেই উত্তরের জন্য ব্যবহার হয়, জমা রাখা হয় না; নাম ও নম্বর এজেন্টদের কাছ থেকে লুকানো থাকে।"
+          ] },
+          { "link": { "href": "/docs#data", "text": "পুরো তালিকা: তথ্য, সম্মতি ও নিরাপত্তা (ইংরেজিতে)" } }
+        ]
+      },
+      {
+        "id": "live",
+        "title": "লাইভ ট্র্যাকিং",
+        "blocks": [
+          { "p": "দর, বিক্রি, ডেলিভারি ও অভিযোগ ঘটার সাথে সাথে স্ক্রিনে আসে। কাজের জায়গার ওপরে ‘লাইভ’ চিহ্ন সংযোগ দেখায়; ‘আবার সংযোগ হচ্ছে’ দেখালেও পাতা কয়েক সেকেন্ড পরপর হালনাগাদ হয়।" },
+          { "ul": [
+            "আপনার সাথে জড়িত কিছু ঘটলে বার্তা পাবেন: আপনার লটে নতুন দর, কেউ আপনার দর ছাড়িয়ে গেছেন, লট বিক্রি হয়েছে, চালকের জন্য কাজ অপেক্ষায়, মাল তোলা হয়েছে, পৌঁছেছে ও টাকা ছাড় হয়েছে, বা কোনো অভিযোগ খোলা বা মীমাংসা হয়েছে।",
+            "চালক অবস্থান জানালে লটে দেখা যায়, যেমন: ট্রাক ঢাকা থেকে ৪২ কিমি দূরে · পৌঁছাতে প্রায় ১.২ ঘণ্টা · ৩০ সেকেন্ড আগে হালনাগাদ।",
+            "অবস্থান প্রায় এক কিলোমিটার পর্যন্ত মোটা দাগে দেখানো হয়, শুধু সেই বিক্রির কৃষক, ক্রেতা ও চালক এবং ব্যাংক, বিচারক ও অ্যাডমিন ডেস্ক তা দেখেন; অন্য কোনো অ্যাকাউন্ট পায় না। ফসল পৌঁছালে বা চালক বন্ধ করলে থেমে যায়।"
+          ] }
+        ]
+      },
+      {
+        "id": "app",
+        "title": "অ্যান্ড্রয়েড অ্যাপ",
+        "blocks": [
+          { "p": "কৃষিনেক্সাস অ্যাপে একই অ্যাকাউন্ট আর একই বাজার। এটি বাংলায় শোনে ও বলে, আর ফোনের ক্যামেরায় ফসল গ্রেড করে।" },
+          { "app": true },
+          { "ol": [
+            "KrishiNexus.apk নামিয়ে নিন (প্রায় ২১ এমবি, অ্যান্ড্রয়েড ৭ বা নতুন)। পুরোনো ৩২-বিট ফোনে পুরোনো ফোনের সংস্করণটি নিন।",
+            "নামানো ফাইলটি খুলুন। অ্যান্ড্রয়েড জিজ্ঞেস করলে ব্রাউজার বা ফাইল ম্যানেজার থেকে অ্যাপ ইনস্টলের অনুমতি দিন।",
+            "‘ইনস্টল’ চাপুন, কৃষিনেক্সাস খুলুন, আর অ্যাকাউন্ট আইডি ও পাসওয়ার্ড দিয়ে লগইন করুন।"
+          ] },
+          { "p": "এই ওয়েবসাইটও ফোনে অ্যাপের মতো রাখা যায়: ক্রোমের মেনু খুলে ‘Install app’ বা ‘Add to Home screen’ বেছে নিন।" }
+        ]
+      },
+      {
+        "id": "faq",
+        "title": "প্রায়ই যা জিজ্ঞেস করা হয়",
+        "blocks": [
+          { "faq": [
+            { "q": "টাকা লাগে কি?", "a": "না। এটি একটি প্রদর্শনী: কোনো ফি নেই, সত্যিকারের টাকা লেনদেন হয় না; লেনদেনগুলো সিমুলেটেড।" },
+            { "q": "সমবায়, হিমাগার বা ব্যাংকের অ্যাকাউন্ট কেন অপেক্ষায় থাকে?", "a": "এগুলো অনেক কৃষকের হয়ে কাজ করে এবং গুদাম বা টাকা সামলায়, তাই আগে একজন অ্যাডমিন যাচাই করেন। অনুমোদনের পর লগইন করতে পারবেন।" },
+            { "q": "অ্যাকাউন্ট আইডি ভুলে গেছি।", "a": "নিবন্ধনের সময় এবং কাজের জায়গার ওপরে এটি দেখানো হয়। একজন অ্যাডমিনও খুঁজে দিতে পারেন।" },
+            { "q": "টাকা পাওয়ার ওয়ালেট বদলাতে পারি?", "a": "অ্যাপ থেকে এখনো না: টাকা যায় শুধু অ্যাকাউন্টে নিবন্ধিত ওয়ালেটে।" },
+            { "q": "আমার অবস্থান কে দেখেন?", "a": "শুধু চালকেরা অবস্থান জানান, তাও নিজে চালু করলে। সেই বিক্রির কৃষক ও ক্রেতা তা দেখেন, প্রায় এক কিলোমিটার পর্যন্ত মোটা দাগে; ব্যাংক, বিচারক ও অ্যাডমিন ডেস্কও দেখে, অন্য কোনো অ্যাকাউন্ট পায় না।" },
+            { "q": "ইন্টারনেট ছাড়া চলে?", "a": "কৃষিনেক্সাস চালানো গ্রামের কিয়স্ক ইন্টারনেট ছাড়াও প্রশ্নের উত্তর দিতে পারে (ওপরের বারে ‘অফলাইন এজ’)। বাজার, লেনদেন ও লাইভ ট্র্যাকিংয়ে সংযোগ লাগে।" },
+            { "q": "আমার কণ্ঠ কি রেকর্ড হয়?", "a": "আপনার প্রশ্ন শুধু সেই উত্তরের জন্য ব্যবহার হয়, জমা রাখা হয় না। অনলাইনে ব্রাউজারের স্পিচ সেবা শোনে; অফলাইনে কিয়স্ক নিজেই লিখে নেয়।" }
+          ] }
+        ]
+      }
+    ]
+  }
+}

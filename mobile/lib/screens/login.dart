@@ -6,6 +6,10 @@ import '../core/models.dart';
 import '../core/state.dart';
 import '../core/theme.dart';
 import '../widgets/common.dart';
+import 'guide.dart';
+import 'scan.dart' show fadeRoute;
+import 'signup.dart';
+import 'team.dart';
 
 IconData roleIcon(String role) => switch (role) {
       'farmer' => Icons.agriculture_rounded,
@@ -20,6 +24,7 @@ IconData roleIcon(String role) => switch (role) {
     };
 
 /// Pick an account: one tap signs in on the demo node (quick login); a password is needed where the node asks.
+/// New people create an account; a signed-up account logs in with its account ID and password.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,58 +39,84 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<List<User>> _load() async =>
       ((await Api.get('/auth/demo-users')) as List).map((u) => User((u as Map).cast<String, dynamic>())).where((u) => u.active).toList();
 
-  Future<void> _signIn(User user, {String? password}) async {
-    setState(() => _busy = user.id);
+  Future<void> _signIn(String id, {String? password, User? user}) async {
+    setState(() => _busy = id);
     try {
-      final session = await Api.post('/auth/login', {'user_id': user.id, 'password': ?password});
+      final session = await Api.post('/auth/login', {'user_id': id, 'password': ?password});
       await app.signIn((session as Map).cast<String, dynamic>());
     } on ApiError catch (e) {
       if (!mounted) return;
       if (e.status == 401 && password == null) {
         _askPassword(user);
       } else {
-        snack(context, friendlyError(e), icon: Icons.error_outline_rounded, tone: Tone.rose);
+        final message = switch (e.status) {
+          401 => t('অ্যাকাউন্ট আইডি বা পাসওয়ার্ড মেলেনি।', 'The account ID or the password is wrong.'),
+          403 when e.message.contains('waiting') =>
+            t('অ্যাকাউন্টটি এখনো অ্যাডমিনের অনুমোদনের অপেক্ষায়। অনুমোদন হলে লগইন করা যাবে।', 'This account is still waiting for an admin to approve it.'),
+          403 => t('এই অ্যাকাউন্ট নেই বা বন্ধ করা আছে।', 'That account does not exist or is disabled.'),
+          _ => friendlyError(e),
+        };
+        snack(context, message, icon: Icons.error_outline_rounded, tone: Tone.rose);
       }
     } finally {
       if (mounted) setState(() => _busy = null);
     }
   }
 
-  Future<void> _askPassword(User user) async {
+  /// The password for a listed account, or (no [user]) an account ID and password, as a signed-up account logs in.
+  Future<void> _askPassword(User? user) async {
+    final idField = TextEditingController();
     final controller = TextEditingController();
-    final password = await showModalBottomSheet<String>(
+    final entered = await showModalBottomSheet<(String, String)>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
         padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t('${user.name}: পাসওয়ার্ড দিন', 'Password for ${user.name}'), style: Theme.of(context).textTheme.titleLarge),
+          Text(user == null ? t('অ্যাকাউন্ট আইডি দিয়ে লগইন', 'Log in with your account ID') : t('${user.name}: পাসওয়ার্ড দিন', 'Password for ${user.name}'),
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           Text(
-            user.role == 'admin'
-                ? t('অ্যাডমিন অ্যাকাউন্ট শুধু সার্ভারের অ্যাডমিন পাসওয়ার্ডে খোলে।', 'Admin accounts open only with the server\'s admin password.')
-                : t('ডেমো অ্যাকাউন্টের পাসওয়ার্ড: krishi2026', 'Demo accounts use the password krishi2026.'),
+            user == null
+                ? t('অ্যাকাউন্ট খোলার সময় পাওয়া আইডি (যেমন FARM-DHA-7K2Q) আর আপনার পাসওয়ার্ড দিন।',
+                    'Enter the ID you got when you created the account (like FARM-DHA-7K2Q) and your password.')
+                : user.role == 'admin'
+                    ? t('অ্যাডমিন অ্যাকাউন্ট শুধু সার্ভারের অ্যাডমিন পাসওয়ার্ডে খোলে।', 'Admin accounts open only with the server\'s admin password.')
+                    : t('ডেমো অ্যাকাউন্টের পাসওয়ার্ড: krishi2026', 'Demo accounts use the password krishi2026.'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
+          if (user == null) ...[
+            TextField(
+              controller: idField,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              autofillHints: const [AutofillHints.username],
+              decoration: InputDecoration(labelText: t('অ্যাকাউন্ট আইডি', 'Account ID')),
+            ),
+            const SizedBox(height: 12),
+          ],
           TextField(
             controller: controller,
             obscureText: true,
-            autofocus: true,
+            autofocus: user != null,
             autofillHints: const [AutofillHints.password],
             decoration: InputDecoration(labelText: t('পাসওয়ার্ড', 'Password')),
-            onSubmitted: (v) => Navigator.pop(context, v),
+            onSubmitted: (v) => Navigator.pop(context, (idField.text, v)),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: Text(t('লগইন', 'Log in'))),
+            child: FilledButton(onPressed: () => Navigator.pop(context, (idField.text, controller.text)), child: Text(t('লগইন', 'Log in'))),
           ),
         ]),
       ),
     );
+    idField.dispose();
     controller.dispose();
-    if (password != null && password.isNotEmpty) await _signIn(user, password: password);
+    if (entered == null) return;
+    final id = user?.id ?? entered.$1.trim();
+    if (id.isNotEmpty && entered.$2.isNotEmpty) await _signIn(id, password: entered.$2, user: user);
   }
 
   @override
@@ -147,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 _accounts(desks, big: false),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   sliver: SliverToBoxAdapter(
                     child: Text(
                       t('ডেমো সার্ভার: ${Api.base.replaceFirst('https://', '')} · ট্যাপ করলেই লগইন; পাসওয়ার্ড লাগলে চাওয়া হবে।',
@@ -157,6 +188,46 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text(t('নতুন এসেছেন?', 'New here?'), style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 10),
+                    FilledButton.tonalIcon(
+                      onPressed: () => Navigator.of(context).push(fadeRoute(const SignUpScreen())),
+                      icon: const Icon(Icons.person_add_alt_1_rounded),
+                      label: Text(t('নতুন অ্যাকাউন্ট খুলুন', 'Create an account')),
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton.icon(
+                      onPressed: _busy == null ? () => _askPassword(null) : null,
+                      icon: const Icon(Icons.key_rounded),
+                      label: Text(t('অ্যাকাউন্ট আইডি দিয়ে লগইন', 'Log in with an account ID')),
+                    ),
+                  ]),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                sliver: SliverToBoxAdapter(
+                  child: Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    TextButton.icon(
+                      onPressed: () => openWeb(context, '/'),
+                      icon: const Icon(Icons.language_rounded),
+                      label: Text(Api.base.replaceFirst(RegExp('^https?://'), '')),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(fadeRoute(const GuideScreen())),
+                      child: Text(t('কীভাবে ব্যবহার করবেন', 'How to use')),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(fadeRoute(const TeamScreen())),
+                      child: Text(t('টিম হিট ওয়েভ', 'Team Heat Wave')),
+                    ),
+                  ]),
+                ),
+              ),
             ]);
           },
         ),
@@ -174,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
             final theme = Theme.of(context);
             return AppCard(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 14 : 10),
-              onTap: _busy == null ? () => _signIn(u) : null,
+              onTap: _busy == null ? () => _signIn(u.id, user: u) : null,
               child: Row(children: [
                 CircleAvatar(
                   radius: big ? 24 : 20,

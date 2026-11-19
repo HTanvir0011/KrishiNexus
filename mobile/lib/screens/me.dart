@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
 import '../core/format.dart';
@@ -8,13 +7,11 @@ import '../core/state.dart';
 import '../core/theme.dart';
 import '../core/voice.dart';
 import '../widgets/common.dart';
+import 'guide.dart';
 import 'login.dart' show roleIcon;
 import 'market.dart' show Polling;
-
-Future<void> openWeb(BuildContext context, String path) async {
-  final ok = await launchUrl(Uri.parse('${Api.base}$path'), mode: LaunchMode.externalApplication);
-  if (!ok && context.mounted) snack(context, t('ব্রাউজার খোলা গেল না।', 'Could not open the browser.'), tone: Tone.rose);
-}
+import 'scan.dart' show fadeRoute;
+import 'team.dart';
 
 /// The account, language, theme, offline mode, voice checks, privacy and the server this app talks to.
 class MeScreen extends StatelessWidget {
@@ -48,6 +45,7 @@ class MeScreen extends StatelessWidget {
                   ),
                 ]),
               ),
+              if (user.kyc != null) _KycCard(user: user),
               SectionTitle(t('অ্যাপ', 'App')),
               AppCard(
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -133,6 +131,25 @@ class MeScreen extends StatelessWidget {
                   ),
                 ]),
               ),
+              SectionTitle(t('সাহায্য', 'Help')),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(children: [
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_rounded),
+                    title: Text(t('কৃষিনেক্সাস কীভাবে ব্যবহার করবেন', 'How to use KrishiNexus')),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(fadeRoute(const GuideScreen())),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.groups_rounded),
+                    title: Text(t('টিম হিট ওয়েভ', 'Team Heat Wave')),
+                    subtitle: Text(t('কৃষিনেক্সাস যাঁরা বানিয়েছেন', 'The people who build KrishiNexus')),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(fadeRoute(const TeamScreen())),
+                  ),
+                ]),
+              ),
               const SizedBox(height: 24),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error, side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5))),
@@ -141,7 +158,7 @@ class MeScreen extends StatelessWidget {
                 label: Text(t('লগআউট', 'Log out')),
               ),
               const SizedBox(height: 16),
-              Center(child: Text('KrishiNexus 1.0.0', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
+              Center(child: Text('KrishiNexus 1.1.0', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
             ]),
           );
         },
@@ -174,6 +191,46 @@ class MeScreen extends StatelessWidget {
     app.setServer(url);
     // Another node does not know this session: sign in there again.
     await app.logout();
+  }
+}
+
+/// A signed-up account's registered details, masked as the node keeps them (the full numbers only as hashes).
+class _KycCard extends StatelessWidget {
+  const _KycCard({required this.user});
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final kyc = user.kyc!;
+    final (label, tone) = kyc.verified
+        ? (t('যাচাই করা', 'Verified'), Tone.green)
+        : user.pendingReview
+            ? (t('অনুমোদনের অপেক্ষায়', 'Awaiting approval'), Tone.amber)
+            : (t('এখনো যাচাই হয়নি', 'Not verified yet'), Tone.slate);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: AppCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text(t('নিবন্ধনের তথ্য', 'Registered details'), style: theme.textTheme.titleSmall)),
+            Pill(label, tone: tone, icon: kyc.verified ? Icons.verified_rounded : Icons.hourglass_top_rounded),
+          ]),
+          const SizedBox(height: 6),
+          InfoRow(t('অ্যাকাউন্ট আইডি', 'Account ID'), user.id, mono: true),
+          InfoRow(t('ফোন', 'Phone'), digits(kyc.phoneMasked)),
+          InfoRow(t('জাতীয় পরিচয়পত্র', 'National ID'), '…${digits(kyc.nidLast4)}'),
+          InfoRow(t('টাকা পাওয়ার ওয়ালেট', 'Payout wallet'), '${kyc.walletProvider} ${digits(kyc.walletMasked)}'),
+          if (kyc.registeredAt.isNotEmpty) InfoRow(t('নিবন্ধন', 'Registered'), ago(kyc.registeredAt)),
+          const SizedBox(height: 4),
+          Text(
+            t('পুরো নম্বরগুলো শুধু হ্যাশ করে রাখা হয়, তাই এখানে শেষ অঙ্কগুলোই দেখা যায়। লগইন করতে অ্যাকাউন্ট আইডি ও পাসওয়ার্ড লাগে।',
+                'The full numbers are kept only as hashes, so only their last digits show here. You log in with the account ID and your password.'),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -258,6 +315,10 @@ class DeskScreen extends StatefulWidget {
 
 class _DeskScreenState extends State<DeskScreen> with Polling<DeskScreen, List<Map<String, dynamic>>> {
   bool get _coop => app.user?.role == 'coop';
+
+  // Truck pools and chamber alerts change outside the market feed: keep polling them.
+  @override
+  bool get followsMarket => false;
 
   @override
   Future<List<Map<String, dynamic>>> load() async => mapsOf(await Api.get(_coop ? '/automation/truck-pools' : '/mcp/anomalies'));

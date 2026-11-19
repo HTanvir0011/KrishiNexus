@@ -1,0 +1,20 @@
+{
+  "name": "KrishiNexus OS",
+  "short_name": "KrishiNexus",
+  "description": "Fair prices, open cold storage and flood alerts for Bangladeshi farmers: one workspace for farmers, buyers, drivers, co-ops, cold stores and banks.",
+  "lang": "en",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F8F5",
+  "theme_color": "#047857",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    { "src": "/icons/Icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/Icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/Icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/Icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

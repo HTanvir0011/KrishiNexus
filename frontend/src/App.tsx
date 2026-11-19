@@ -5,6 +5,7 @@ import { Navbar } from "./components/Navbar";
 import { Alerts } from "./components/shell/Alerts";
 import { homeOf } from "./lib/roles";
 import { Link, routeOf, useLocation, type Route } from "./lib/router";
+import { connectMarketStream } from "./state/marketStream";
 import { pushTraces, refreshPools, refreshQuota, refreshTelemetry, restoreSession, setState, useAppState } from "./state/store";
 
 // Each page is its own chunk: only the live OS loads Three.js (the cold-storage twin).
@@ -12,6 +13,8 @@ const StoryPage = lazy(() => import("./story/StoryPage"));
 const OsPage = lazy(() => import("./os/OsPage"));
 const DocsShell = lazy(() => import("./os/DocsShell"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignupPage = lazy(() => import("./pages/SignupPage"));
+const GuidePage = lazy(() => import("./pages/GuidePage"));
 const AdminPage = lazy(() => import("./admin/AdminPage"));
 
 const TITLES: Record<Route["page"], string> = {
@@ -19,6 +22,8 @@ const TITLES: Record<Route["page"], string> = {
   os: "KrishiNexus OS · live operations workspace",
   docs: "KrishiNexus OS · technical whitepaper",
   login: "KrishiNexus OS · log in",
+  signup: "KrishiNexus OS · create an account",
+  guide: "KrishiNexus OS · user guide",
   admin: "KrishiNexus OS · admin panel",
 };
 
@@ -76,7 +81,11 @@ function Gate({ adminOnly = false, children }: { adminOnly?: boolean; children: 
 export default function App() {
   const route = routeOf(useLocation());
   const lang = useAppState((s) => s.lang);
+  const userId = useAppState((s) => s.user?.user_id);
   useBackendBootstrap(route.page);
+
+  // Live market events for a signed-in account (the stream is public, but only an account has lots, bids or jobs).
+  useEffect(() => (userId ? connectMarketStream() : undefined), [userId]);
 
   useEffect(() => {
     document.title = TITLES[route.page];
@@ -92,6 +101,8 @@ export default function App() {
       <Suspense fallback={<PageLoading />}>
         {route.page === "story" && <StoryPage />}
         {route.page === "login" && <LoginPage />}
+        {route.page === "signup" && <SignupPage />}
+        {route.page === "guide" && <GuidePage />}
         {route.page === "os" && <Gate><OsPage view={route.view} /></Gate>}
         {route.page === "admin" && <Gate adminOnly><AdminPage section={route.section} /></Gate>}
         {route.page === "docs" && <DocsShell />}

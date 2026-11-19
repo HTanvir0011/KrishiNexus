@@ -40,8 +40,15 @@ class Api {
   static Future<Object?> get(String path, {Duration timeout = const Duration(seconds: 25)}) async =>
       _json(await _send(() => _client.get(_uri(path), headers: _headers()), timeout));
 
-  static Future<Object?> post(String path, [Object? body, Duration timeout = const Duration(seconds: 90)]) async =>
-      _json(await _send(() => _client.post(_uri(path), headers: _headers(), body: jsonEncode(body ?? const <String, dynamic>{})), timeout));
+  /// The last write from this phone and when: live banners skip what the user has just done here.
+  static String lastWrite = '';
+  static DateTime lastWriteAt = DateTime(0);
+
+  static Future<Object?> post(String path, [Object? body, Duration timeout = const Duration(seconds: 90)]) async {
+    lastWrite = path;
+    lastWriteAt = DateTime.now();
+    return _json(await _send(() => _client.post(_uri(path), headers: _headers(), body: jsonEncode(body ?? const <String, dynamic>{})), timeout));
+  }
 
   /// A POST whose answer is binary (the online Bangla voice, audio/mpeg).
   static Future<Uint8List> postBytes(String path, Object body, {Duration timeout = const Duration(seconds: 40)}) async =>

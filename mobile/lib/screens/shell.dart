@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../core/live.dart';
+import '../core/models.dart';
 import '../core/state.dart';
 import '../core/theme.dart';
+import '../widgets/common.dart';
 import 'ask.dart';
 import 'bank.dart';
 import 'driver.dart';
@@ -64,6 +69,56 @@ class _ShellState extends State<Shell> {
   // The shell is keyed by the account, so its role and tabs are fixed for its life.
   late final List<_Tab> _tabs = _tabsFor(app.user!.role);
   late final List<Widget?> _built = List.filled(_tabs.length, null);
+  late final AppLifecycleListener _lifecycle;
+  StreamSubscription<MarketEvent>? _events;
+  Timer? _soon;
+  bool _reset = false;
+  Map<String, Lot>? _seen; // the lots at the last look, to tell what changed for this account
+
+  @override
+  void initState() {
+    super.initState();
+    live.start();
+    // The feed sleeps while the app is in the background and catches up on what it missed when it returns.
+    _lifecycle = AppLifecycleListener(onHide: live.stop, onShow: live.start);
+    if (const ['farmer', 'buyer', 'driver', 'bank'].contains(app.user!.role)) {
+      _look(banners: false);
+      _events = live.events.where((e) => !e.quiet).listen((e) {
+        _reset |= e.kind == 'market_reset';
+        _soon?.cancel();
+        _soon = Timer(const Duration(milliseconds: 400), () {
+          _look(banners: !_reset); // a reset re-seeds the market: nothing to announce
+          _reset = false;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _events?.cancel();
+    _soon?.cancel();
+    _lifecycle.dispose();
+    if (app.user == null) live.stop(); // signed out; an account signed in during the fade keeps the feed
+    super.dispose();
+  }
+
+  // In-app banners for what changed on this account's lots since the last look.
+  Future<void> _look({required bool banners}) async {
+    final List<Lot> lots;
+    try {
+      lots = await fetchLots();
+    } catch (_) {
+      return; // the next event looks again
+    }
+    final before = _seen;
+    _seen = {for (final l in lots) l.id: l};
+    final me = app.user;
+    if (!banners || before == null || me == null || !mounted) return;
+    for (final n in notices(me, before, lots)) {
+      snack(context, n.text, icon: n.icon, tone: n.tone);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(

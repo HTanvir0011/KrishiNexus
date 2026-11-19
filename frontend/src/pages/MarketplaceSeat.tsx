@@ -1,13 +1,15 @@
-import { BadgeCheck, Gavel, HandCoins, PackagePlus, ShieldAlert, Truck, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { BadgeCheck, Gavel, HandCoins, PackagePlus, ShieldAlert, ShieldCheck, Truck, X } from "lucide-react";
+import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
-import { api, ApiError, type Crop, type MarketBid, type MarketLot, type Wallet } from "../api/client";
+import { api, ApiError, WALLET_PROVIDERS, type Crop, type MarketBid, type MarketLot, type Wallet } from "../api/client";
 import { DisputeBox } from "../components/DisputeBox";
+import { RouteBar } from "../components/RouteBar";
 import { RouteSteps } from "../components/RouteSteps";
 import { Badge, Button, Panel, Spinner } from "../components/ui";
-import { cn, tk } from "../lib/format";
+import { cn, latinDigits, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
 import { useBecame, useFreshIds } from "../lib/motion";
+import { useMarketRefresh } from "../state/marketStream";
 import { pushAlert, useAppState } from "../state/store";
 
 const CROPS: Crop[] = ["Cardinal Potato", "Diamant Potato", "Green Chili", "Brinjal", "Boro Rice"];
@@ -23,12 +25,13 @@ const COPY = {
     none: "Nothing here yet.", bids: "Bids", noBids: "No bids yet.", asking2: "asking", floor: "cost floor",
     accept: "Accept", cancel: "Cancel lot", cancelled: "Lot cancelled", wallet: "Wallet", walletNo: "Wallet number",
     confirmAccept: "Accept and hold payment", belowFloor: (floor: number) => `This bid is below the Tk ${floor}/kg production cost. Sell at a loss anyway?`,
+    registered: (wallet: string) => `Payouts go only to the wallet registered with this account: ${wallet}. Type its number to confirm.`,
     sold: "Sold: payment held in escrow", yourBid: "Your bid", bidPrice: "Your price, Tk/kg", placeBid: "Place bid", raise: "Raise bid", bidPlaced: "Bid placed",
     highest: "Highest bid", escrowHeld: "Payment held", escrowRefunded: "Refunded to the buyer", you: "You", top: "Highest", earlier: (n: number) => `Earlier bids (${n})`,
     leading: (p: number) => `You lead at Tk ${p}/kg.`, outbid: (top: number, mine: number) => `Outbid: the highest is Tk ${top}/kg, yours Tk ${mine}/kg.`,
     first: "No bids yet: yours will be the first.", total: (tk: string, kg: number) => `= ${tk} for ${kg.toLocaleString("en-IN")} kg`,
     belowTop: "This is not above the highest bid.", escrowReleased: "Payment released to the farmer", delivery: "Delivery",
-    route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} km · about ${h} h`,
+    atRisk: "at risk",
     states: { AWAITING_DRIVER: "Waiting for a driver", ASSIGNED: "Driver assigned", PICKED_UP: "On the road", DELIVERED: "Delivered" },
     readOnly: "Read-only view: farmers list and accept, buyers bid.", simulated: "Escrows are simulated: no money moves.",
     failed: "Request failed", steps: ["Listed", "Sold", "On the road", "Delivered"], stepsLabel: "Lot progress",
@@ -41,12 +44,13 @@ const COPY = {
     none: "এখনও কিছু নেই।", bids: "দর", noBids: "এখনও দর আসেনি।", asking2: "চাওয়া", floor: "উৎপাদন খরচ",
     accept: "গ্রহণ", cancel: "লট বাতিল", cancelled: "লট বাতিল হয়েছে", wallet: "ওয়ালেট", walletNo: "ওয়ালেট নম্বর",
     confirmAccept: "গ্রহণ করে টাকা আটকে রাখুন", belowFloor: (floor: number) => `এই দর উৎপাদন খরচ ${floor} টাকা/কেজির নিচে। তবু লোকসানে বেচবেন?`,
+    registered: (wallet: string) => `টাকা যাবে শুধু এই অ্যাকাউন্টে নিবন্ধিত ওয়ালেটে: ${wallet}। নিশ্চিত করতে নম্বরটি লিখুন।`,
     sold: "বিক্রি হয়েছে: টাকা এসক্রোতে", yourBid: "আপনার দর", bidPrice: "আপনার দাম, টাকা/কেজি", placeBid: "দর দিন", raise: "দর বাড়ান", bidPlaced: "দর দেওয়া হয়েছে",
     highest: "সর্বোচ্চ দর", escrowHeld: "টাকা আটকে আছে", escrowRefunded: "ক্রেতাকে ফেরত দেওয়া হয়েছে", you: "আপনি", top: "সর্বোচ্চ", earlier: (n: number) => `আগের দর (${n})`,
     leading: (p: number) => `আপনিই এগিয়ে, কেজি ${p} টাকা।`, outbid: (top: number, mine: number) => `আপনার চেয়ে বেশি দর এসেছে: সর্বোচ্চ ${top}, আপনার ${mine} টাকা/কেজি।`,
     first: "এখনও দর নেই: আপনার দরই প্রথম হবে।", total: (tk: string, kg: number) => `= ${kg.toLocaleString("en-IN")} কেজিতে ${tk}`,
     belowTop: "এই দর সর্বোচ্চ দরের বেশি নয়।", escrowReleased: "টাকা কৃষককে ছাড় হয়েছে", delivery: "ডেলিভারি",
-    route: (from: string, to: string, km: number, h: number) => `${from} → ${to} · ${km} কিমি · প্রায় ${h} ঘণ্টা`,
+    atRisk: "ঝুঁকিতে",
     states: { AWAITING_DRIVER: "চালকের অপেক্ষা", ASSIGNED: "চালক ঠিক হয়েছে", PICKED_UP: "পথে", DELIVERED: "পৌঁছেছে" },
     readOnly: "শুধু দেখা: কৃষক লট দেন ও গ্রহণ করেন, ক্রেতা দর দেন।", simulated: "এসক্রো সিমুলেটেড: কোনো টাকা লেনদেন হয় না।",
     failed: "অনুরোধ ব্যর্থ", steps: ["তালিকায়", "বিক্রি", "পথে", "পৌঁছেছে"], stepsLabel: "লটের অগ্রগতি",
@@ -71,11 +75,7 @@ export function MarketplaceSeat() {
     }
   }, [c.failed]);
 
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), 8_000);  // new bids show up without a reload
-    return () => window.clearInterval(timer);
-  }, [load]);
+  useMarketRefresh(load);  // new bids show up as they are placed (or within 8 s while the live stream is down)
 
   if (!user) return null;
   if (!lots) return <Spinner />;
@@ -191,12 +191,15 @@ function LotCard({ lot, bidAction, footer, me, onChange }: {
       )}
       {me && <DisputeBox lot={lot} me={me} lang={lang} onChange={onChange} />}
       {lot.delivery && lot.status !== "CANCELLED" && (
-        <div className="mt-2 text-[12.5px] text-slate-700">
-          <Truck className="mr-1 inline size-3.5 text-amber-600" aria-hidden />
-          <span className="font-medium">{c.states[lot.delivery.status]}</span>
-          {lot.delivery.driver_name ? ` · ${lot.delivery.driver_name}` : ""} · {c.route(lot.delivery.origin_district, lot.delivery.destination_district, lot.delivery.distance_km, lot.delivery.eta_hours)}
-          {lot.delivery.at_risk && <span className="ml-1 font-semibold text-rose-700"><ShieldAlert className="mr-0.5 inline size-3.5" aria-hidden />at risk</span>}
-        </div>
+        <>
+          <div className="mt-2 text-[12.5px] text-slate-700">
+            <Truck className="mr-1 inline size-3.5 text-amber-600" aria-hidden />
+            <span className="font-medium">{c.delivery}: {c.states[lot.delivery.status]}</span>
+            {lot.delivery.driver_name ? ` · ${lot.delivery.driver_name}` : ""}
+            {lot.delivery.at_risk && <span className="ml-1 font-semibold text-rose-700"><ShieldAlert className="mr-0.5 inline size-3.5" aria-hidden />{c.atRisk}</span>}
+          </div>
+          <RouteBar lot={lot} className="mt-1.5" />
+        </>
       )}
       {footer}
     </article>
@@ -274,8 +277,10 @@ function SellForm({ onListed }: { onListed: () => Promise<void> }) {
 
 function FarmerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange: () => Promise<void> }) {
   const c = useCopy(COPY);
+  // A self-registered farmer is paid only to the wallet on the account (the node answers 409 to any other).
+  const kyc = useAppState((s) => s.user?.kyc);
   const [choosing, setChoosing] = useState<MarketBid | null>(null);
-  const [wallet, setWallet] = useState<Wallet>("bKash");
+  const [wallet, setWallet] = useState<Wallet>(kyc?.wallet_provider ?? "bKash");
   const [walletNumber, setWalletNumber] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -318,12 +323,20 @@ function FarmerLot({ lot, me, onChange }: { lot: MarketLot; me: string; onChange
               <div className="text-[13px] text-slate-700 sm:col-span-3">
                 {c.accept}: <span className="num font-semibold">Tk {choosing.price_tk_per_kg}/kg</span> × {lot.weight_kg} kg = <span className="num font-semibold">{tk(choosing.price_tk_per_kg * lot.weight_kg, 0)}</span> · {choosing.buyer_name}
               </div>
+              {kyc && (
+                <p className="m-0 flex gap-1.5 text-[12.5px] text-emerald-900 sm:col-span-3">
+                  <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-700" aria-hidden /> {c.registered(`${kyc.wallet_provider} ${kyc.wallet_masked}`)}
+                </p>
+              )}
               <label className="grid gap-1 text-[12.5px] font-medium text-slate-700">{c.wallet}
-                <select value={wallet} onChange={(e) => setWallet(e.target.value as Wallet)} className={FIELD}><option>bKash</option><option>Nagad</option></select>
+                <select value={wallet} onChange={(e) => setWallet(e.target.value as Wallet)} disabled={Boolean(kyc)} className={cn(FIELD, "disabled:bg-slate-50 disabled:text-slate-700")}>
+                  {WALLET_PROVIDERS.map((w) => <option key={w}>{w}</option>)}
+                </select>
               </label>
+              {/* Bangla digits are turned into 0-9 as they are typed; the number is never stored on this device. */}
               <label className="grid gap-1 text-[12.5px] font-medium text-slate-700">{c.walletNo}
-                <input required inputMode="numeric" pattern="01[3-9][0-9]{8}" placeholder="01XXXXXXXXX" value={walletNumber}
-                  onChange={(e) => setWalletNumber(e.target.value.trim())} className={FIELD} />
+                <input required inputMode="numeric" autoComplete="off" pattern="01[3-9][0-9]{8}" maxLength={11} placeholder="01XXXXXXXXX" value={walletNumber}
+                  onChange={(e) => setWalletNumber(latinDigits(e.target.value).replace(/[\s-]/g, ""))} className={FIELD} />
               </label>
               <div className="flex items-end gap-1">
                 <Button variant="primary" type="submit" className="min-h-10" disabled={busy}>{busy ? <Spinner /> : null} {c.confirmAccept}</Button>

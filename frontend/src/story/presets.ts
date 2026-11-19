@@ -33,12 +33,3 @@ export const STORY_PRESETS: StoryPreset[] = [
 
 export const RAHIM = STORY_PRESETS[0];
 export const ABDUL = STORY_PRESETS[2];
-
-export const TEAM: { name: string; role: string; country: string }[] = [
-  { name: "Tanvir Hossin", role: "Team Lead", country: "Bangladesh" },
-  { name: "Md. Omar Faruk", role: "AI/ML Engineer", country: "Bangladesh" },
-  { name: "Md. Abdur Rahman", role: "Full-Stack & Backend Developer", country: "Bangladesh" },
-  { name: "Mohammed Mahmud Parvez", role: "Full-Stack Developer", country: "Bangladesh" },
-  { name: "Md. Morsalin", role: "Full-Stack & Backend Developer", country: "Bangladesh" },
-  { name: "Md Rifat", role: "Domain Expert (Network Engineering)", country: "USA" },
-];

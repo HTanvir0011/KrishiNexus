@@ -1,5 +1,5 @@
 import { BadgeCheck, FileSearch, Landmark, MessageSquareWarning, ReceiptText, Scale, ShieldAlert, Vault } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import { api, ApiError, type Dispute, type LedgerRow, type Resolution } from "../api/client";
 import { KIND_LABEL, RESOLUTION_LABEL } from "../components/DisputeBox";
@@ -8,6 +8,7 @@ import { cn, tk } from "../lib/format";
 import { useCopy } from "../lib/i18n";
 import { useFreshIds } from "../lib/motion";
 import { Link } from "../lib/router";
+import { useMarketRefresh } from "../state/marketStream";
 import { pushAlert, useAppState } from "../state/store";
 
 const COPY = {
@@ -84,11 +85,7 @@ export function BankDesk() {
     }
   }, [c.failed]);
 
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), 8_000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+  useMarketRefresh(load);
 
   const fresh = useFreshIds((disputes ?? []).map((d) => d.dispute_id));
   if (!user) return null;

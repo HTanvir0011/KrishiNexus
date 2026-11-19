@@ -11,6 +11,16 @@ export function bnDigits(value: string | number): string {
   return String(value).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
 
+/** Bangla digits typed into a number field (০-৯) become 0-9; anything else is left for the validator. */
+export function latinDigits(value: string): string {
+  return value.replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)));
+}
+
+/** The masked identity line of a self-registered account: "bKash 017••••5678 · NID …1234". */
+export function kycLine(kyc: { wallet_provider: string; wallet_masked: string; nid_last4: string }): string {
+  return `${kyc.wallet_provider} ${kyc.wallet_masked} · NID …${kyc.nid_last4}`;
+}
+
 export function tk(value: number | null | undefined, decimals = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `Tk ${value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;

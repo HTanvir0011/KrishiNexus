@@ -2,6 +2,17 @@ import 'state.dart';
 
 const _bnDigits = '০১২৩৪৫৬৭৮৯';
 
+/// Bangla digits typed on a Bangla keyboard (০-৯) as ASCII; every other character is kept.
+String asciiDigits(String s) => s.replaceAllMapped(RegExp('[০-৯]'), (m) => '${_bnDigits.indexOf(m[0]!)}');
+
+/// A Bangladeshi mobile number as typed (Bangla digits, spaces, dashes, a +88 prefix) in its 01XXXXXXXXX form.
+String bdMobile(String s) {
+  final n = asciiDigits(s).replaceAll(RegExp(r'[\s-]'), '').replaceFirst(RegExp(r'^\+'), '');
+  return n.startsWith('880') ? n.substring(2) : n;
+}
+
+bool isBdMobile(String n) => RegExp(r'^01[3-9]\d{8}$').hasMatch(n);
+
 /// Bangla numerals when the app speaks Bangla.
 String digits(Object value) {
   final s = '$value';
@@ -42,6 +53,38 @@ String kg(num value) => '${digits(grouped(value))} ${t('কেজি', 'kg')}';
 String pct(num? value, {int decimals = 1}) => value == null ? '–' : '${digits(value.toStringAsFixed(decimals))}%';
 
 String num1(num value, {int decimals = 0}) => digits(grouped(value, decimals: decimals));
+
+/// A drive time: "45 min", "1 h 10 min".
+String hoursText(num hours) {
+  final m = (hours * 60).round();
+  final h = m ~/ 60, rest = m % 60;
+  if (h == 0) return t('${digits(rest)} মিনিট', '$rest min');
+  if (rest == 0) return t('${digits(h)} ঘণ্টা', '$h h');
+  return t('${digits(h)} ঘণ্টা ${digits(rest)} মিনিট', '$h h $rest min');
+}
+
+/// Mobile-banking wallets a payout can go to (backend schemas Wallet).
+const walletProviders = ['bKash', 'Nagad', 'Rocket', 'Upay'];
+
+/// Bangladesh's 64 districts, as (English name the node stores, Bangla name), by division.
+const districts = [
+  ('Barguna', 'বরগুনা'), ('Barishal', 'বরিশাল'), ('Bhola', 'ভোলা'), ('Jhalokati', 'ঝালকাঠি'), ('Patuakhali', 'পটুয়াখালী'),
+  ('Pirojpur', 'পিরোজপুর'),
+  ('Bandarban', 'বান্দরবান'), ('Brahmanbaria', 'ব্রাহ্মণবাড়িয়া'), ('Chandpur', 'চাঁদপুর'), ('Chattogram', 'চট্টগ্রাম'),
+  ("Cox's Bazar", 'কক্সবাজার'), ('Cumilla', 'কুমিল্লা'), ('Feni', 'ফেনী'), ('Khagrachhari', 'খাগড়াছড়ি'), ('Lakshmipur', 'লক্ষ্মীপুর'),
+  ('Noakhali', 'নোয়াখালী'), ('Rangamati', 'রাঙ্গামাটি'),
+  ('Dhaka', 'ঢাকা'), ('Faridpur', 'ফরিদপুর'), ('Gazipur', 'গাজীপুর'), ('Gopalganj', 'গোপালগঞ্জ'), ('Kishoreganj', 'কিশোরগঞ্জ'),
+  ('Madaripur', 'মাদারীপুর'), ('Manikganj', 'মানিকগঞ্জ'), ('Munshiganj', 'মুন্সিগঞ্জ'), ('Narayanganj', 'নারায়ণগঞ্জ'),
+  ('Narsingdi', 'নরসিংদী'), ('Rajbari', 'রাজবাড়ী'), ('Shariatpur', 'শরীয়তপুর'), ('Tangail', 'টাঙ্গাইল'),
+  ('Bagerhat', 'বাগেরহাট'), ('Chuadanga', 'চুয়াডাঙ্গা'), ('Jashore', 'যশোর'), ('Jhenaidah', 'ঝিনাইদহ'), ('Khulna', 'খুলনা'),
+  ('Kushtia', 'কুষ্টিয়া'), ('Magura', 'মাগুরা'), ('Meherpur', 'মেহেরপুর'), ('Narail', 'নড়াইল'), ('Satkhira', 'সাতক্ষীরা'),
+  ('Jamalpur', 'জামালপুর'), ('Mymensingh', 'ময়মনসিংহ'), ('Netrokona', 'নেত্রকোণা'), ('Sherpur', 'শেরপুর'),
+  ('Bogura', 'বগুড়া'), ('Chapai Nawabganj', 'চাঁপাইনবাবগঞ্জ'), ('Joypurhat', 'জয়পুরহাট'), ('Naogaon', 'নওগাঁ'), ('Natore', 'নাটোর'),
+  ('Pabna', 'পাবনা'), ('Rajshahi', 'রাজশাহী'), ('Sirajganj', 'সিরাজগঞ্জ'),
+  ('Dinajpur', 'দিনাজপুর'), ('Gaibandha', 'গাইবান্ধা'), ('Kurigram', 'কুড়িগ্রাম'), ('Lalmonirhat', 'লালমনিরহাট'),
+  ('Nilphamari', 'নীলফামারী'), ('Panchagarh', 'পঞ্চগড়'), ('Rangpur', 'রংপুর'), ('Thakurgaon', 'ঠাকুরগাঁও'),
+  ('Habiganj', 'হবিগঞ্জ'), ('Moulvibazar', 'মৌলভীবাজার'), ('Sunamganj', 'সুনামগঞ্জ'), ('Sylhet', 'সিলেট'),
+];
 
 const _crops = {
   'Cardinal Potato': ('কার্ডিনাল আলু', 'Cardinal potato'),

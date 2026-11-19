@@ -74,7 +74,7 @@ export function Navbar() {
     { to: "/", label: c.links.story, current: route.page === "story" },
     user
       ? { to: homeOf(user.role), label: c.links.os, current: route.page === "os" || route.page === "admin" }
-      : { to: "/login", label: c.links.login, current: route.page === "login" },
+      : { to: "/login", label: c.links.login, current: route.page === "login" || route.page === "signup" },
     { to: "/docs", label: c.links.docs, current: route.page === "docs" },
   ];
 
@@ -97,7 +97,7 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/75 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/75 backdrop-blur-md print:hidden">
       <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-3 sm:px-6 lg:gap-5">
         <Wordmark />
         <StatusPill />

@@ -1,7 +1,8 @@
-import { Ban, Camera, Check, CloudRain, ImageUp, Landmark, Mic, ShieldCheck, Snowflake, ThumbsDown, ThumbsUp, Truck, Volume2, WifiOff } from "lucide-react";
+import { Ban, Camera, Check, CloudRain, ImageUp, Landmark, Mic, ScanLine, ShieldCheck, Snowflake, ThumbsDown, ThumbsUp, Truck, Volume2, WifiOff } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError, type Crop, type GradeableCrop, type SamplePreset, type VoiceInteractBody } from "../api/client";
+import { CameraDialog, downscalePhoto } from "../components/CameraCapture";
 import { CertificateCard, OpticalGraderCanvas, SCAN_DURATION_MS } from "../components/OpticalGraderCanvas";
 import { Badge, Button, Spinner } from "../components/ui";
 import { bnDigits, cn, kg, tk } from "../lib/format";
@@ -71,6 +72,8 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoWidthMm, setPhotoWidthMm] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [scanCrop, setScanCrop] = useState<GradeableCrop>("Cardinal Potato");
   const [scanQuality, setScanQuality] = useState<SamplePreset>("high_grade_harvest");
@@ -185,20 +188,22 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
     }
   };
 
-  const gradePhoto = async (file: File) => {
+  const gradePhoto = async (file: Blob) => {
     setBusy("photo");
     setScanDone(false);
     try {
+      // Upright and at most 1600 px as JPEG; a format this browser cannot draw (HEIC on Chrome) goes as it is.
+      const photoFile = await downscalePhoto(file).catch(() => file);
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(photoFile);
       });
       const result = await api.gradePhoto(scanCrop, dataUrl, me?.district || selected.district, photoWidthMm);
       setPhoto((old) => {
         if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(file);
+        return URL.createObjectURL(photoFile);   // the very image the node graded, so its boxes line up
       });
       setState({ lastGrade: result });
       setScanStartedAt(null);
@@ -354,10 +359,15 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
                 {PHOTO_WIDTHS.map((w) => <option key={w.mm} value={w.mm}>{w.label}</option>)}
               </select>
               <Button variant="ghost" className="min-h-11" onClick={() => void scan()} disabled={busy !== null}>
-                {busy === "scan" ? <Spinner /> : <Camera className="size-4" aria-hidden />} Scan sample lot
+                {busy === "scan" ? <Spinner /> : <ScanLine className="size-4" aria-hidden />} Scan sample lot
               </Button>
               <Button variant="ghost" className="min-h-11" onClick={() => withConsent(() => photoInput.current?.click())} disabled={busy !== null}>
                 {busy === "photo" ? <Spinner /> : <ImageUp className="size-4" aria-hidden />} Grade a photo
+              </Button>
+              {/* The live viewfinder where the browser has a camera API; otherwise the phone's own camera app. */}
+              <Button variant="primary" className="col-span-2 min-h-12" disabled={busy !== null}
+                onClick={() => withConsent(() => (typeof navigator.mediaDevices?.getUserMedia === "function" ? setCameraOpen(true) : cameraInput.current?.click()))}>
+                <Camera className="size-4" aria-hidden /> <span lang="bn">ছবি তুলুন</span> · Take a photo
               </Button>
             </div>
             {/* JPEG/PNG only, so iPhones convert HEIC before upload */}
@@ -367,6 +377,17 @@ export function FarmerZeroUIApp({ className }: { className?: string }) {
                 e.target.value = "";
                 if (file) void gradePhoto(file);
               }} />
+            {/* On a phone this opens the camera app (capture="environment"); desktops ignore capture and show a file picker. */}
+            <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="hidden" aria-label="Photo of the harvest from the camera"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void gradePhoto(file);
+              }} />
+            <CameraDialog open={cameraOpen} onClose={() => setCameraOpen(false)}
+              onCapture={(shot) => { setCameraOpen(false); void gradePhoto(shot); }}
+              onGallery={() => { setCameraOpen(false); photoInput.current?.click(); }}
+              onPhoneCamera={() => { setCameraOpen(false); cameraInput.current?.click(); }} />
             {grade && scanDone && <div className="mt-2"><CertificateCard result={grade} /></div>}
           </section>
 

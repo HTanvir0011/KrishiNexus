@@ -1,18 +1,21 @@
-import { ArrowRight, Award, CheckCircle2, ExternalLink, KeyRound } from "lucide-react";
+import { ArrowRight, Award, CheckCircle2, Download, ExternalLink, KeyRound, Smartphone } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { AppDownload } from "../components/AppDownload";
+import site from "../data/site.json";
 import { useCopy } from "../lib/i18n";
 import { Link } from "../lib/router";
 import { useAppState } from "../state/store";
 import type { RahimFacts } from "./data";
 import { HaorCard } from "./HaorCard";
+import { LandingVideo } from "./LandingVideo";
 import { LiveDecisionCard } from "./LiveDecisionCard";
 import { PipelineSection } from "./PipelineSection";
-import { TEAM } from "./presets";
 import { QuotaCard } from "./QuotaCard";
 import { RouteGraphic } from "./RouteGraphic";
 import { SyndicateCard } from "./SyndicateCard";
+import { TeamSection } from "./TeamSection";
 import { useLive } from "./useLive";
 
 const COPY = {
@@ -29,7 +32,16 @@ const COPY = {
     measured: "Measured on this backend just now, not typed in.",
     leakTitle: "Where the money and the harvest leak",
     leakLede: "Three live views of the failures KrishiNexus targets. Every figure is an MCP tool call you can repeat in the whitepaper.",
-    team: "The team",
+    problem: "The problem in 30 seconds",
+    problemLabel: "Video: the problem KrishiNexus solves, in 30 seconds",
+    demoTitle: "Watch the demo",
+    demoLede: "Three minutes on the live site: a farmer asks in his dialect, the agents decide, a buyer bids, a driver delivers and the payment is released.",
+    demoLabel: "Video: KrishiNexus OS demo",
+    captions: "English captions are on; the player's menu turns them off.",
+    appTitle: "Take KrishiNexus to the field",
+    appLede: "The Android app uses the same account: ask in Bangla by voice, grade a crop with the phone's camera, sell, deliver and get paid.",
+    guide: "How to install it, step by step",
+    footer: { team: "Team", guide: "User guide", docs: "Whitepaper", app: "Get the Android app" },
     congress: "International AI Builders Congress 2026 · AgriSphere AI → FarmMarket · Showcase on 26 December 2026 at Daffodil International University.",
     source: "Source on GitHub",
   },
@@ -46,7 +58,16 @@ const COPY = {
     measured: "এই ব্যাকএন্ডে এইমাত্র মাপা, হাতে লেখা নয়।",
     leakTitle: "টাকা আর ফসল কোথায় হারায়",
     leakLede: "কৃষিনেক্সাস যে তিনটি সমস্যার সমাধান করে, তার লাইভ চিত্র। প্রতিটি সংখ্যা একটি এমসিপি টুল কল, যা শ্বেতপত্রে আবার চালানো যায়।",
-    team: "দল",
+    problem: "৩০ সেকেন্ডে সমস্যাটি",
+    problemLabel: "ভিডিও: কৃষিনেক্সাস যে সমস্যার সমাধান করে, ৩০ সেকেন্ডে",
+    demoTitle: "ডেমো দেখুন",
+    demoLede: "চালু সাইটে তিন মিনিট: কৃষক নিজের ভাষায় প্রশ্ন করেন, এজেন্টরা সিদ্ধান্ত দেয়, ক্রেতা দর দেন, চালক পৌঁছে দেন, আর টাকা ছাড় হয়।",
+    demoLabel: "ভিডিও: কৃষিনেক্সাস ওএস ডেমো",
+    captions: "ইংরেজি ক্যাপশন চালু আছে; প্লেয়ারের মেনু থেকে বন্ধ করা যায়।",
+    appTitle: "কৃষিনেক্সাস মাঠে নিয়ে যান",
+    appLede: "অ্যান্ড্রয়েড অ্যাপে একই অ্যাকাউন্ট চলে: মুখে বাংলায় প্রশ্ন, ফোনের ক্যামেরায় ফসল গ্রেডিং, বিক্রি, ডেলিভারি আর টাকা পাওয়া।",
+    guide: "কীভাবে ইনস্টল করবেন, ধাপে ধাপে",
+    footer: { team: "দল", guide: "ব্যবহার নির্দেশিকা", docs: "শ্বেতপত্র", app: "অ্যান্ড্রয়েড অ্যাপ নিন" },
     congress: "ইন্টারন্যাশনাল এআই বিল্ডার্স কংগ্রেস ২০২৬ · এগ্রিস্ফিয়ার এআই → ফার্মমার্কেট · প্রদর্শনী ২৬ ডিসেম্বর ২০২৬, ড্যাফোডিল ইন্টারন্যাশনাল ইউনিভার্সিটি।",
     source: "গিটহাবে সোর্স",
   },
@@ -110,6 +131,10 @@ export default function StoryPage() {
             </Link>
           </div>
           <HeroMetrics />
+          <LandingVideo name="problem-30s" label={c.problemLabel} className="mt-8 max-w-[640px]"
+            title={<h2 className="m-0 mb-2 text-[15px] font-semibold text-slate-900">{c.problem}</h2>}>
+            {c.captions}
+          </LandingVideo>
         </div>
         <div className="min-w-0 space-y-4 lg:col-span-5">
           <LiveDecisionCard onRahim={(facts) => setRahim((prev) => ({ facts, run: (prev?.run ?? 0) + 1 }))} />
@@ -130,27 +155,51 @@ export default function StoryPage() {
         </div>
       </section>
 
+      <LandingVideo name="krishinexus-demo" label={c.demoLabel} className="mx-auto max-w-[960px] px-4 pt-16 sm:px-6"
+        title={<>
+          <h2 className="m-0 text-[28px] font-semibold tracking-[-0.02em] text-slate-900">{c.demoTitle}</h2>
+          <p className="m-0 mt-2 mb-6 max-w-[44rem] text-[15px] text-slate-600">{c.demoLede}</p>
+        </>}>
+        {c.captions}
+      </LandingVideo>
+
       <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6">
         <PipelineSection />
       </div>
 
+      <section aria-labelledby="app-heading" className="border-t border-slate-200">
+        <div className="mx-auto grid max-w-[1280px] items-center gap-x-6 gap-y-4 px-4 py-14 sm:px-6 md:grid-cols-[auto_minmax(0,1fr)]">
+          <span className="grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-700/15" aria-hidden>
+            <Smartphone className="size-7" />
+          </span>
+          <div className="min-w-0">
+            <h2 id="app-heading" className="m-0 text-[24px] font-semibold tracking-[-0.02em] text-slate-900">{c.appTitle}</h2>
+            <p className="m-0 mt-1.5 max-w-[48rem] text-[15px] text-slate-600">{c.appLede}</p>
+            <AppDownload className="mt-4" />
+            <Link to="/guide#app" className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-semibold text-emerald-700 no-underline hover:text-emerald-800">
+              {c.guide} <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <TeamSection />
+
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6">
-          <h2 className="m-0 text-[15px] font-semibold text-slate-900">{c.team}</h2>
-          <ul className="m-0 mt-4 grid list-none gap-x-6 gap-y-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
-            {TEAM.map((member) => (
-              <li key={member.name} className="text-[14px]">
-                <span className="font-medium text-slate-900">{member.name}</span>
-                <span className="block text-[13px] text-slate-500">{member.role} · {member.country}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-[13px] text-slate-500">
-            <p className="m-0 max-w-[60rem]">{c.congress}</p>
-            <a href="https://github.com/HTanvir0011/KrishiNexus" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-emerald-700 no-underline hover:text-emerald-800">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-[13px] text-slate-500 sm:px-6">
+          <p className="m-0 max-w-[60rem]">{c.congress}</p>
+          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5">
+            {/* /team/ is a static page written at build time, so it is a normal link, not a client route. */}
+            <a href={lang === "bn" ? "/team/bn/" : "/team/"} className="inline-flex min-h-11 items-center font-medium text-slate-700 no-underline hover:text-slate-900">{c.footer.team}</a>
+            <Link to="/guide" className="inline-flex min-h-11 items-center font-medium text-slate-700 no-underline hover:text-slate-900">{c.footer.guide}</Link>
+            <Link to="/docs" className="inline-flex min-h-11 items-center font-medium text-slate-700 no-underline hover:text-slate-900">{c.footer.docs}</Link>
+            <a href={site.apk} className="inline-flex min-h-11 items-center gap-1 font-medium text-slate-700 no-underline hover:text-slate-900">
+              <Download className="size-3.5" aria-hidden /> {c.footer.app}
+            </a>
+            <a href={site.source} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-medium text-emerald-700 no-underline hover:text-emerald-800">
               {c.source} <ExternalLink className="size-3.5" aria-hidden />
             </a>
-          </div>
+          </nav>
         </div>
       </footer>
     </main>

@@ -5,9 +5,9 @@ and the 66 WFP aggregation centres. The prices come from the DAM-modelled hub ru
 already ranks by net payout per kg after pooled 5-ton freight, hub fees and transit loss. They are not a live feed
 from named buyers.
 
-Locking a bid opens an escrow: the buyer's payment for the lot is held, and released to the farmer's bKash or Nagad
-wallet when the delivery is weighed at the buyer's door. The escrow is SIMULATED: no money moves and no wallet API is
-called. A live escrow needs a merchant agreement and API credentials from bKash or Nagad.
+Locking a bid opens an escrow: the buyer's payment for the lot is held, and released to the farmer's bKash, Nagad,
+Rocket or Upay wallet when the delivery is weighed at the buyer's door. The escrow is SIMULATED: no money moves and no
+wallet API is called. A live escrow needs a merchant agreement and API credentials from the wallet provider.
 """
 
 from __future__ import annotations
@@ -28,10 +28,10 @@ from mcp_servers.dam_market_mcp import SEASONAL_CURVES, find_optimal_selling_hub
 from schemas.mcp_models import Crop, FindOptimalSellingHubInput, Grade, HubType, SellingHubOption
 
 ESCROW_FILE = STATE_DIR / "escrows.json"
-Wallet = Literal["bKash", "Nagad"]
+Wallet = Literal["bKash", "Nagad", "Rocket", "Upay"]  # also the marketplace escrow and the wallet a sign-up registers
 RELEASE_CONDITION = "Released to the farmer's wallet when the delivery is weighed at the buyer's door."
-SIMULATED_NOTE = ("Simulated escrow: no money moves and no bKash or Nagad API is called. A live escrow needs a merchant "
-                  "agreement and API credentials.")
+SIMULATED_NOTE = ("Simulated escrow: no money moves and no bKash, Nagad, Rocket or Upay API is called. A live escrow needs a "
+                  "merchant agreement and API credentials.")
 
 
 class Bid(SellingHubOption):

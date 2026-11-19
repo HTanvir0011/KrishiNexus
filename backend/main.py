@@ -35,16 +35,19 @@ GET    /edge/local-models            Ollama / llama.cpp / vLLM runtimes, Q4_K_M 
 POST   /edge/local-inference         On-device generation (live runtime or offline-blackout fallback)
 GET    /edge/lora-dataset            SFT examples of the deployed krishi-bangla model (json or jsonl)
 GET    /market/bids                  Buyer bids for a lot, best net payout first (modelled)
-POST   /market/bids/lock             Lock a bid in one tap: simulated bKash/Nagad escrow
+POST   /market/bids/lock             Lock a bid in one tap: simulated bKash/Nagad/Rocket/Upay escrow
 GET    /evals/metrics                Measured RAGAS-style metrics, MCP schema validity, PII recall
 GET    /evals/holdout               Frozen 66-probe blind retrieval test (cached 10 min)
 POST   /evals/run-regression         Seeded 5-category regression suite (20 per category = 100 cases)
 GET    /auth/demo-users              Demo accounts for the quick-login screen (auth.py)
+POST   /auth/register                Sign up with KYC (national ID, phone, wallet kept as HMAC digests + masks)
 POST   /auth/login                   Quick login by account id -> signed session token (no password: demo)
 GET    /auth/me                      The account behind a Bearer token
 *      /auth/admin/...               Admin only: accounts (list, create, update, delete, reset), escrow list, feedback, overview counts
 POST   /feedback                     Was this advice useful? (comment PII-scrubbed; feedback.py)
-*      /market/lots, /market/deliveries  Direct marketplace: lots, buyer bids, accept -> escrow, driver delivery (marketplace.py)
+*      /market/lots, /market/deliveries  Direct marketplace: lots, buyer bids, accept -> escrow, driver delivery and truck
+                                     location (marketplace.py)
+GET    /market/stream, /market/events    Live market events: server-sent events, or a poll for clients that can't stream
 
 Run:  uvicorn main:app --reload --port 8000
 """
@@ -619,7 +622,8 @@ async def market_bids(crop: Crop, district: str, weight_kg: Annotated[float, Que
 
 @app.post("/market/bids/lock", response_model=EscrowReceipt, tags=["market"])
 async def market_bids_lock(body: LockBidRequest) -> EscrowReceipt:
-    """Lock a bid in one tap: the node recomputes it and opens a simulated bKash/Nagad escrow for its net payout."""
+    """Lock a bid in one tap: the node recomputes it and opens a simulated wallet escrow (bKash, Nagad, Rocket or Upay)
+    for its net payout."""
     try:
         return await ESCROWS.lock(body)
     except ToolExecutionError as exc:

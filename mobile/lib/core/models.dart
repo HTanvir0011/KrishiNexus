@@ -17,6 +17,21 @@ class User {
   String get district => j['district'] as String? ?? '';
   String get title => j['title'] as String? ?? '';
   bool get active => j['active'] as bool? ?? true;
+  Kyc? get kyc => mapOf(j['kyc']) == null ? null : Kyc(mapOf(j['kyc'])!);
+  bool get pendingReview => j['pending_review'] as bool? ?? false;
+  bool get selfRegistered => j['self_registered'] as bool? ?? false;
+}
+
+/// What a self-registered account showed at sign-up, masked: the node keeps the full numbers only as hashes.
+class Kyc {
+  Kyc(this.j);
+  final Map<String, dynamic> j;
+  String get nidLast4 => j['nid_last4'] as String? ?? '';
+  String get phoneMasked => j['phone_masked'] as String? ?? '';
+  String get walletProvider => j['wallet_provider'] as String? ?? '';
+  String get walletMasked => j['wallet_masked'] as String? ?? '';
+  String get registeredAt => j['registered_at'] as String? ?? '';
+  bool get verified => j['verified'] as bool? ?? false;
 }
 
 class Box {
@@ -91,6 +106,14 @@ class Delivery {
   double? get shelfLifeHours => numOrNull(j['shelf_life_hours']);
   bool get atRisk => j['at_risk'] as bool? ?? false;
   List<DeliveryEvent> get events => mapsOf(j['events']).map(DeliveryEvent.new).toList();
+  // The driver's last shared position (coarse), while they share it.
+  Map<String, dynamic>? get position => mapOf(j['position']);
+  double? get kmLeft => numOrNull(position?['km_to_destination']);
+  double? get etaLeft => numOrNull(position?['eta_hours_left']);
+  String get positionAt => position?['at'] as String? ?? '';
+
+  /// Share of the route behind the truck (0 to 1) by its last shared position; null without one.
+  double? get progress => kmLeft == null || km <= 0 ? null : (1 - kmLeft! / km).clamp(0.0, 1.0);
 }
 
 class Dispute {
@@ -146,6 +169,18 @@ class Lot {
   Delivery? get delivery => mapOf(j['delivery']) == null ? null : Delivery(mapOf(j['delivery'])!);
   List<Dispute> get disputes => mapsOf(j['disputes']).map(Dispute.new).toList();
   int get openDisputes => disputes.where((d) => d.status == 'OPEN').length;
+}
+
+/// One change on the market, from GET /market/stream or /market/events.
+class MarketEvent {
+  MarketEvent(this.j);
+  final Map<String, dynamic> j;
+  int get seq => numOf(j['seq']).toInt();
+  String get kind => j['kind'] as String? ?? '';
+  String? get lotId => j['lot_id'] as String?;
+
+  /// A truck's position or temperature: frequent, and only screens that show that delivery care.
+  bool get quiet => kind == 'location' || kind == 'temperature_logged';
 }
 
 /// POST /edge/voice-interact's answer, with the agents' plan (orchestration.state) unpacked.

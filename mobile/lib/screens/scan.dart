@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart' show Geolocator;
 import 'package:image_picker/image_picker.dart';
 
 import '../core/api.dart';
@@ -340,6 +342,9 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   CameraController? _controller;
   String? _error;
+  bool _denied = false; // the camera permission is off: the phone's settings can turn it on
+  bool _starting = false;
+  bool _stopped = false; // the app went to the background and closed a running camera
   bool _capturing = false;
   bool _torch = false;
   Offset? _focus;
@@ -353,6 +358,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   Future<void> _start() async {
+    // One start at a time: the permission prompt pauses and resumes the app while the first one is still running.
+    if (_starting) return;
+    _starting = true;
+    _denied = false;
     if (_error != null) setState(() => _error = null);
     try {
       final cameras = await availableCameras();
@@ -375,6 +384,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       });
     } on CameraException catch (e) {
       if (!mounted) return;
+      _denied = e.code.startsWith('CameraAccess');
       setState(
         () => _error = switch (e.code) {
           'CameraAccessDenied' || 'CameraAccessDeniedWithoutPrompt' || 'CameraAccessRestricted' => t(
@@ -388,17 +398,27 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           _ => t('ক্যামেরা চালু হলো না (${e.code})।', 'The camera did not start (${e.code}).'),
         },
       );
+    } catch (_) {
+      if (mounted) setState(() => _error = t('ক্যামেরা চালু হলো না।', 'The camera did not start.'));
+    } finally {
+      _starting = false;
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _controller;
+    // Only a running camera stops and restarts: the permission prompt (and the gallery) also pause the app, and a
+    // second start then would open the camera twice or ask for the permission again.
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      final controller = _controller;
+      if (controller == null) return;
       _controller = null;
-      controller?.dispose();
+      _stopped = true;
+      _torch = false;
+      controller.dispose();
       if (mounted) setState(() {});
-    } else if (state == AppLifecycleState.resumed && controller == null && _error == null) {
+    } else if (state == AppLifecycleState.resumed && _stopped) {
+      _stopped = false;
       _start();
     }
   }
@@ -454,11 +474,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
+  // [size] is the preview's own (the tap is read inside it), so the point is in the camera frame, not the cropped screen.
   Future<void> _focusAt(TapUpDetails d, Size size) async {
     final controller = _controller;
     if (controller == null) return;
     setState(() {
-      _focus = d.localPosition;
+      _focus = d.globalPosition; // the viewfinder fills the screen from its top-left corner
       _focusTick++;
     });
     final point = Offset((d.localPosition.dx / size.width).clamp(0, 1), (d.localPosition.dy / size.height).clamp(0, 1));
@@ -483,12 +504,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           fit: StackFit.expand,
           children: [
             if (ready)
-              GestureDetector(
-                onTapUp: (d) => _focusAt(d, size),
-                child: ClipRect(
-                  child: Transform.scale(
-                    scale: _coverScale(size, controller.value.aspectRatio),
-                    child: Center(child: CameraPreview(controller)),
+              ClipRect(
+                child: Transform.scale(
+                  scale: _coverScale(size, controller.value.aspectRatio),
+                  child: Center(
+                    child: CameraPreview(
+                      controller,
+                      child: LayoutBuilder(
+                        builder: (context, box) => GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (d) => _focusAt(d, box.biggest),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               )
@@ -534,6 +562,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         style: const TextStyle(color: Brand.husk, fontSize: 16, height: 1.5),
                       ),
                       const SizedBox(height: 20),
+                      if (_denied && !kIsWeb) ...[
+                        FilledButton.icon(
+                          // Opens this app's page in the phone settings (any permission, the camera's too).
+                          onPressed: Geolocator.openAppSettings,
+                          icon: const Icon(Icons.settings_rounded),
+                          label: Text(t('ফোনের সেটিংস খুলুন', 'Open the phone settings')),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                       FilledButton.icon(
                         onPressed: _gallery,
                         icon: const Icon(Icons.photo_library_rounded),
