@@ -49,6 +49,7 @@ answer in spoken Bangla, online or offline at a union kiosk. It targets three fa
 | Component | Command (from repo root) | Port / route |
 |---|---|---|
 | Backend (FastAPI) | `cd backend && .venv/Scripts/python -m uvicorn main:app --port 8000` | `http://localhost:8000`, OpenAPI at `/docs` |
+| Mobile app (Flutter, Android/iOS) | `cd mobile && flutter run` · `flutter build apk --release` | talks to `https://tanvir.health` unless `--dart-define=API_BASE=...` or Me → Server says otherwise; see `mobile/README.md` |
 | Frontend (Vite) | `npm --prefix frontend run dev` | `http://localhost:5173`: overview `/`, live OS `/os` (`/os/field`, `/os/coop`, `/os/himagar`, `/os/trade`, `/os/driver`, `/os/market`), whitepaper `/docs` |
 | Live agent trace | WebSocket | `ws://localhost:8000/ws/agent-trace?session_id=...` (proxied as `/ws`) |
 | MCP stdio servers | `cd backend && python -m mcp_servers.<server_module>` | newline-delimited JSON-RPC on stdin/stdout |
@@ -184,6 +185,11 @@ krishinexus-os/
 │   ├── evals/regression_suite.py       # EvaluationEngine (EVALUATION_ENGINE): metrics + 100-case suite
 │   ├── evals/holdout_probe.py          # 66 blind retrieval probes + runner (also scores any probe set); a FROZEN test set
 │   └── .state/truck_pools.json         # runtime only: durable pool state (delete to re-seed); escrows.json beside it
+├── mobile/                             # Flutter app for farmers, buyers, drivers (+ bank; desk roles get voice, camera, a web link)
+│   ├── lib/core/                       # api.dart (HTTP, UTF-8 JSON, 401 sign-out) · models.dart (typed views) · state.dart (account, lang, offline, consent, grades) · voice.dart (speech_to_text bn-BD, flutter_tts, online voice) · theme.dart · format.dart
+│   ├── lib/screens/                    # login · shell (role tabs) · ask (voice + decision cards) · scan (camera, grading, result) · market (lots, bids, accept, escrow, delivery, disputes, purchases, verify) · driver · bank · me (+ desk)
+│   ├── lib/widgets/                    # common (cards, pills, RouteSteps, polling) · mic_orb · grade_view (boxes, tray, sweep, stamp, certificate) · consent
+│   └── test/core_test.dart             # number formats, lot bid ranking, voice-answer unpacking
 └── frontend/
     ├── package.json · vite.config.ts · tsconfig.json · index.html
     ├── Dockerfile · .dockerignore · nginx.conf   # node build stage -> nginx serving dist + API/ws proxy
@@ -483,3 +489,17 @@ versions `v1.0` → `v1.2-dspy-optimized`; agents read decision parameters from 
   (`--ease-out-expo`, `animate-draw/drive/pop/stamp/flash/fade-in`); `flash` and `stamp` have only a start state, so they
   settle into the element's own background and ring. Reduced motion lands every animation on its end state, with no delays.
 - **Pipeline:** `story/pipeline.ts` is the single list of LangGraph nodes, with their state reads and writes, MCP tools and files. `nodeOf` maps trace events to nodes, including token compression's DAM lookup, which is recorded under the supervisor's name.
+
+### 9.2 Mobile app (`mobile/`, Flutter 3.44, Material 3)
+
+- Same API, same accounts and data as the website; role tabs follow the backend's `_role` checks, so no button calls an
+  endpoint its role cannot use. Desk roles (co-op, cold storage) keep voice and camera and open their web desk.
+- Voice: the phone's recogniser in `bn-BD` (partial words shown live); a spoken question is answered aloud with the
+  phone's Bangla voice, else `POST /edge/tts`, never in Offline edge mode. NEEDS_CLARIFICATION asks back by voice.
+- Camera: framing guide, tap to focus, torch, gallery, sample lots; 1080p JPEG as a data URI to `/edge/grade-crop`
+  (`frame_width_mm` only when the farmer picks a scale). Boxes are drawn in the node's `frame_size` coordinates (the node
+  applies EXIF orientation, as Flutter does when it shows the photo).
+- Design: the website's tokens (§9.1) as a Material colour scheme; dark theme from the night-paddy palette; one authored
+  moment (grade reveal); `MediaQuery.disableAnimations` lands every animation at once.
+- Android: minSdk 24 (audioplayers plays the online voice from memory), queries for RecognitionService, TTS_SERVICE and
+  https VIEW; cleartext allowed so a village kiosk on the LAN can be used over http. Release APK is debug-signed.

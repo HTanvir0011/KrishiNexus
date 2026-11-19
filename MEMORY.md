@@ -1896,3 +1896,23 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   offline mode never fetches. Docs Data safety has a "Spoken answer" row.
 - Local check: a browser with no Bangla voice played the online voice in 6.4 s (200 audio/mpeg); cache replay 0.02 s.
 
+### 2026-11-19 · Mobile app in Flutter (`mobile/`; the owner asked for it with camera and voice first)
+- Same API, accounts and data as the website (default `https://tanvir.health`; `--dart-define=API_BASE` or Me -> Server).
+  Role tabs follow `marketplace._role`: farmer Ask/Scan/Market/Me; buyer Market/Purchases/Verify/Me; driver Jobs/On the
+  road/Me; bank Disputes/Ledger/Me; judge+admin Ask/Scan/Market/Deliveries/Me (read-only); co-op, storage Ask/Scan/Desk/Me.
+- Voice: speech_to_text in bn-BD (live words, orb follows the level), POST /edge/voice-interact; a spoken question is
+  answered aloud (flutter_tts bn-BD, else POST /edge/tts via audioplayers BytesSource; never offline). NEEDS_CLARIFICATION
+  re-asks with the previous words prepended. Consent sheet before the farmer's own voice/words/photo.
+- Camera: camera plugin viewfinder (guide, tap to focus, torch, gallery, sample lots), 1080p JPEG data URI to
+  /edge/grade-crop; GradeCanvas outlines pieces in `frame_size` coords (staggered), stamp, metrics, verify certificate.
+- Toolchain installed with the owner's OK: Android cmdline-tools + platform/build-tools 36 at %LOCALAPPDATA%\Android\Sdk,
+  Microsoft JDK 17 at %LOCALAPPDATA%\Programs\jdk-17 (`flutter config` points at both). First Gradle build took 30 min.
+- Lessons: google_fonts loads after the first layout on web/first launch and clipped chip labels, so the fonts are bundled
+  (static Anek Bangla 400-700 + Tiro Bangla instanced from the frontend's fontsource files with fontTools); on the web,
+  `Random().nextInt(1 << 32)` throws (1 << 32 == 0 there).
+- Verified: `flutter analyze` clean, 4 unit tests, release APK builds; web build against the local backend walked every
+  role: Rahim's preset -> decision cards -> online Bangla voice (200) -> sell sheet prefilled with the certificate -> lot;
+  sample-lot grade -> outlines, tap-to-inspect, verify; buyer bid; farmer accept (escrow HELD); driver claim, pickup,
+  temperature, deliver (RELEASED); bank ledger and disputes; judge views. Not verified on a phone: live camera capture,
+  the phone's Bangla speech recognition and TTS voices. Release APK is debug-signed (sideload only).
+

@@ -87,6 +87,12 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
+### Mobile app in Flutter (19 November 2026)
+
+- `mobile/` is an Android (and iOS-ready) app on the same node and accounts: farmers ask in Bangla by voice and hear the
+  answer, photograph the harvest for a signed grade, and sell lots; buyers bid and verify certificates; drivers run
+  deliveries with temperature logs; the bank resolves disputes. See `mobile/README.md`.
+
 ### Bangla playback in every browser (19 November 2026)
 
 - শুনুন / Listen in Bangla now plays everywhere. The device's own Bangla voice is used where there is one (Microsoft
