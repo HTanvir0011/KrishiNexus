@@ -14,7 +14,14 @@ import '../widgets/consent.dart';
 import '../widgets/mic_orb.dart';
 
 class _Preset {
-  const _Preset(this.id, this.titleBn, this.titleEn, this.question, this.district, this.upazila);
+  const _Preset(
+    this.id,
+    this.titleBn,
+    this.titleEn,
+    this.question,
+    this.district,
+    this.upazila,
+  );
   final String id;
   final String titleBn;
   final String titleEn;
@@ -41,7 +48,14 @@ const _presets = [
     'Bogura',
     'Sariakandi',
   ),
-  _Preset('sunamganj_haor_flood', 'আব্দুল · হাওরের বোরো ধান', 'Abdul · Sunamganj haor rice', 'অখন কাটমু নি?', 'Sunamganj', 'Tahirpur'),
+  _Preset(
+    'sunamganj_haor_flood',
+    'আব্দুল · হাওরের বোরো ধান',
+    'Abdul · Sunamganj haor rice',
+    'অখন কাটমু নি?',
+    'Sunamganj',
+    'Tahirpur',
+  ),
   _Preset(
     'munshiganj_cold_storage',
     'মুন্সিগঞ্জের হিমাগার',
@@ -79,7 +93,10 @@ class _AskScreenState extends State<AskScreen> {
   String _live = '';
   String? _heard;
   VoiceResult? _result;
-  late _Preset _place = _presets.firstWhere((p) => p.district == app.user?.district, orElse: () => _presets.first);
+  late _Preset _place = _presets.firstWhere(
+    (p) => p.district == app.user?.district,
+    orElse: () => _presets.first,
+  );
   String? _speechNote;
   String? _detached; // a photo grade the farmer chose not to use
 
@@ -87,7 +104,11 @@ class _AskScreenState extends State<AskScreen> {
   String? get _cert {
     if (app.askWithCert != null) return app.askWithCert;
     final grade = app.lastGrade;
-    return grade != null && grade.result.fromPhoto && grade.result.certId != _detached ? grade.result.certId : null;
+    return grade != null &&
+            grade.result.fromPhoto &&
+            grade.result.certId != _detached
+        ? grade.result.certId
+        : null;
   }
 
   @override
@@ -97,7 +118,9 @@ class _AskScreenState extends State<AskScreen> {
   }
 
   void _onSpeaking() {
-    if (!voice.speaking.value && _speechNote != null && mounted) setState(() => _speechNote = null);
+    if (!voice.speaking.value && _speechNote != null && mounted) {
+      setState(() => _speechNote = null);
+    }
   }
 
   @override
@@ -132,7 +155,14 @@ class _AskScreenState extends State<AskScreen> {
         if (isFinal) finalWords = words;
       },
       onError: (message) {
-        if (mounted) snack(context, message, icon: Icons.mic_off_rounded, tone: Tone.amber);
+        if (mounted) {
+          snack(
+            context,
+            message,
+            icon: Icons.mic_off_rounded,
+            tone: Tone.amber,
+          );
+        }
       },
       onEnd: () {
         if (!mounted) return;
@@ -145,7 +175,10 @@ class _AskScreenState extends State<AskScreen> {
       setState(() => _orb = OrbState.idle);
       snack(
         context,
-        t('এই ফোনে কথা শোনার সুবিধা নেই। প্রশ্নটি লিখে পাঠান।', 'This phone has no speech recognition. Please type the question.'),
+        t(
+          'এই ফোনে কথা শোনার সুবিধা নেই। প্রশ্নটি লিখে পাঠান।',
+          'This phone has no speech recognition. Please type the question.',
+        ),
         icon: Icons.keyboard_rounded,
         tone: Tone.amber,
       );
@@ -163,21 +196,31 @@ class _AskScreenState extends State<AskScreen> {
   }
 
   /// One question to the node. A farmer's own words are placed in their home district.
-  Future<void> _ask({String? text, _Preset? preset, bool spoken = false}) async {
+  Future<void> _ask({
+    String? text,
+    _Preset? preset,
+    bool spoken = false,
+  }) async {
     if (preset != null) _place = preset;
     // Answering the node's follow-up question: send it together with the question it follows.
-    if (text != null && _result?.needsClarification == true && _heard != null) text = '$_heard $text';
+    if (text != null && _result?.needsClarification == true && _heard != null) {
+      text = '$_heard $text';
+    }
     final user = app.user;
     final cert = _cert;
     final body = <String, dynamic>{
       if (text != null) ...{
         'text': text,
-        'district': _isFarmer && user!.district.isNotEmpty ? user.district : _place.district,
-        if (!_isFarmer || _place.district == user!.district) 'upazila': _place.upazila,
+        'district': _isFarmer && user!.district.isNotEmpty
+            ? user.district
+            : _place.district,
+        if (!_isFarmer || _place.district == user!.district)
+          'upazila': _place.upazila,
       } else
         'preset_id': preset!.id,
       'offline_mode': app.offline,
-      'session_id': 'KNX-APP-${math.Random().nextInt(0x7fffffff).toRadixString(36).toUpperCase().padLeft(6, '0')}',
+      'session_id':
+          'KNX-APP-${math.Random().nextInt(0x7fffffff).toRadixString(36).toUpperCase().padLeft(6, '0')}',
       if (_isFarmer) 'farmer_id': user!.id,
       'edge_certificate_id': ?cert,
     };
@@ -188,13 +231,19 @@ class _AskScreenState extends State<AskScreen> {
     });
     HapticFeedback.lightImpact();
     try {
-      final json = await Api.post('/edge/voice-interact', body, const Duration(seconds: 120));
+      final json = await Api.post(
+        '/edge/voice-interact',
+        body,
+        const Duration(seconds: 120),
+      );
       final result = VoiceResult((json as Map).cast<String, dynamic>());
       if (!mounted) return;
       setState(() {
         _result = result;
         // A recorded question shows what the node heard, with names and numbers already hidden.
-        if (preset != null && result.scrubbedTranscript.isNotEmpty) _heard = result.scrubbedTranscript;
+        if (preset != null && result.scrubbedTranscript.isNotEmpty) {
+          _heard = result.scrubbedTranscript;
+        }
         _orb = OrbState.idle;
       });
       HapticFeedback.mediumImpact();
@@ -209,11 +258,22 @@ class _AskScreenState extends State<AskScreen> {
           );
         }
       });
-      if (spoken) _readAloud(result.needsClarification ? (result.followUp ?? result.spoken) : result.spoken);
+      if (spoken) {
+        _readAloud(
+          result.needsClarification
+              ? (result.followUp ?? result.spoken)
+              : result.spoken,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _orb = OrbState.idle);
-      snack(context, friendlyError(e), icon: Icons.error_outline_rounded, tone: Tone.rose);
+      snack(
+        context,
+        friendlyError(e),
+        icon: Icons.error_outline_rounded,
+        tone: Tone.rose,
+      );
     }
   }
 
@@ -222,7 +282,11 @@ class _AskScreenState extends State<AskScreen> {
       await voice.stopSpeaking();
       return;
     }
-    setState(() => _speechNote = bangla && !app.offline ? t('বাংলা কণ্ঠ আনা হচ্ছে…', 'Getting the Bangla voice…') : null);
+    setState(
+      () => _speechNote = bangla && !app.offline
+          ? t('বাংলা কণ্ঠ আনা হচ্ছে…', 'Getting the Bangla voice…')
+          : null,
+    );
     final how = await voice.speak(text, bangla: bangla, online: !app.offline);
     if (!mounted) return;
     setState(
@@ -239,7 +303,10 @@ class _AskScreenState extends State<AskScreen> {
                   'অফলাইনে এই ফোনে বাংলা কণ্ঠ নেই; উত্তরটি লেখা আছে।',
                   'Offline, and this phone has no Bangla voice; the answer is written above.',
                 )
-              : t('বাংলা কণ্ঠ পাওয়া গেল না; উত্তরটি লেখা আছে।', 'The Bangla voice could not be reached; the answer is written above.'),
+              : t(
+                  'বাংলা কণ্ঠ পাওয়া গেল না; উত্তরটি লেখা আছে।',
+                  'The Bangla voice could not be reached; the answer is written above.',
+                ),
       },
     );
   }
@@ -247,54 +314,59 @@ class _AskScreenState extends State<AskScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final user = app.user;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t('জিজ্ঞাসা', 'Ask')),
-        actions: [
-          ListenableBuilder(
-            listenable: app,
-            builder: (context, _) => IconButton(
-              isSelected: app.offline,
-              icon: const Icon(Icons.cloud_done_outlined),
-              selectedIcon: Icon(Icons.cloud_off_rounded, color: Tone.amber.fg(context)),
-              tooltip: app.offline ? t('অফলাইন এজ মোড চালু', 'Offline edge mode is on') : t('অফলাইন এজ মোড', 'Offline edge mode'),
-              onPressed: () {
-                app.setOffline(!app.offline);
-                snack(
-                  context,
-                  app.offline ? t('অফলাইন এজ মোড চালু', 'Offline edge mode on') : t('আবার অনলাইন', 'Back online'),
-                  icon: app.offline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-                );
-              },
+      body: ListView(
+        controller: _scroll,
+        padding: EdgeInsets.zero,
+        children: [
+          HeaderBand(
+            title: _isFarmer
+                ? t('${user!.name}, স্বাগতম', 'Welcome, ${user.name}')
+                : t('জিজ্ঞাসা', 'Ask'),
+            subtitle: user == null
+                ? null
+                : [
+                    roleName(user.role),
+                    if (user.district.isNotEmpty) user.district,
+                  ].join(' · '),
+            trailing: ListenableBuilder(
+              listenable: app,
+              builder: (context, _) => IconButton(
+                isSelected: app.offline,
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                style: IconButton.styleFrom(foregroundColor: Colors.white),
+                icon: const Icon(Icons.cloud_done_outlined, size: 26),
+                selectedIcon: const Icon(
+                  Icons.cloud_off_rounded,
+                  size: 26,
+                  color: Brand.voice,
+                ),
+                tooltip: app.offline
+                    ? t('অফলাইন এজ মোড চালু', 'Offline edge mode is on')
+                    : t('অফলাইন এজ মোড', 'Offline edge mode'),
+                onPressed: () {
+                  app.setOffline(!app.offline);
+                  snack(
+                    context,
+                    app.offline
+                        ? t('অফলাইন এজ মোড চালু', 'Offline edge mode on')
+                        : t('আবার অনলাইন', 'Back online'),
+                    icon: app.offline
+                        ? Icons.cloud_off_rounded
+                        : Icons.cloud_done_rounded,
+                  );
+                },
+              ),
             ),
           ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Column(
-        children: [
           const OfflineBanner(),
-          Expanded(
-            child: ListView(
-              controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  _isFarmer
-                      ? t('${app.user!.name}, কী জানতে চান?', '${app.user!.name}, what would you like to know?')
-                      : t('কৃষকের মতো জিজ্ঞাসা করুন', 'Ask as a farmer would'),
-                  style: theme.textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  t(
-                    'বিক্রি করবেন, হিমাগারে রাখবেন, না যৌথ ট্রাকে পাঠাবেন: নিজের ভাষায় বলুন।',
-                    'Sell now, store, or send on a shared truck: say it in your own words and dialect.',
-                  ),
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
                 _gradeChip(),
-                const SizedBox(height: 8),
                 Center(
                   child: MicOrb(
                     state: _orb,
@@ -302,7 +374,10 @@ class _AskScreenState extends State<AskScreen> {
                     onTap: _toggleMic,
                     label: _orb == OrbState.listening
                         ? t('শোনা বন্ধ করুন', 'Stop listening')
-                        : t('বাংলায় প্রশ্ন বলুন', 'Speak your question in Bangla'),
+                        : t(
+                            'বাংলায় প্রশ্ন বলুন',
+                            'Speak your question in Bangla',
+                          ),
                   ),
                 ),
                 Center(
@@ -310,13 +385,31 @@ class _AskScreenState extends State<AskScreen> {
                     duration: Motion.of(context, Motion.short),
                     child: Text(
                       key: ValueKey(_orb),
+                      textAlign: TextAlign.center,
                       switch (_orb) {
-                        OrbState.idle => t('ট্যাপ করে বাংলায় বলুন', 'Tap and speak in Bangla'),
-                        OrbState.listening => t('শুনছি… শেষ হলে আবার ট্যাপ করুন', 'Listening… tap again when you finish'),
-                        OrbState.thinking => t('এজেন্টরা হিসাব করছে…', 'The agents are working it out…'),
+                        OrbState.idle =>
+                          _isFarmer
+                              ? t(
+                                  'কী জানতে চান? ট্যাপ করে বলুন',
+                                  'What do you want to know? Tap and speak',
+                                )
+                              : t(
+                                  'ট্যাপ করে বাংলায় বলুন',
+                                  'Tap and speak in Bangla',
+                                ),
+                        OrbState.listening => t(
+                          'শুনছি… শেষ হলে আবার ট্যাপ করুন',
+                          'Listening… tap again when you finish',
+                        ),
+                        OrbState.thinking => t(
+                          'এজেন্টরা হিসাব করছে…',
+                          'The agents are working it out…',
+                        ),
                       },
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: _orb == OrbState.listening ? Tone.rose.fg(context) : theme.colorScheme.onSurfaceVariant,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: _orb == OrbState.listening
+                            ? Tone.rose.fg(context)
+                            : theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -325,17 +418,11 @@ class _AskScreenState extends State<AskScreen> {
                 _transcript(),
                 const SizedBox(height: 12),
                 _typeRow(),
-                SectionTitle(t('রেকর্ড করা প্রশ্ন শুনে দেখুন', 'Try a recorded question'), top: 22),
-                SizedBox(
-                  height: 128,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    itemCount: _presets.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemBuilder: (context, i) => _presetCard(_presets[i]),
-                  ),
+                SectionTitle(
+                  t('এই প্রশ্নগুলো শুনে দেখুন', 'Try one of these questions'),
+                  top: 24,
                 ),
+                for (final p in _presets) _presetRow(p),
                 if (_result != null && _orb != OrbState.thinking)
                   KeyedSubtree(
                     key: _answerKey,
@@ -359,7 +446,9 @@ class _AskScreenState extends State<AskScreen> {
     listenable: app,
     builder: (context, _) {
       final certId = _cert;
-      final grade = app.grades.where((g) => g.result.certId == certId).firstOrNull;
+      final grade = app.grades
+          .where((g) => g.result.certId == certId)
+          .firstOrNull;
       if (certId == null || grade == null) return const SizedBox(height: 8);
       return Padding(
         padding: const EdgeInsets.only(top: 12),
@@ -396,12 +485,21 @@ class _AskScreenState extends State<AskScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _orb == OrbState.listening ? t('শুনছি', 'Hearing') : t('আপনার প্রশ্ন', 'Your question'),
-                    style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    _orb == OrbState.listening
+                        ? t('শুনছি', 'Hearing')
+                        : t('আপনার প্রশ্ন', 'Your question'),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    showing.isEmpty ? '…' : showing.replaceAll(RegExp(r'<[A-Z_]+_REDACTED>'), t('[লুকানো]', '[hidden]')),
+                    showing.isEmpty
+                        ? '…'
+                        : showing.replaceAll(
+                            RegExp(r'<[A-Z_]+_REDACTED>'),
+                            t('[লুকানো]', '[hidden]'),
+                          ),
                     style: voiceStyle(context, size: 20),
                   ),
                   if (_result != null && _orb == OrbState.idle) ...[
@@ -410,9 +508,16 @@ class _AskScreenState extends State<AskScreen> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        if (_result!.dialect.isNotEmpty) Pill(_result!.dialect, tone: Tone.violet, icon: Icons.record_voice_over_rounded),
-                        if (_result!.intent.isNotEmpty) Pill(_sentence(_result!.intent), tone: Tone.sky),
-                        if (_result!.quantityKg != null) Pill(kg(_result!.quantityKg!), tone: Tone.slate),
+                        if (_result!.dialect.isNotEmpty)
+                          Pill(
+                            _result!.dialect,
+                            tone: Tone.violet,
+                            icon: Icons.record_voice_over_rounded,
+                          ),
+                        if (_result!.intent.isNotEmpty)
+                          Pill(_sentence(_result!.intent), tone: Tone.sky),
+                        if (_result!.quantityKg != null)
+                          Pill(kg(_result!.quantityKg!), tone: Tone.slate),
                         if (_result!.piiHidden > 0)
                           Pill(
                             t(
@@ -445,7 +550,10 @@ class _AskScreenState extends State<AskScreen> {
           style: voiceStyle(context, size: 17),
           decoration: InputDecoration(
             counterText: '',
-            hintText: t('অথবা লিখুন: "১০ মণ আলু, ফড়িয়া ১২ টাকা বলছে"', 'Or type: "10 maund potatoes, the faria offers 12 taka"'),
+            hintText: t(
+              'অথবা লিখুন: "১০ মণ আলু, ফড়িয়া ১২ টাকা বলছে"',
+              'Or type: "10 maund potatoes, the faria offers 12 taka"',
+            ),
           ),
         ),
       ),
@@ -459,33 +567,59 @@ class _AskScreenState extends State<AskScreen> {
     ],
   );
 
-  Widget _presetCard(_Preset p) {
+  Widget _presetRow(_Preset p) {
     final theme = Theme.of(context);
     final active = _place.id == p.id && _result != null;
-    return SizedBox(
-      width: 232,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
         tone: active ? Tone.green : null,
         strong: active,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         onTap: _orb == OrbState.idle ? () => _ask(preset: p) : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.play_circle_fill_rounded, color: theme.colorScheme.primary, size: 20),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(t(p.titleBn, p.titleEn), maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelLarge),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Brand.voice,
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: Text(p.question, maxLines: 2, overflow: TextOverflow.ellipsis, style: voiceStyle(context, size: 17)),
-            ),
-          ],
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  size: 30,
+                  color: Brand.ink,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t(p.titleBn, p.titleEn),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    Text(
+                      p.question,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: voiceStyle(context, size: 17),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -495,7 +629,13 @@ class _AskScreenState extends State<AskScreen> {
 /// The agents' decision as cards: the flood alert, the middleman's offer (struck when the circuit breaker blocks it),
 /// the recommended route with its money, the alternative, and the Bangla answer to listen to.
 class _Answer extends StatelessWidget {
-  const _Answer({required this.result, required this.onRead, required this.note, required this.onAnswerFollowUp, required this.heard});
+  const _Answer({
+    required this.result,
+    required this.onRead,
+    required this.note,
+    required this.onAnswerFollowUp,
+    required this.heard,
+  });
   final VoiceResult result;
   final Future<void> Function(String text, {bool bangla}) onRead;
   final String? note;
@@ -518,15 +658,25 @@ class _Answer extends StatelessWidget {
                 children: [
                   Icon(Icons.help_rounded, color: Tone.amber.fg(context)),
                   const SizedBox(width: 8),
-                  Text(t('আরেকটু জানা দরকার', 'A little more is needed'), style: theme.textTheme.titleMedium),
+                  Text(
+                    t('আরেকটু জানা দরকার', 'A little more is needed'),
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(r.followUp ?? r.spoken, style: voiceStyle(context, size: 20)),
+              Text(
+                r.followUp ?? r.spoken,
+                style: voiceStyle(context, size: 20),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Brand.voice,
+                      foregroundColor: Brand.ink,
+                    ),
                     onPressed: onAnswerFollowUp,
                     icon: const Icon(Icons.mic_rounded),
                     label: Text(t('উত্তর বলুন', 'Answer by voice')),
@@ -582,7 +732,8 @@ class _Answer extends StatelessWidget {
                   'Above the cost floor; ${money(r.spotValue)} for ${kg(r.qty)}.',
                 ),
         ),
-      if (syn != null && r.pooledValue != null && !r.storeFirst) _TruckCard(result: r),
+      if (syn != null && r.pooledValue != null && !r.storeFirst)
+        _TruckCard(result: r),
       if (breaker != null && r.storeValue != null)
         _DecisionCard(
           tone: r.storeFirst ? Tone.green : Tone.sky,
@@ -638,7 +789,10 @@ class _Answer extends StatelessWidget {
         for (var i = 0; i < cards.length; i++)
           _Rise(
             order: i,
-            child: Padding(padding: const EdgeInsets.only(bottom: 12), child: cards[i]),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: cards[i],
+            ),
           ),
         _Rise(
           order: cards.length,
@@ -655,7 +809,8 @@ class _Answer extends StatelessWidget {
                   children: [
                     _ListenButton(text: r.spoken, onRead: onRead),
                     OutlinedButton.icon(
-                      onPressed: () => onRead(_englishSummary(r), bangla: false),
+                      onPressed: () =>
+                          onRead(_englishSummary(r), bangla: false),
                       icon: const Icon(Icons.translate_rounded),
                       label: const Text('English'),
                     ),
@@ -670,10 +825,11 @@ class _Answer extends StatelessWidget {
             ),
           ),
         ),
-        if (app.user?.role == 'farmer' && r.crop.isNotEmpty && marketCrops.contains(r.crop)) ...[
+        if (app.user?.role == 'farmer' &&
+            r.crop.isNotEmpty &&
+            marketCrops.contains(r.crop)) ...[
           const SizedBox(height: 12),
           FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary, foregroundColor: theme.colorScheme.onSecondary),
             onPressed: () => app.sellLot({
               'crop': r.crop,
               'weight_kg': r.qty,
@@ -683,7 +839,9 @@ class _Answer extends StatelessWidget {
               'certificate_id': ?r.qualityCert?['edge_certificate_id'],
             }),
             icon: const Icon(Icons.storefront_rounded),
-            label: Text(t('সরাসরি ক্রেতাদের কাছে বেচুন', 'Sell directly to buyers')),
+            label: Text(
+              t('সরাসরি ক্রেতাদের কাছে বেচুন', 'Sell directly to buyers'),
+            ),
           ),
         ],
         const SizedBox(height: 12),
@@ -700,8 +858,10 @@ String _englishSummary(VoiceResult r) {
   final syn = r.syndicate;
   final credit = r.credit;
   return [
-    if (cert != null) 'Your ${r.qty.toStringAsFixed(0)} kilograms of ${r.crop} are certified ${cert['grade']}.',
-    if (r.saleBlocked) 'The middleman offer of ${r.offer} taka per kilo is below the production cost, so that sale is blocked.',
+    if (cert != null)
+      'Your ${r.qty.toStringAsFixed(0)} kilograms of ${r.crop} are certified ${cert['grade']}.',
+    if (r.saleBlocked)
+      'The middleman offer of ${r.offer} taka per kilo is below the production cost, so that sale is blocked.',
     if (syn != null)
       'A pooled five-ton truck to ${syn['best_hub_name']} pays ${numOf(syn['b2b_net_tk_per_kg']).toStringAsFixed(2)} taka per kilo.',
     if (r.floodAlert)
@@ -719,7 +879,11 @@ class _ListenButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
     valueListenable: voice.speaking,
-    builder: (context, speaking, _) => FilledButton.tonalIcon(
+    builder: (context, speaking, _) => FilledButton.icon(
+      style: FilledButton.styleFrom(
+        backgroundColor: Brand.voice,
+        foregroundColor: Brand.ink,
+      ),
       onPressed: () => onRead(text),
       icon: Icon(speaking ? Icons.stop_rounded : Icons.volume_up_rounded),
       label: Text(speaking ? t('থামান', 'Stop') : t('শুনুন', 'Listen')),
@@ -743,7 +907,10 @@ class _Rise extends StatelessWidget {
       curve: Interval(delay / (520 + delay), 1, curve: Motion.expo),
       builder: (_, v, child) => Opacity(
         opacity: v,
-        child: Transform.translate(offset: Offset(0, 18 * (1 - v)), child: child),
+        child: Transform.translate(
+          offset: Offset(0, 18 * (1 - v)),
+          child: child,
+        ),
       ),
       child: child,
     );
@@ -777,39 +944,49 @@ class _DecisionCard extends StatelessWidget {
     return AppCard(
       tone: tone,
       strong: recommended,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: fg),
+              Icon(icon, color: fg, size: 26),
               const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleSmall),
-                    if (recommended) ...[
-                      const SizedBox(height: 4),
-                      Pill(t('পরামর্শ', 'Recommended'), tone: Tone.green, icon: Icons.thumb_up_alt_rounded),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                value,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: fg,
-                  fontFeatures: tabular,
-                  decoration: struck ? TextDecoration.lineThrough : null,
-                  decorationThickness: 2.5,
-                  decorationColor: fg,
-                ),
-              ),
+              Expanded(child: Text(title, style: theme.textTheme.titleSmall)),
             ],
           ),
+          if (recommended || struck) ...[
+            const SizedBox(height: 8),
+            if (recommended)
+              Pill(
+                t('পরামর্শ', 'Recommended'),
+                tone: Tone.green,
+                icon: Icons.thumb_up_alt_rounded,
+              ),
+            if (struck)
+              Pill(
+                t('আটকানো', 'Blocked'),
+                tone: Tone.rose,
+                icon: Icons.block_rounded,
+              ),
+          ],
+          const SizedBox(height: 10),
+          if (struck)
+            Text(
+              value,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+                color: fg,
+                fontFeatures: tabular,
+                decoration: TextDecoration.lineThrough,
+                decorationThickness: 2.5,
+                decorationColor: fg,
+              ),
+            )
+          else
+            AmountText(value, color: fg),
           const SizedBox(height: 8),
           Text(detail, style: theme.textTheme.bodyMedium),
           if (footer != null) ...[const SizedBox(height: 10), footer!],
@@ -864,7 +1041,6 @@ class _TruckCardState extends State<_TruckCard> {
     final syn = r.syndicate!;
     final pool = r.pool;
     final theme = Theme.of(context);
-    const onGreen = Colors.white;
     final capacity = numOf(_pool?['capacity_kg'] ?? pool?['capacity_kg']);
     final after = numOf(_pool?['loaded_kg'] ?? pool?['after_join_kg']);
     final dispatched = (_pool?['status'] ?? '') == 'DISPATCHED';
@@ -872,7 +1048,13 @@ class _TruckCardState extends State<_TruckCard> {
       decoration: BoxDecoration(
         color: Brand.green,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Brand.green.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10))],
+        boxShadow: [
+          BoxShadow(
+            color: Brand.green.withValues(alpha: 0.28),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -880,11 +1062,20 @@ class _TruckCardState extends State<_TruckCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.local_shipping_rounded, color: Color(0xFFD1FAE5), size: 20),
+              const Icon(
+                Icons.local_shipping_rounded,
+                color: Color(0xFFD1FAE5),
+                size: 20,
+              ),
               const SizedBox(width: 6),
               Text(
-                t('পরামর্শ · ৫ টনের যৌথ ট্রাক', 'Recommended · 5-ton pooled truck'),
-                style: theme.textTheme.labelLarge?.copyWith(color: const Color(0xFFD1FAE5)),
+                t(
+                  'পরামর্শ · ৫ টনের যৌথ ট্রাক',
+                  'Recommended · 5-ton pooled truck',
+                ),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: const Color(0xFFD1FAE5),
+                ),
               ),
             ],
           ),
@@ -892,7 +1083,11 @@ class _TruckCardState extends State<_TruckCard> {
           CountUp(
             value: r.pooledValue!,
             format: (v) => money(v),
-            style: theme.textTheme.displaySmall?.copyWith(color: onGreen, fontWeight: FontWeight.w700),
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: Brand.voice,
+              fontWeight: FontWeight.w800,
+              fontSize: 40,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -900,7 +1095,9 @@ class _TruckCardState extends State<_TruckCard> {
               '${perKg(numOf(syn['b2b_net_tk_per_kg']))} নিট ${syn['best_hub_name']}-এ, ভাড়া ${perKg(numOf(syn['pooled_transport_tk_per_kg']))} বাদে',
               '${perKg(numOf(syn['b2b_net_tk_per_kg']))} net to ${syn['best_hub_name']}, after ${perKg(numOf(syn['pooled_transport_tk_per_kg']))} freight',
             ),
-            style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFECFDF5)),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: const Color(0xFFECFDF5),
+            ),
           ),
           if (pool != null && capacity > 0) ...[
             const SizedBox(height: 14),
@@ -912,12 +1109,17 @@ class _TruckCardState extends State<_TruckCard> {
                       '${digits(numOf(pool['neighbor_farmers']).toInt())} জন প্রতিবেশী তুলছেন',
                       '${numOf(pool['neighbor_farmers']).toInt()} neighbours loading',
                     ),
-                    style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFFD1FAE5)),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFFD1FAE5),
+                    ),
                   ),
                 ),
                 Text(
                   '${kg(after)} / ${kg(capacity)}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFFD1FAE5), fontFeatures: tabular),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFFD1FAE5),
+                    fontFeatures: tabular,
+                  ),
                 ),
               ],
             ),
@@ -928,29 +1130,60 @@ class _TruckCardState extends State<_TruckCard> {
                 tween: Tween(begin: 0, end: (after / capacity).clamp(0, 1)),
                 duration: Motion.of(context, Motion.long),
                 curve: Motion.expo,
-                builder: (_, v, _) =>
-                    LinearProgressIndicator(value: v, minHeight: 10, color: Brand.mustard, backgroundColor: const Color(0xFF064E3B)),
+                builder: (_, v, _) => LinearProgressIndicator(
+                  value: v,
+                  minHeight: 10,
+                  color: Brand.mustard,
+                  backgroundColor: const Color(0xFF064E3B),
+                ),
               ),
             ),
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Brand.greenDeep),
-                onPressed: _busy || _joined != null || r.farmerId.isEmpty ? null : _join,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Brand.greenDeep,
+                ),
+                onPressed: _busy || _joined != null || r.farmerId.isEmpty
+                    ? null
+                    : _join,
                 icon: _busy
-                    ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(_joined != null ? Icons.check_circle_rounded : Icons.add_task_rounded),
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _joined != null
+                            ? Icons.check_circle_rounded
+                            : Icons.add_task_rounded,
+                      ),
                 label: Text(
                   _joined != null
-                      ? (dispatched ? t('ট্রাক রওনা হচ্ছে', 'Truck dispatched') : t('ট্রাকে যুক্ত হয়েছে', 'Joined the truck'))
+                      ? (dispatched
+                            ? t('ট্রাক রওনা হচ্ছে', 'Truck dispatched')
+                            : t('ট্রাকে যুক্ত হয়েছে', 'Joined the truck'))
                       : t('হ্যাঁ, ট্রাকে যুক্ত করুন', 'Yes, join this truck'),
                 ),
               ),
             ),
             if (_joined != null) ...[
-              const SizedBox(height: 8),
-              Text(_joined!, style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFFECFDF5))),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const ConfirmTick(size: 40),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _joined!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFFECFDF5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ],
@@ -976,7 +1209,10 @@ class _HowDecided extends StatelessWidget {
         child: ExpansionTile(
           shape: const Border(),
           leading: const Icon(Icons.account_tree_rounded),
-          title: Text(t('এজেন্টরা কীভাবে ঠিক করল', 'How the agents decided'), style: theme.textTheme.titleSmall),
+          title: Text(
+            t('এজেন্টরা কীভাবে ঠিক করল', 'How the agents decided'),
+            style: theme.textTheme.titleSmall,
+          ),
           subtitle: Text(
             t(
               '${digits(path.length)} ধাপ · ${digits((result.latencyMs / 1000).toStringAsFixed(1))} সেকেন্ড',
@@ -991,17 +1227,37 @@ class _HowDecided extends StatelessWidget {
                 children: [
                   Column(
                     children: [
-                      Container(width: 2, height: 8, color: i == 0 ? Colors.transparent : theme.colorScheme.outlineVariant),
+                      Container(
+                        width: 2,
+                        height: 8,
+                        color: i == 0
+                            ? Colors.transparent
+                            : theme.colorScheme.outlineVariant,
+                      ),
                       Container(
                         width: 10,
                         height: 10,
-                        decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                      Container(width: 2, height: 8, color: i == path.length - 1 ? Colors.transparent : theme.colorScheme.outlineVariant),
+                      Container(
+                        width: 2,
+                        height: 8,
+                        color: i == path.length - 1
+                            ? Colors.transparent
+                            : theme.colorScheme.outlineVariant,
+                      ),
                     ],
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(_humanize(path[i]), style: theme.textTheme.bodyMedium)),
+                  Expanded(
+                    child: Text(
+                      _humanize(path[i]),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
                 ],
               ),
           ],
@@ -1066,7 +1322,14 @@ class _FeedbackState extends State<_Feedback> {
           children: [
             Icon(Icons.favorite_rounded, color: Tone.green.fg(context)),
             const SizedBox(width: 10),
-            Expanded(child: Text(t('ধন্যবাদ! আপনার মতামত আমাদের উন্নত করে।', 'Thank you, your answer helps us improve.'))),
+            Expanded(
+              child: Text(
+                t(
+                  'ধন্যবাদ! আপনার মতামত আমাদের উন্নত করে।',
+                  'Thank you, your answer helps us improve.',
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -1075,13 +1338,27 @@ class _FeedbackState extends State<_Feedback> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t('পরামর্শটি কি কাজে লাগল?', 'Was this advice useful?'), style: theme.textTheme.titleSmall),
+          Text(
+            t('পরামর্শটি কি কাজে লাগল?', 'Was this advice useful?'),
+            style: theme.textTheme.titleSmall,
+          ),
           const SizedBox(height: 10),
           SegmentedButton<bool>(
+            style: const ButtonStyle(
+              minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+            ),
             emptySelectionAllowed: true,
             segments: [
-              ButtonSegment(value: true, icon: const Icon(Icons.thumb_up_alt_rounded), label: Text(t('হ্যাঁ', 'Yes'))),
-              ButtonSegment(value: false, icon: const Icon(Icons.thumb_down_alt_rounded), label: Text(t('না', 'No'))),
+              ButtonSegment(
+                value: true,
+                icon: const Icon(Icons.thumb_up_alt_rounded),
+                label: Text(t('হ্যাঁ', 'Yes')),
+              ),
+              ButtonSegment(
+                value: false,
+                icon: const Icon(Icons.thumb_down_alt_rounded),
+                label: Text(t('না', 'No')),
+              ),
             ],
             selected: {?_useful},
             onSelectionChanged: (s) => setState(() => _useful = s.firstOrNull),
@@ -1099,11 +1376,19 @@ class _FeedbackState extends State<_Feedback> {
                           controller: _comment,
                           maxLength: 500,
                           maxLines: 2,
-                          decoration: InputDecoration(hintText: t('কিছু বলতে চাইলে লিখুন (ঐচ্ছিক)', 'Anything to add? (optional)')),
+                          decoration: InputDecoration(
+                            hintText: t(
+                              'কিছু বলতে চাইলে লিখুন (ঐচ্ছিক)',
+                              'Anything to add? (optional)',
+                            ),
+                          ),
                         ),
                         SizedBox(
                           width: double.infinity,
-                          child: FilledButton(onPressed: _sending ? null : _send, child: Text(t('পাঠান', 'Send'))),
+                          child: FilledButton(
+                            onPressed: _sending ? null : _send,
+                            child: Text(t('পাঠান', 'Send')),
+                          ),
                         ),
                       ],
                     ),

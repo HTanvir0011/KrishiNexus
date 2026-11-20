@@ -8,10 +8,17 @@ import '../core/theme.dart';
 
 enum OrbState { idle, listening, thinking }
 
-/// The voice button: a calm green orb at rest; while listening it turns red, swells with the voice and sends rings
-/// outward; while the agents work an amber arc runs around it.
+/// The voice button: a mustard orb at rest (mustard is the voice colour); while listening it turns red, swells with the
+/// voice and sends rings outward; while the agents work a green arc runs around it.
 class MicOrb extends StatefulWidget {
-  const MicOrb({super.key, required this.state, required this.level, required this.onTap, this.size = 132, required this.label});
+  const MicOrb({
+    super.key,
+    required this.state,
+    required this.level,
+    required this.onTap,
+    this.size = 148,
+    required this.label,
+  });
   final OrbState state;
   final ValueListenable<double> level;
   final VoidCallback? onTap;
@@ -23,7 +30,10 @@ class MicOrb extends StatefulWidget {
 }
 
 class _MicOrbState extends State<MicOrb> with SingleTickerProviderStateMixin {
-  late final _clock = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+  late final _clock = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  );
   double _smoothed = 0;
 
   @override
@@ -55,7 +65,8 @@ class _MicOrbState extends State<MicOrb> with SingleTickerProviderStateMixin {
     final scheme = Theme.of(context).colorScheme;
     final listening = widget.state == OrbState.listening;
     final thinking = widget.state == OrbState.thinking;
-    final core = listening ? Tone.rose.fg(context) : scheme.primary;
+    final core = listening ? Tone.rose.fg(context) : Brand.voice;
+    final iconColor = listening ? Colors.white : Brand.ink;
     return Semantics(
       button: true,
       label: widget.label,
@@ -73,7 +84,9 @@ class _MicOrbState extends State<MicOrb> with SingleTickerProviderStateMixin {
             builder: (context, _) {
               // Ease the raw level so the orb breathes with the voice instead of flickering.
               _smoothed += (widget.level.value - _smoothed) * 0.35;
-              final breathe = listening && widget.level.value == 0 ? 0.08 * (0.5 + 0.5 * math.sin(_clock.value * math.pi * 4)) : 0.0;
+              final breathe = listening && widget.level.value == 0
+                  ? 0.08 * (0.5 + 0.5 * math.sin(_clock.value * math.pi * 4))
+                  : 0.0;
               final swell = listening ? 1 + 0.16 * _smoothed + breathe : 1.0;
               return CustomPaint(
                 painter: _OrbPainter(
@@ -82,8 +95,8 @@ class _MicOrbState extends State<MicOrb> with SingleTickerProviderStateMixin {
                   thinking: thinking,
                   level: _smoothed,
                   core: core,
-                  ring: listening ? Tone.rose.fg(context) : scheme.primary,
-                  arc: Tone.amber.fg(context),
+                  ring: core,
+                  arc: scheme.primary,
                   reduced: Motion.reduced(context),
                 ),
                 child: Center(
@@ -101,16 +114,24 @@ class _MicOrbState extends State<MicOrb> with SingleTickerProviderStateMixin {
                           colors: [Color.lerp(core, Colors.white, 0.22)!, core],
                         ),
                         boxShadow: [
-                          BoxShadow(color: core.withValues(alpha: 0.32), blurRadius: 28, offset: const Offset(0, 12)),
+                          BoxShadow(
+                            color: core.withValues(alpha: 0.32),
+                            blurRadius: 28,
+                            offset: const Offset(0, 12),
+                          ),
                         ],
                       ),
                       child: AnimatedSwitcher(
                         duration: Motion.of(context, Motion.short),
                         child: Icon(
-                          thinking ? Icons.auto_awesome_rounded : listening ? Icons.stop_rounded : Icons.mic_rounded,
+                          thinking
+                              ? Icons.auto_awesome_rounded
+                              : listening
+                              ? Icons.stop_rounded
+                              : Icons.mic_rounded,
                           key: ValueKey(widget.state),
                           size: widget.size * 0.4,
-                          color: Colors.white,
+                          color: iconColor,
                         ),
                       ),
                     ),
@@ -165,29 +186,42 @@ class _OrbPainter extends CustomPainter {
         );
       }
     } else if (!thinking) {
-      canvas.drawCircle(c, r * 1.18, Paint()..color = ring.withValues(alpha: 0.10));
+      canvas.drawCircle(
+        c,
+        r * 1.18,
+        Paint()..color = ring.withValues(alpha: 0.10),
+      );
     }
     if (thinking) {
       final rect = Rect.fromCircle(center: c, radius: r * 1.2);
-      canvas.drawCircle(c, r * 1.2, Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..color = arc.withValues(alpha: 0.16));
+      canvas.drawCircle(
+        c,
+        r * 1.2,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..color = arc.withValues(alpha: 0.16),
+      );
       final start = reduced ? -math.pi / 2 : t * math.pi * 2 * 1.5;
       canvas.drawArc(
-          rect,
-          start,
-          math.pi * 0.75,
-          false,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 5
-            ..strokeCap = StrokeCap.round
-            ..color = arc);
+        rect,
+        start,
+        math.pi * 0.75,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..strokeCap = StrokeCap.round
+          ..color = arc,
+      );
     }
   }
 
   @override
   bool shouldRepaint(_OrbPainter old) =>
-      old.t != t || old.level != level || old.listening != listening || old.thinking != thinking || old.core != core;
+      old.t != t ||
+      old.level != level ||
+      old.listening != listening ||
+      old.thinking != thinking ||
+      old.core != core;
 }

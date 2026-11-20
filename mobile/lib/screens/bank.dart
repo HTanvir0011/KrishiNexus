@@ -6,9 +6,8 @@ import '../core/models.dart';
 import '../core/state.dart';
 import '../core/theme.dart';
 import '../widgets/common.dart';
+import 'driver.dart' show BandLiveDot;
 import 'market.dart';
-
-const _resolutions = ['RELEASE_TO_FARMER', 'REFUND_TO_BUYER', 'KEEP_HOLDING', 'NO_CHANGE'];
 
 /// Bank: problems farmers, buyers and drivers reported on sales; release, refund or keep holding the payment.
 class DisputesScreen extends StatefulWidget {
@@ -18,16 +17,68 @@ class DisputesScreen extends StatefulWidget {
   State<DisputesScreen> createState() => _DisputesScreenState();
 }
 
-class _DisputesScreenState extends State<DisputesScreen> with Polling<DisputesScreen, List<Dispute>> {
+class _DisputesScreenState extends State<DisputesScreen>
+    with Polling<DisputesScreen, List<Dispute>> {
   @override
-  Future<List<Dispute>> load() async => mapsOf(await Api.get('/market/disputes')).map(Dispute.new).toList();
+  Future<List<Dispute>> load() async =>
+      mapsOf(await Api.get('/market/disputes')).map(Dispute.new).toList();
 
   @override
-  bool relevant(MarketEvent e) => e.lotId == null || e.kind.startsWith('dispute');
+  bool relevant(MarketEvent e) =>
+      e.lotId == null || e.kind.startsWith('dispute');
 
-  Future<void> _resolve(Dispute d) async {
-    final done = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, builder: (_) => _ResolveSheet(dispute: d));
+  Future<void> _resolve(Dispute d, String resolution) async {
+    final done = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _DecideSheet(dispute: d, resolution: resolution),
+    );
     if (done == true) refresh(quiet: true);
+  }
+
+  /// The three outcomes as labelled buttons (refund in rose, always confirmed in the sheet) and a quiet "no change".
+  Widget _outcomes(Dispute d) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${t('বিক্রি', 'Sale')} ${d.lotId}',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () => _resolve(d, 'RELEASE_TO_FARMER'),
+            icon: const Icon(Icons.check_circle_rounded),
+            label: Text(resolutionName('RELEASE_TO_FARMER')),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
+            ),
+            onPressed: () => _resolve(d, 'REFUND_TO_BUYER'),
+            icon: const Icon(Icons.undo_rounded),
+            label: Text(resolutionName('REFUND_TO_BUYER')),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _resolve(d, 'KEEP_HOLDING'),
+            icon: const Icon(Icons.lock_clock_rounded),
+            label: Text(resolutionName('KEEP_HOLDING')),
+          ),
+          TextButton(
+            onPressed: () => _resolve(d, 'NO_CHANGE'),
+            child: Text(resolutionName('NO_CHANGE')),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -37,50 +88,93 @@ class _DisputesScreenState extends State<DisputesScreen> with Polling<DisputesSc
     final closed = all.where((d) => d.status != 'OPEN').toList();
     final canResolve = app.user?.role == 'bank' || app.user?.role == 'admin';
     return Scaffold(
-      appBar: AppBar(title: Text(t('অভিযোগ', 'Disputes')), actions: const [LiveDot()]),
-      body: RefreshIndicator(
-        onRefresh: refresh,
-        child: loading && data == null
-            ? const SkeletonList()
-            : error != null && data == null
-                ? ListView(children: [ErrorState(error: error!, onRetry: refresh)])
-                : ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
-                    SectionTitle(t('খোলা (${digits(open.length)})', 'Open (${open.length})'), top: 8),
-                    if (open.isEmpty)
-                      AppCard(child: Text(t('কোনো খোলা অভিযোগ নেই।', 'No open disputes.')))
-                    else
-                      for (final d in open) ...[
-                        DisputeTile(
-                          dispute: d,
-                          trailing: canResolve
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: FilledButton.tonalIcon(onPressed: () => _resolve(d), icon: const Icon(Icons.gavel_rounded), label: Text(t('মীমাংসা করুন · ${d.lotId}', 'Resolve · ${d.lotId}'))),
-                                )
-                              : null,
+      body: Column(
+        children: [
+          HeaderBand(
+            title: t('অভিযোগ', 'Disputes'),
+            trailing: const BandLiveDot(),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: AmountText(
+                    digits(open.length),
+                    color: Colors.white,
+                    caption: t('খোলা অভিযোগ', 'Open disputes'),
+                  ),
+                ),
+                AmountText(
+                  digits(closed.length),
+                  size: 22,
+                  color: Colors.white,
+                  caption: t('মীমাংসিত', 'Resolved'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: refresh,
+              child: loading && data == null
+                  ? const SkeletonList()
+                  : error != null && data == null
+                  ? ListView(
+                      children: [ErrorState(error: error!, onRetry: refresh)],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      children: [
+                        SectionTitle(
+                          t(
+                            'খোলা (${digits(open.length)})',
+                            'Open (${open.length})',
+                          ),
+                          top: 16,
                         ),
-                        const SizedBox(height: 10),
+                        if (open.isEmpty)
+                          EmptyState(
+                            icon: Icons.verified_rounded,
+                            title: t(
+                              'কোনো খোলা অভিযোগ নেই',
+                              'No open disputes',
+                            ),
+                          )
+                        else
+                          for (final d in open) ...[
+                            DisputeTile(
+                              dispute: d,
+                              trailing: canResolve ? _outcomes(d) : null,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        if (closed.isNotEmpty) ...[
+                          SectionTitle(t('মীমাংসিত', 'Resolved')),
+                          for (final d in closed) ...[
+                            DisputeTile(dispute: d),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
                       ],
-                    if (closed.isNotEmpty) ...[
-                      SectionTitle(t('মীমাংসিত', 'Resolved')),
-                      for (final d in closed) ...[DisputeTile(dispute: d), const SizedBox(height: 10)],
-                    ],
-                  ]),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ResolveSheet extends StatefulWidget {
-  const _ResolveSheet({required this.dispute});
+/// Confirms one outcome: names it, takes the reason, and sends it. A refund shows in rose.
+class _DecideSheet extends StatefulWidget {
+  const _DecideSheet({required this.dispute, required this.resolution});
   final Dispute dispute;
+  final String resolution;
 
   @override
-  State<_ResolveSheet> createState() => _ResolveSheetState();
+  State<_DecideSheet> createState() => _DecideSheetState();
 }
 
-class _ResolveSheetState extends State<_ResolveSheet> {
-  String _resolution = 'RELEASE_TO_FARMER';
+class _DecideSheetState extends State<_DecideSheet> {
   final _note = TextEditingController();
   bool _busy = false;
 
@@ -92,33 +186,90 @@ class _ResolveSheetState extends State<_ResolveSheet> {
 
   Future<void> _send() async {
     setState(() => _busy = true);
-    final res = await guarded(context, () => Api.post('/market/disputes/${widget.dispute.id}/resolve', {'resolution': _resolution, 'note': _note.text.trim()}),
-        done: t('মীমাংসা হয়েছে', 'Resolved'));
+    final res = await guarded(
+      context,
+      () => Api.post('/market/disputes/${widget.dispute.id}/resolve', {
+        'resolution': widget.resolution,
+        'note': _note.text.trim(),
+      }),
+      done: t('মীমাংসা হয়েছে', 'Resolved'),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (res != null) Navigator.pop(context, true);
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('${disputeKind(widget.dispute.kind)} · ${widget.dispute.lotId}', style: Theme.of(context).textTheme.titleLarge),
-          if (widget.dispute.note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(widget.dispute.note)),
-          const SizedBox(height: 14),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final r in _resolutions) ChoiceChip(label: Text(resolutionName(r)), selected: _resolution == r, onSelected: (_) => setState(() => _resolution = r)),
-          ]),
-          const SizedBox(height: 8),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final refund = widget.resolution == 'REFUND_TO_BUYER';
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Text(
-            t('ফেরত শুধু টাকা আটকে থাকা অবস্থায় হয়; পৌঁছায়নি এমন বিক্রি বাতিল হয়।', 'A refund works only while the payment is held; it cancels an undelivered sale.'),
-            style: Theme.of(context).textTheme.bodySmall,
+            resolutionName(widget.resolution),
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: refund ? theme.colorScheme.error : null,
+            ),
           ),
-          const SizedBox(height: 12),
-          TextField(controller: _note, maxLength: 300, maxLines: 2, decoration: InputDecoration(hintText: t('সিদ্ধান্তের কারণ', 'Why this decision'))),
-          FilledButton(onPressed: _busy ? null : _send, child: Text(t('সিদ্ধান্ত দিন', 'Decide'))),
-        ]),
-      );
+          const SizedBox(height: 4),
+          Text(
+            '${disputeKind(widget.dispute.kind)} · ${widget.dispute.lotId}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (widget.dispute.note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(widget.dispute.note),
+            ),
+          if (refund) ...[
+            const SizedBox(height: 8),
+            Text(
+              t(
+                'ফেরত শুধু টাকা আটকে থাকা অবস্থায় হয়; পৌঁছায়নি এমন বিক্রি বাতিল হয়।',
+                'A refund works only while the payment is held; it cancels an undelivered sale.',
+              ),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+          const SizedBox(height: 14),
+          TextField(
+            controller: _note,
+            maxLength: 300,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: t('সিদ্ধান্তের কারণ', 'Why this decision'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            style: refund
+                ? FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: theme.colorScheme.onError,
+                  )
+                : null,
+            onPressed: _busy ? null : _send,
+            child: Text(t('নিশ্চিত করুন', 'Confirm')),
+          ),
+          TextButton(
+            onPressed: _busy ? null : () => Navigator.pop(context, false),
+            child: Text(t('ফিরে যান', 'Go back')),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Bank: every payment held or settled (direct sales and one-tap truckload locks, both simulated).
@@ -129,9 +280,11 @@ class LedgerScreen extends StatefulWidget {
   State<LedgerScreen> createState() => _LedgerScreenState();
 }
 
-class _LedgerScreenState extends State<LedgerScreen> with Polling<LedgerScreen, List<Map<String, dynamic>>> {
+class _LedgerScreenState extends State<LedgerScreen>
+    with Polling<LedgerScreen, List<Map<String, dynamic>>> {
   @override
-  Future<List<Map<String, dynamic>>> load() async => mapsOf(await Api.get('/market/ledger'));
+  Future<List<Map<String, dynamic>>> load() async =>
+      mapsOf(await Api.get('/market/ledger'));
 
   @override
   bool relevant(MarketEvent e) => e.kind != 'location';
@@ -140,56 +293,181 @@ class _LedgerScreenState extends State<LedgerScreen> with Polling<LedgerScreen, 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final rows = data ?? const <Map<String, dynamic>>[];
-    double sum(String status) => rows.where((r) => r['status'] == status).fold(0.0, (a, r) => a + numOf(r['amount_tk']));
+    double sum(String status) => rows
+        .where((r) => r['status'] == status)
+        .fold(0.0, (a, r) => a + numOf(r['amount_tk']));
     return Scaffold(
-      appBar: AppBar(title: Text(t('লেনদেন', 'Ledger')), actions: const [LiveDot()]),
-      body: RefreshIndicator(
-        onRefresh: refresh,
-        child: loading && data == null
-            ? const SkeletonList()
-            : error != null && data == null
-                ? ListView(children: [ErrorState(error: error!, onRetry: refresh)])
-                : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
-                    Row(children: [
-                      for (final (status, tone) in [('HELD', Tone.violet), ('RELEASED', Tone.green), ('REFUNDED', Tone.rose)]) ...[
-                        Expanded(
-                          child: AppCard(
-                            tone: tone,
-                            padding: const EdgeInsets.all(12),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(escrowStatus(status), maxLines: 2, style: theme.textTheme.labelMedium),
-                              const SizedBox(height: 4),
-                              CountUp(value: sum(status), format: (v) => money(v), style: theme.textTheme.titleMedium?.copyWith(color: tone.fg(context))),
-                            ]),
-                          ),
-                        ),
-                        if (status != 'REFUNDED') const SizedBox(width: 8),
-                      ],
-                    ]),
-                    SectionTitle(t('সব লেনদেন (${digits(rows.length)})', 'All payments (${rows.length})')),
-                    for (final r in rows) ...[
-                      AppCard(
-                        tone: r['at_risk'] == true || numOf(r['open_disputes']) > 0 ? Tone.amber : null,
-                        padding: const EdgeInsets.all(14),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Row(children: [
-                            Expanded(child: Text('${r['kind'] == 'Truckload lock' ? t('ট্রাকলোড লক', 'Truckload lock') : t('সরাসরি বিক্রি', 'Direct sale')} · ${cropName('${r['crop']}')} · ${kg(numOf(r['weight_kg']))}', style: theme.textTheme.titleSmall)),
-                            Text(money(numOf(r['amount_tk'])), style: theme.textTheme.titleSmall?.copyWith(fontFeatures: tabular)),
-                          ]),
-                          const SizedBox(height: 4),
-                          Text('${r['farmer']} → ${r['buyer']} · ${r['wallet']} ${r['wallet_masked']}', style: theme.textTheme.bodySmall),
-                          const SizedBox(height: 8),
-                          Wrap(spacing: 6, runSpacing: 6, children: [
-                            Pill(escrowStatus('${r['status']}'), tone: switch (r['status']) { 'RELEASED' => Tone.green, 'REFUNDED' => Tone.rose, _ => Tone.violet }),
-                            if (numOf(r['open_disputes']) > 0) Pill(t('${digits(numOf(r['open_disputes']).toInt())} অভিযোগ', '${numOf(r['open_disputes']).toInt()} open dispute(s)'), tone: Tone.amber),
-                            if (r['at_risk'] == true) Pill(t('পচনের ঝুঁকি', 'Spoilage risk'), tone: Tone.rose),
-                            if (r['below_floor'] == true) Pill(t('খরচের নিচে', 'Below cost'), tone: Tone.rose),
-                          ]),
-                        ]),
+      body: Column(
+        children: [
+          HeaderBand(
+            title: t('লেনদেন', 'Ledger'),
+            trailing: const BandLiveDot(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AmountText(
+                  money(sum('HELD')),
+                  color: Colors.white,
+                  caption: escrowStatus('HELD'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AmountText(
+                        money(sum('RELEASED')),
+                        size: 22,
+                        color: Colors.white,
+                        caption: escrowStatus('RELEASED'),
                       ),
-                      const SizedBox(height: 10),
-                    ],
-                  ]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AmountText(
+                        money(sum('REFUNDED')),
+                        size: 22,
+                        color: Colors.white,
+                        caption: escrowStatus('REFUNDED'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: refresh,
+              child: loading && data == null
+                  ? const SkeletonList()
+                  : error != null && data == null
+                  ? ListView(
+                      children: [ErrorState(error: error!, onRetry: refresh)],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      children: [
+                        SectionTitle(
+                          t(
+                            'সব লেনদেন (${digits(rows.length)})',
+                            'All payments (${rows.length})',
+                          ),
+                          top: 16,
+                        ),
+                        if (rows.isEmpty)
+                          EmptyState(
+                            icon: Icons.receipt_long_rounded,
+                            title: t('এখনো কোনো লেনদেন নেই', 'No payments yet'),
+                          ),
+                        for (final r in rows) ...[
+                          _LedgerRow(row: r, theme: theme),
+                          const SizedBox(height: 12),
+                        ],
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One payment as a receipt row: status icon in its colour, what and who, the amount, and the status in words.
+class _LedgerRow extends StatelessWidget {
+  const _LedgerRow({required this.row, required this.theme});
+  final Map<String, dynamic> row;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = row;
+    final status = '${r['status']}';
+    final (tone, icon) = switch (status) {
+      'RELEASED' => (Tone.green, Icons.check_circle_rounded),
+      'REFUNDED' => (Tone.rose, Icons.undo_rounded),
+      _ => (Tone.violet, Icons.lock_clock_rounded),
+    };
+    final disputes = numOf(r['open_disputes']).toInt();
+    return AppCard(
+      tone: r['at_risk'] == true || disputes > 0 ? Tone.amber : null,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: tone.bg(context),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: tone.fg(context), size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${cropName('${r['crop']}')} · ${kg(numOf(r['weight_kg']))}',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    Text(
+                      r['kind'] == 'Truckload lock'
+                          ? t('ট্রাকলোড লক', 'Truckload lock')
+                          : t('সরাসরি বিক্রি', 'Direct sale'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              AmountText(
+                money(numOf(r['amount_tk'])),
+                size: 22,
+                color: tone.fg(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${r['farmer']} → ${r['buyer']} · ${r['wallet']} ${r['wallet_masked']}',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              Pill(escrowStatus(status), tone: tone, icon: icon),
+              if (disputes > 0)
+                Pill(
+                  t('${digits(disputes)} অভিযোগ', '$disputes open dispute(s)'),
+                  tone: Tone.amber,
+                  icon: Icons.report_problem_rounded,
+                ),
+              if (r['at_risk'] == true)
+                Pill(
+                  t('পচনের ঝুঁকি', 'Spoilage risk'),
+                  tone: Tone.rose,
+                  icon: Icons.warning_rounded,
+                ),
+              if (r['below_floor'] == true)
+                Pill(
+                  t('খরচের নিচে', 'Below cost'),
+                  tone: Tone.rose,
+                  icon: Icons.trending_down_rounded,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
