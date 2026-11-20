@@ -1,14 +1,22 @@
 ## What
 
-<!-- One or two sentences: what changes and why. Link the issue if there is one. -->
+<!-- What this PR changes. -->
 
-## How it was tested
+## Why
+
+<!-- The problem it solves, or the issue it closes. -->
+
+## How I tested it
 
 - [ ] Backend self-checks (`python -m tests.<name>` in `backend/`)
 - [ ] `deploy/cloudrun/tests/check_serve.py`
-- [ ] Frontend `npm run build`
+- [ ] Frontend `npm run typecheck` and `npm run build`
 - [ ] Mobile `flutter analyze` and `flutter test`
-- [ ] Checked in the browser or on a phone (say which screens)
+- [ ] Checked by hand in the browser or on a phone (say which screens)
+
+## Screenshots
+
+<!-- Required for UI changes (web or mobile). Delete this section otherwise. -->
 
 ## Checklist
 

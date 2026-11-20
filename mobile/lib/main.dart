@@ -26,6 +26,13 @@ class KrishiNexusApp extends StatelessWidget {
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           themeMode: app.themeMode,
+          // Default status-bar icons for the canvas; HeaderBand overrides them while the green band is on screen.
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: Theme.of(context).brightness == Brightness.dark
+                ? SystemUiOverlayStyle.light
+                : SystemUiOverlayStyle.dark,
+            child: child!,
+          ),
           locale: Locale(app.lang),
           supportedLocales: const [Locale('bn'), Locale('en')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
