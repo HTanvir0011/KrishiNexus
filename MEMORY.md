@@ -1957,11 +1957,12 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
 - Dockerfile source stage is COPY . /src; render.yaml dockerContext: . and the Render dashboard's Docker Build Context
   Directory changed from ./deploy/cloudrun to . (Blueprint managed); root .dockerignore keeps the context to
   backend/, frontend/, deploy/.
-- Blocked: Render has no Git Deployment Credentials (Account settings), so the caa9f58 deploy failed at the clone
-  ("could not read Username for 'https://github.com'"); tanvir.health still serves 60bfe67, whose APK links point at
-  the now-private release (404 for visitors). The fix needs the owner: Render > Account settings > Git Deployment
-  Credentials > Add credential > GitHub, with the Render app given access to KrishiNexus, then redeploy. Making the
-  repository public again would also work with the current settings.
+- Resolved 2026-11-20: the owner signed in to Render and GitHub in the built-in browser and authorized Render (GitHub
+  credential HTanvir0011 in Render Account settings). A manual 'Deploy latest commit' of 95d9186 built from Render's
+  own checkout and went live: /download/KrishiNexus.apk 200, application/vnd.android.package-archive, attachment,
+  bytes identical; armv7 200; /, /team/, /guide/, /signup, /health, videos OK. The repo's RENDER_DEPLOY_HOOK secret
+  is not set, so the Deploy to Render workflow skips; Render's own auto-deploy on push is what deploys.
+  Notes-only commits carry [skip render] so they don't restart the demo node.
 - A new APK build must be copied into frontend/public/download/ (and apk_size_mb in site.json) to reach the site.
 - PR #1 by Mohammed-051 (Krishi Wallet redesign of mobile/, plus README refresh and CHANGELOG.md) merged as f722ba9
   after a local merge passed flutter analyze and 13 tests. App bumped to 1.2.0+3 and rebuilt: arm64 22,062,523 B,
