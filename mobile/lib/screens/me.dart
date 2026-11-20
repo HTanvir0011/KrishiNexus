@@ -293,7 +293,7 @@ class MeScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Center(
                     child: Text(
-                      'KrishiNexus 1.1.0',
+                      'KrishiNexus 1.2.0',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

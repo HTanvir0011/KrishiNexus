@@ -2,6 +2,13 @@
 
 Newest first. The live build state and handover log is in [`MEMORY.md`](MEMORY.md). Trained-model results are in [`README.md`](README.md#trained-models) and [`TRAINING_PLAN.md`](TRAINING_PLAN.md).
 
+## Mobile app 1.2.0: Krishi Wallet redesign (20 November 2026)
+
+- The Flutter app is redesigned in a trusted mobile-money style, farmers first and Bangla first (PR #1 by Mohammed Mahmud
+  Parvez): green header bands, bigger type and 48 dp targets, a labelled bottom bar, confirm sheets and receipts for
+  money steps, status as icon + colour + word. Routes, API calls and texts are unchanged. Direction:
+  `mobile/design/DIRECTION.md`. The APKs on https://tanvir.health/download/ are rebuilt from it.
+
 ## Mobile app in Flutter (19 November 2026)
 
 - `mobile/` is an Android (and iOS-ready) app on the same node and accounts: farmers ask in Bangla by voice and hear the

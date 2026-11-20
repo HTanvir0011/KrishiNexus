@@ -1963,3 +1963,6 @@ Files beyond the brief's tree (keep): `mcp_servers/base.py`, `bd_geo.py`, `anoma
   Credentials > Add credential > GitHub, with the Render app given access to KrishiNexus, then redeploy. Making the
   repository public again would also work with the current settings.
 - A new APK build must be copied into frontend/public/download/ (and apk_size_mb in site.json) to reach the site.
+- PR #1 by Mohammed-051 (Krishi Wallet redesign of mobile/, plus README refresh and CHANGELOG.md) merged as f722ba9
+  after a local merge passed flutter analyze and 13 tests. App bumped to 1.2.0+3 and rebuilt: arm64 22,062,523 B,
+  armv7 19,685,419 B in frontend/public/download/. Emulator (x86_64): live demo users, farmer login, preset answer OK.
