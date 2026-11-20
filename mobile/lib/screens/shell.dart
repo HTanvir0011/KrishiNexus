@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/live.dart';
 import '../core/models.dart';
@@ -251,17 +252,36 @@ class _ShellState extends State<Shell> {
           if (!didPop) app.goTab(_tabs.first.id);
         },
         child: Scaffold(
-          body: IndexedStack(
-            index: index,
+          body: Stack(
             children: [
-              for (var i = 0; i < _tabs.length; i++)
-                TickerMode(
-                  enabled: i == index,
-                  child: _FadeThrough(
-                    active: i == index,
-                    child: _built[i] ?? const SizedBox(),
+              IndexedStack(
+                index: index,
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    TickerMode(
+                      enabled: i == index,
+                      child: _FadeThrough(
+                        active: i == index,
+                        child: _built[i] ?? const SizedBox(),
+                      ),
+                    ),
+                ],
+              ),
+              // Band-green strip behind the status bar, so scrolled content never runs under the clock and icons.
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.paddingOf(context).top,
+                child: AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: SystemUiOverlayStyle.light,
+                  child: ColoredBox(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Brand.greenDeep
+                        : Brand.green,
                   ),
                 ),
+              ),
             ],
           ),
           bottomNavigationBar: NavigationBar(
