@@ -20,3 +20,30 @@ Thumbs.db
 
 # Trained model weights (GGUF ~1 GB, LoRA adapter, YOLO .pt): download from the Kaggle runs, never commit
 backend/models/
+
+# Flutter
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins*
+mobile/android/.gradle/
+mobile/android/local.properties
+*.iml
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+npm-debug.log*
+.eslintcache
+
+# Env files (the example stays tracked)
+.env.*
+!.env.example
+!backend/.env.example
+
+# Logs
+*.log
+!training/runs/**/*.log
