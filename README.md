@@ -18,7 +18,7 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 | **Live demo** | https://tanvir.health (open `/login` and pick an account below) |
 | **Android app** | [KrishiNexus.apk](https://tanvir.health/download/KrishiNexus.apk) (v1.2.0, Android 7+, 22 MB) · [32-bit phones](https://tanvir.health/download/KrishiNexus-armv7.apk) |
 | **User guide** | https://tanvir.health/guide/ (English and Bangla) |
-| **Video** | [3-minute demo](https://tanvir.health/video/krishinexus-demo.mp4) |
+| **Videos** | [3-minute demo](https://tanvir.health/video/krishinexus-demo.mp4) · [30-second problem statement](https://tanvir.health/video/problem-30s.mp4) |
 | **Run it yourself** | `docker compose up --build`, then http://localhost:5173/login ([Quickstart](#quickstart)) |
 
 The hosted demo runs on Render's free plan: after 15 minutes without visitors it sleeps and takes about a minute to

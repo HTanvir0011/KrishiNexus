@@ -1,265 +1,308 @@
 WEBVTT
 
 1
-00:00:00.340 --> 00:00:03.840
-KrishiNexus OS, built by Team Heat Wave.
-
-2
-00:00:03.840 --> 00:00:05.390
+00:00:00.000 --> 00:00:05.440
+KrishiNexus OS. Built by Team Heat Wave,
 Tanvir Hossin, team lead.
 
-3
-00:00:06.230 --> 00:00:09.600
-Md. Omar Faruk, AI and machine learning engineer.
+2
+00:00:05.440 --> 00:00:08.920
+Md. Omar Faruk, AI and machine learning
+engineer.
 
-4
-00:00:09.600 --> 00:00:12.510
+3
+00:00:08.920 --> 00:00:11.480
 Md. Abdur Rahman, full-stack and backend.
 
-5
-00:00:12.510 --> 00:00:14.920
-Mohammed Mahmud Parvez, full-stack developer.
+4
+00:00:11.480 --> 00:00:14.240
+Mohammed Mahmud Parvez, full-stack
+developer.
 
-6
-00:00:15.410 --> 00:00:17.980
+5
+00:00:14.240 --> 00:00:16.680
 Md. Morsalin, full-stack and backend.
 
+6
+00:00:16.680 --> 00:00:21.600
+And our advisor, Md Rifat, domain and
+network expert, joining us online.
+
 7
-00:00:17.980 --> 00:00:20.240
-And our advisor, Md Rifat,
+00:00:21.600 --> 00:00:25.640
+In Bangladesh, a potato farmer often sells
+below cost.
 
 8
-00:00:20.240 --> 00:00:22.990
-domain and network expert, joining us online.
+00:00:25.640 --> 00:00:29.440
+Between the field and the buyer, five
+tiers of middlemen can mark the price up
 
 9
-00:00:23.608 --> 00:00:27.568
-In Bangladesh, a potato farmer often sells below cost.
+00:00:29.440 --> 00:00:32.080
+by as much as 116%.
 
 10
-00:00:27.568 --> 00:00:30.410
-Between the field and the buyer, five tiers of middlemen
+00:00:32.080 --> 00:00:35.320
+Traders hold 77% of the cold storage
+space.
 
 11
-00:00:30.410 --> 00:00:34.478
-can mark the price up by as much as 116%.
+00:00:35.320 --> 00:00:38.800
+And a single flash flood can wipe out an
+entire season.
 
 12
-00:00:34.478 --> 00:00:37.928
-Traders hold 77% of the cold-storage space,
+00:00:38.800 --> 00:00:43.560
+KrishiNexus OS is one AI operating system
+for everyone in that chain.
 
 13
-00:00:37.928 --> 00:00:41.478
-and a single flash flood can wipe out an entire season.
+00:00:43.560 --> 00:00:48.680
+The farmer, the co-op, the cold store, the
+buyer, the truck driver and the bank.
 
 14
-00:00:41.684 --> 00:00:44.776
-KrishiNexus OS is one AI operating system
-
-15
-00:00:44.776 --> 00:00:46.734
-for everyone in that chain:
-
-16
-00:00:46.734 --> 00:00:49.454
-the farmer, the co-op, the cold store,
-
-17
-00:00:49.454 --> 00:00:52.274
-the buyer, the truck driver and the bank.
-
-18
-00:00:52.274 --> 00:00:54.834
+00:00:48.680 --> 00:00:51.280
 Each one signs in to their own workspace.
 
-19
-00:00:55.049 --> 00:00:57.499
+15
+00:00:51.280 --> 00:00:53.560
 Rahim is a potato farmer in Rangpur.
 
-20
-00:00:57.499 --> 00:00:59.419
+16
+00:00:53.560 --> 00:00:55.680
 He simply asks in his own dialect.
 
-21
-00:00:59.759 --> 00:01:03.399
-After he gives consent, four AI agents grade his crop,
+17
+00:00:55.800 --> 00:00:59.440
+After he gives consent, four AI agents
+grade his crop,
 
-22
-00:01:03.709 --> 00:01:07.049
-compare today's market with cold storage and a shared truck,
+18
+00:00:59.440 --> 00:01:02.560
+compare today's market with cold storage
+and a shared truck,
 
-23
-00:01:07.049 --> 00:01:08.679
+19
+00:01:02.560 --> 00:01:04.080
 and check the flood risk.
 
-24
-00:01:08.679 --> 00:01:11.989
-A circuit breaker stops him from selling below his cost,
+20
+00:01:04.080 --> 00:01:07.160
+A circuit breaker stops him from selling
+below his cost,
 
-25
-00:01:11.989 --> 00:01:13.499
+21
+00:01:07.160 --> 00:01:08.800
 and it shows its working.
 
-26
-00:01:13.731 --> 00:01:15.841
+22
+00:01:08.800 --> 00:01:10.800
 He can also photograph his potatoes.
 
-27
-00:01:15.841 --> 00:01:18.991
-A trained vision model finds every tuber and its defects,
+23
+00:01:10.800 --> 00:01:14.160
+A trained vision model finds every tuber
+and its defects,
 
-28
-00:01:19.311 --> 00:01:21.181
+24
+00:01:14.160 --> 00:01:16.080
 then signs a quality certificate.
 
-29
-00:01:21.501 --> 00:01:24.731
-Buyers and banks can verify that certificate for themselves.
+25
+00:01:16.080 --> 00:01:19.280
+Buyers and banks can verify that
+certificate for themselves.
 
-30
-00:01:24.941 --> 00:01:28.001
-Behind every answer, you can watch the agents work.
+26
+00:01:19.280 --> 00:01:22.440
+Behind every answer, you can watch the
+agents work.
 
-31
-00:01:28.351 --> 00:01:30.421
+27
+00:01:22.440 --> 00:01:24.360
 They retrieve Bangladeshi farm data,
 
-32
-00:01:30.421 --> 00:01:33.181
+28
+00:01:24.360 --> 00:01:26.920
 call live tools through three MCP servers,
 
-33
-00:01:33.181 --> 00:01:35.101
+29
+00:01:26.920 --> 00:01:28.720
 and every step is traced.
 
+30
+00:01:28.720 --> 00:01:31.840
+It even runs offline on a fine-tuned
+Bangla model
+
+31
+00:01:31.840 --> 00:01:33.040
+at a village kiosk.
+
+32
+00:01:33.040 --> 00:01:36.520
+Co-ops pool small harvests into full five-
+ton trucks.
+
+33
+00:01:36.520 --> 00:01:39.640
+The cold store sees live chamber sensors
+in a 3D twin,
+
 34
-00:01:35.101 --> 00:01:36.055
-It even runs offline,
+00:01:39.640 --> 00:01:41.840
+and when a flood or heat alert arrives,
 
 35
-00:01:36.055 --> 00:01:39.411
-on a fine-tuned Bangla model at a village kiosk.
+00:01:41.840 --> 00:01:43.280
+the trucks are rerouted.
 
 36
-00:01:39.716 --> 00:01:43.036
-Co-ops pool small harvests into full five-ton trucks.
-
-37
-00:01:43.466 --> 00:01:46.796
-The cold store sees live chamber sensors in a 3D twin.
-
-38
-00:01:46.796 --> 00:01:50.476
-And when a flood or heat alert arrives, the trucks are rerouted.
-
-39
-00:01:50.666 --> 00:01:52.236
+00:01:43.280 --> 00:01:45.160
 Rahim can also sell directly.
 
-40
-00:01:52.596 --> 00:01:55.046
+37
+00:01:45.160 --> 00:01:47.840
 He lists his lot, traders bid in the open,
 
-41
-00:01:55.586 --> 00:01:57.326
+38
+00:01:47.840 --> 00:01:49.440
 and he accepts the best bid.
 
-42
-00:01:57.326 --> 00:01:59.146
+39
+00:01:49.440 --> 00:01:51.160
 The payment is held in escrow.
 
-43
-00:01:59.146 --> 00:02:00.232
+40
+00:01:51.160 --> 00:01:52.440
 A driver takes the job
 
+41
+00:01:52.440 --> 00:01:54.760
+and reports the load temperature along the
+road.
+
+42
+00:01:54.760 --> 00:01:57.920
+Our shelf life model checks that the
+potatoes will arrive safe,
+
+43
+00:01:57.920 --> 00:02:00.920
+and on delivery, the payment is released
+to Rahim.
+
 44
-00:02:00.232 --> 00:02:03.046
-and reports the load temperature along the road.
-
-45
-00:02:03.046 --> 00:02:06.446
-Our shelf-life model checks that the potatoes will arrive safe,
-
-46
-00:02:06.446 --> 00:02:09.406
-and on delivery the payment is released to Rahim.
-
-47
-00:02:09.610 --> 00:02:13.620
+00:02:00.920 --> 00:02:04.600
 Banks see a credit score from 300 to 850.
 
+45
+00:02:04.600 --> 00:02:06.400
+It is backed by satellite flood checks
+
+46
+00:02:06.400 --> 00:02:07.760
+and signed certificates.
+
+47
+00:02:07.760 --> 00:02:09.640
+So, a farmer without collateral
+
 48
-00:02:13.620 --> 00:02:16.570
-It is backed by satellite flood checks and signed certificates.
+00:02:09.640 --> 00:02:11.040
+can still get credit.
 
 49
-00:02:16.990 --> 00:02:20.170
-So a farmer without collateral can still get credit.
+00:02:11.040 --> 00:02:12.640
+We trained five models,
 
 50
-00:02:20.519 --> 00:02:23.529
-We trained five models, and we publish every score,
+00:02:12.640 --> 00:02:14.320
+and we publish every score,
 
 51
-00:02:23.529 --> 00:02:25.979
-including the ones that missed their targets.
+00:02:14.320 --> 00:02:16.520
+including the ones that miss their
+targets.
 
 52
-00:02:26.379 --> 00:02:30.119
-The app asks for consent. It removes names and phone numbers.
+00:02:16.520 --> 00:02:18.120
+The app asks for consent.
 
 53
-00:02:30.119 --> 00:02:32.419
-It keeps data for 24 hours only,
+00:02:18.120 --> 00:02:20.000
+It removes names and phone numbers.
 
 54
-00:02:32.419 --> 00:02:35.769
-and it always leaves the final decision to the farmer.
+00:02:20.000 --> 00:02:22.160
+It keeps data for 24 hours only,
 
 55
-00:02:37.580 --> 00:02:39.850
-KrishiNexus also fits in a farmer's pocket.
+00:02:22.160 --> 00:02:25.560
+and it always leaves the final decision to
+the farmer.
 
 56
-00:02:40.430 --> 00:02:42.250
-Our Android app speaks Bangla:
+00:02:26.960 --> 00:02:29.600
+KrishiNexus also fits in a farmer's
+pocket.
 
 57
-00:02:42.250 --> 00:02:44.670
-Rahim asks out loud and hears the answer back.
+00:02:29.600 --> 00:02:31.320
+Our Android app speaks Bangla.
 
 58
-00:02:45.200 --> 00:02:48.800
-He photographs his harvest and gets a signed grade in seconds.
+00:02:31.320 --> 00:02:32.600
+Rahim asks out loud,
 
 59
-00:02:49.220 --> 00:02:52.840
-Buyers bid from their phones, drivers share their live location,
+00:02:32.600 --> 00:02:34.080
+and hears the answer back.
 
 60
-00:02:52.840 --> 00:02:55.170
-and everyone follows the sale in real time.
+00:02:34.080 --> 00:02:35.680
+He photographs his harvest,
 
 61
-00:02:58.989 --> 00:03:00.959
-One pooled truck covers its costs.
+00:02:35.680 --> 00:02:37.920
+and gets a signed grade in seconds.
 
 62
-00:03:01.349 --> 00:03:04.119
-A district breaks even at 16 trucks a month.
+00:02:37.920 --> 00:02:39.520
+Buyers bid from their phones,
 
 63
-00:03:04.119 --> 00:03:05.661
-We start a field test this December
+00:02:39.520 --> 00:02:41.200
+drivers share their live location,
 
 64
-00:03:05.661 --> 00:03:08.129
-and a potato pilot in January.
+00:02:41.200 --> 00:02:44.160
+and everyone follows the sale in real
+time.
 
 65
-00:03:08.129 --> 00:03:11.359
-This is KrishiNexus OS, by Team Heat Wave.
+00:02:44.160 --> 00:02:46.360
+One pooled truck covers its costs.
 
 66
-00:03:11.359 --> 00:03:13.207
+00:02:46.360 --> 00:02:48.960
+A district breaks even at 16 trucks a
+month.
+
+67
+00:02:48.960 --> 00:02:50.800
+We start a field test this December,
+
+68
+00:02:50.800 --> 00:02:52.680
+and a potato pilot in January.
+
+69
+00:02:52.680 --> 00:02:55.680
+This is KrishiNexus OS by Team Heat Wave.
+
+70
+00:02:55.680 --> 00:02:57.680
 Try it now at tanvir.health.
