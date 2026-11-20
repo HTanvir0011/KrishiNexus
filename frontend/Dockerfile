@@ -9,7 +9,7 @@ COPY . .
 # VITE_API_BASE stays unset so the app calls same-origin paths that nginx forwards.
 RUN npm run build
 
-FROM nginx:1.28-alpine
+FROM nginx:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
