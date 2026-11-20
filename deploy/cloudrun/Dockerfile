@@ -9,7 +9,7 @@
 FROM python:3.14-slim AS source
 COPY . /src
 
-FROM node:24-bookworm-slim AS web
+FROM node:26-bookworm-slim AS web
 WORKDIR /web
 COPY --from=source /src/frontend/package.json /src/frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
