@@ -13,8 +13,16 @@ and underwrite credit, then reply in spoken Bangla, online or offline at a union
 | Traders and plant owners hold **77.32%** of cold-storage quota, so smallholders can't store and wait | Live quota and tariff lookup, cold-chain arbitrage, and 1-tap escrow to the best buyer (simulated) |
 | Haor flash floods destroy whole harvests (about **65%** of Sunamganj's Boro in April 2017), and farmers have no collateral for credit | A 72-hour flood check that reads Sentinel-1 radar through monsoon cloud, and a 300–850 credit score with HMAC-signed quality certificates |
 
-**Try it.** Run `docker compose up --build` ([Quickstart](#quickstart)) and open http://localhost:5173/login. **Live demo: https://tanvir.health** (Render free plan, from `render.yaml`;
-it sleeps after 15 minutes without visitors and takes about a minute to wake). Demo password: `krishi2026`.
+| | |
+|---|---|
+| **Live demo** | https://tanvir.health (open `/login` and pick an account below) |
+| **Android app** | [KrishiNexus.apk](https://tanvir.health/download/KrishiNexus.apk) (v1.2.0, Android 7+, 22 MB) · [32-bit phones](https://tanvir.health/download/KrishiNexus-armv7.apk) |
+| **User guide** | https://tanvir.health/guide/ (English and Bangla) |
+| **Videos** | [3-minute demo](https://tanvir.health/video/krishinexus-demo.mp4) · [30-second problem statement](https://tanvir.health/video/problem-30s.mp4) |
+| **Run it yourself** | `docker compose up --build`, then http://localhost:5173/login ([Quickstart](#quickstart)) |
+
+The hosted demo runs on Render's free plan: after 15 minutes without visitors it sleeps and takes about a minute to
+wake. Demo password: `krishi2026`.
 
 | Demo account | Role |
 |---|---|
@@ -78,8 +86,8 @@ Team Heat Wave.
 | **LangGraph supervisor + 4 agents** | Vision grading, syndicate bypass (5-ton pooled trucks), cold-chain arbitrage (ΔΠ circuit-breaker), climate credit (SAR flood shield + 300–850 score) |
 | **Offline edge node** | Bangla voice pipeline, optical grader with signed certificates, local LLM manager for **Ollama** / llama.cpp / vLLM with automatic fallback when no runtime is reachable |
 | **Vite + React + TypeScript frontend** (`frontend/`, port `5173`) | A product overview at `/` with one-click live farmer decisions and live MCP cards; the live OS at `/os` (farmer zero-UI app, co-op command center with a Three.js cold-storage twin, market and bank desk); the `/docs` whitepaper with a 13-tool MCP inspector |
-| **Flutter mobile app** (`mobile/`) | Android app (iOS-ready) on the same API and accounts: Bangla voice questions, photo grading, lots and bids, driver jobs with live tracking, bank disputes. See [`mobile/README.md`](mobile/README.md) |
-| **Demo login and admin console** | Seeded accounts for six roles (farmer, co-op, buyer, bank, judge, admin), password or quick login, HMAC-signed session tokens; `/admin` manages accounts and demo state |
+| **Flutter mobile app** (`mobile/`, v1.2.0) | Android app (iOS-ready) on the same API and accounts: Bangla voice questions, phone-camera photo grading, lots and bids, driver jobs with live location, bank disputes, sign-up. See [`mobile/README.md`](mobile/README.md) |
+| **Accounts and admin console** | Seeded accounts for all eight roles (farmer, co-op, cold storage, buyer, driver, bank, judge, admin), password or quick login, HMAC-signed session tokens; sign-up at `/signup`; `/admin` reviews new accounts and manages demo state |
 | **Docker Compose** | Backend and nginx-served frontend; optional `local-llm` profile adds Ollama and pulls the quantised models; optional `data` profile adds PostgreSQL + pgvector, Neo4j, Redis and n8n, loaded with the app's own data |
 
 The system runs end to end with **no paid API keys and no GPU**: every agent has deterministic logic seeded with
@@ -89,8 +97,17 @@ Bangladeshi agricultural data (DAM prices, BCSA storage quotas, BARI storage pro
 
 ## Recent changes
 
-Latest (19 November 2026): the Flutter mobile app in `mobile/`, Bangla playback in every browser through `POST /edge/tts`,
-and review fixes to photo grading, voice, bids, the bank desk, cold-store incidents and the co-op desk.
+Latest (20 November 2026):
+
+- **Android app 1.2.0:** the "Krishi Wallet" redesign (farmers first, Bangla first, confirm sheets and receipts for
+  every money step), downloadable from the site itself.
+- **Accounts for every role** with national ID and mobile-wallet details (bKash, Nagad, Rocket, Upay), stored only as
+  keyed digests and masks; co-op, cold-storage and bank accounts wait for admin review.
+- **Live tracking:** a server-sent event feed of bids, sales and deliveries, and the truck's rough position shared
+  only with that sale's farmer, buyer, driver and the bank, judge and admin desks.
+- **Repository and security:** documentation in `docs/`, self-checks in `tests/`, `SECURITY.md` and `CONTRIBUTING.md`;
+  production refuses the public development signing key and allows no stray CORS origins.
+
 The full history is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Trained models
@@ -183,6 +200,11 @@ uvicorn main:app --port 8000
 cd frontend
 npm ci
 npm run dev                           # http://localhost:5173, proxies the API to :8000
+
+# mobile (Flutter 3.44+), with an Android phone or emulator connected
+cd mobile
+flutter pub get
+flutter run                           # set Me -> Server to http://10.0.2.2:8000 on the emulator
 ```
 
 Smoke test:
@@ -289,8 +311,8 @@ cd backend
 cd ..
 backend/.venv/Scripts/python deploy/cloudrun/tests/check_serve.py   # hosted server: limits, headers, downloads
 
-cd frontend && npm run build                       # type-check and build the web app
-cd mobile && flutter analyze && flutter test       # mobile app
+(cd frontend && npm run typecheck && npm run build)   # web app
+(cd mobile && flutter analyze && flutter test)        # mobile app
 ```
 
 CI (`.github/workflows/docker-smoke.yml`) builds the Docker images and runs the smoke test on every change to them.
@@ -335,6 +357,7 @@ CI (`.github/workflows/docker-smoke.yml`) builds the Docker images and runs the 
 │   ├── field-test-kit.md       plan for the first farmer study
 │   └── design/mobile.md        design direction of the mobile app
 ├── .github/                    CI workflows, issue and PR templates, CODEOWNERS, Dependabot
+├── .editorconfig  .gitattributes   shared editor settings and line endings
 ├── CHANGELOG.md                dated change history
 ├── CONTRIBUTING.md  SECURITY.md  LICENSE
 ├── docker-compose.yml          backend + frontend; Ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
@@ -359,7 +382,7 @@ Real:
 Simulated or modelled, and labelled as such in the UI and API:
 - DAM, BCSA and IoT figures are seeded data, not live feeds;
 - buyer bids are modelled from DAM hub prices, not offers from named buyers;
-- the bKash / Nagad escrow is simulated: no money moves and no wallet API is called;
+- the escrow and the bKash, Nagad, Rocket and Upay payouts are simulated: no money moves and no wallet API is called;
 - the login is a demo: seeded accounts share a published password and quick login needs none;
 - potato grading without the trained YOLO weights (they are not in the repo) falls back to classical CV, labelled `classical-cv`;
 - local-LLM telemetry when no runtime is running;
@@ -374,7 +397,9 @@ Figures quoted from the project brief, such as the CPD July 2026 study and partn
 - **What is kept:** names, phone, NID, wallet and bank numbers are hidden before any agent reads the text. The hidden
   originals stay in memory for 24 hours at most. Voice and photos are not saved. Wallet numbers are masked before storing.
   The full table is in the whitepaper at `/docs#data`.
-- **Online voice** uses the browser's own speech service; offline, the kiosk transcribes with its own Whisper model.
+- **Online voice** uses the browser's own speech service; where a browser has no Bangla voice, the node reads the
+  answer aloud through an online voice (`POST /edge/tts`, personal details scrubbed first; `KNX_ONLINE_TTS=off`
+  turns it off). Offline, the kiosk transcribes with its own Whisper model.
 - **Feedback:** every decision can be rated; comments are PII-scrubbed and kept in `backend/.state/feedback.json`.
 - **Field testing:** no study with farmers has been run yet. `docs/field-test-kit.md` sets out the first one: five farmers
   and an extension officer in Shibganj, Bogura, with the success bar fixed before the test.
