@@ -1,5 +1,5 @@
 {
-  "note": "Shared by the app and the build-time pages (scripts/prerender.mjs). The APKs are served by tanvir.health itself (public/download/), because the GitHub repository is private.",
+  "note": "Shared by the app and the build-time pages (scripts/prerender.mjs). The APKs are served by tanvir.health itself (public/download/), so the download never depends on GitHub.",
   "origin": "https://tanvir.health",
   "apk": "/download/KrishiNexus.apk",
   "apk_armv7": "/download/KrishiNexus-armv7.apk",

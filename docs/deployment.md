@@ -110,8 +110,8 @@ gcloud projects add-iam-policy-binding <project-id> --member="serviceAccount:<pr
 gcloud run deploy krishinexus-os --source deploy/cloudrun --region asia-south1 --allow-unauthenticated --max-instances 1 --concurrency 250 --timeout 3600
 ```
 
-> Since 20 November 2026 the Dockerfile builds from the repository root (the GitHub repository is private, so the
-> image no longer downloads it). For Cloud Run, build the image from the root with
+> Since 20 November 2026 the Dockerfile builds from the repository root, the host's own checkout of the deployed
+> commit, instead of downloading a source archive from GitHub. For Cloud Run, build the image from the root with
 > `docker build -f deploy/cloudrun/Dockerfile .` (or a Cloud Build config doing the same) and deploy that image;
 > `--source deploy/cloudrun` alone no longer has the source it needs.
 

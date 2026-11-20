@@ -91,7 +91,7 @@ class _Spa(StaticFiles):
         return response
 
 
-# The Android app is served from /download/ (the repository is private, so a GitHub release can't host it). Android
+# The Android app is served from /download/, so the download works whatever happens to the GitHub repository. Android
 # installs only a file typed as a package, and nosniff is on, so the type is registered here, not guessed.
 mimetypes.add_type("application/vnd.android.package-archive", ".apk")
 _site = Starlette(routes=[Mount("/", _Spa(directory=STATIC_DIR, html=True))])
