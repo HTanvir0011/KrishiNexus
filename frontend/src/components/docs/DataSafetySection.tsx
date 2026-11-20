@@ -32,7 +32,7 @@ const LIMITS = [
   "This is a demo: quick login needs no password and every API route except the admin API is open.",
   "Market prices, chamber telemetry and radar inputs are modelled, not live feeds; no real money moves.",
   "Whisper missed its character-error target, the potato defect stage missed its mask target, and the dialect retriever missed one precision target (switched on by the owner); the app quotes these scores.",
-  "No study with farmers has been run yet; the field-test kit in the repository (FIELD_TEST_KIT.md) is the plan for one.",
+  "No study with farmers has been run yet; the field-test kit in the repository (docs/FIELD_TEST_KIT.md) is the plan for one.",
   "On the free hosted demo the disk is wiped whenever the service restarts or sleeps, so accounts, pools, escrows and feedback start fresh.",
 ];
 

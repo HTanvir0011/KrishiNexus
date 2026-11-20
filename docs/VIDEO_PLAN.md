@@ -3,7 +3,7 @@
 Status (18 Nov 2026): **silent captioned draft built**, `video/KrishiNexus_demo_draft.webm` (176 s, 1080p, WebM),
 recorded from tanvir.health with `video/tools/rec.py` and assembled with `video/tools/assemble.py`. Waiting for the voice
 (S00–S10); the final MP4 with the voice needs a full ffmpeg (Playwright's bundled one has no H.264 or audio).
-Local file, not pushed (like `PRESENTATION_PLAN.md`); `video/` is excluded in `.git/info/exclude`.
+Local file, not pushed (like `docs/PRESENTATION_PLAN.md`); `video/` is excluded in `.git/info/exclude`.
 
 Draft notes: S07 shows the Accept form opening but not submitted (no wallet number typed on the live site), then cuts
 to Rahim's seeded lot with "Payment held"; the driver steps run for real on Abdul's chili job. The recording changed

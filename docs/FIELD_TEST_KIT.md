@@ -66,6 +66,6 @@ Report the numbers that come out, whether or not they meet the bar.
 1. Export the ratings: log in as the admin and open **Admin → Feedback** (`/admin/feedback`). The page shows the share
    rated useful and every comment, with personal details already removed. On the free hosted demo the disk is wiped
    whenever the service sleeps, so read the page right after each session; the paper score sheet is the lasting record.
-2. Write the results into `MEMORY.md`, and into the pitch: tasks done, understood, would follow, the officer's scores,
+2. Write the results into `docs/internal/MEMORY.md`, and into the pitch: tasks done, understood, would follow, the officer's scores,
    and quotes only from farmers who agreed.
 3. Fix the top problem they hit before the showcase, and say so in the pitch.

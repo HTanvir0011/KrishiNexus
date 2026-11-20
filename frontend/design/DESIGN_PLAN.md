@@ -282,7 +282,7 @@ Seasonal prices change by date, and the copy says "today's DAM-modelled prices".
    - browser checks at 1440 px and 390 px;
    - keyboard-only pass, reduced motion, backend-offline;
    - bundle-size check;
-   - `MEMORY.md` and `AGENTS.md` updates.
+   - `docs/internal/MEMORY.md` and `AGENTS.md` updates.
 
 New dependencies: only the two font packages. No GSAP or smooth-scroll library; scroll progress is a small
 `requestAnimationFrame` hook.

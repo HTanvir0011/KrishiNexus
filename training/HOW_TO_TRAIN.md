@@ -2,13 +2,13 @@
 
 A step-by-step runbook for each trainable model: its dataset, its prerequisites, the exact commands, and how it is
 evaluated. For *why* each choice was made (base-model survey, split rules, measured numbers, hardware notes), see
-[`../TRAINING_PLAN.md`](../TRAINING_PLAN.md) — this file is the "how", that file is the "why".
+[`../docs/TRAINING_PLAN.md`](../docs/TRAINING_PLAN.md) — this file is the "how", that file is the "why".
 
 > **Status:** model 1 has been trained twice with the Kaggle notebook on a T4.
 > - The first run (2026-11-08, prompts v3) **failed its targets**.
 > - The second run (2026-11-09, tool-grounded prompts v4) **meets every target** on a fresh test split.
 >   Negotiation decision accuracy is the narrowest margin, at 0.909 against a 0.90 target.
-> - The measured numbers and the diagnosis of both runs are in [`../TRAINING_PLAN.md`](../TRAINING_PLAN.md) §6.
+> - The measured numbers and the diagnosis of both runs are in [`../docs/TRAINING_PLAN.md`](../docs/TRAINING_PLAN.md) §6.
 > - Shipped into the app on 2026-11-09:
 >   - the adapter, GGUF and Modelfile sit in the git-ignored `backend/models/lora/`, so the backend reports
 >     `adapter_present` with the measured scores;
@@ -18,7 +18,7 @@ evaluated. For *why* each choice was made (base-model survey, split rules, measu
 >   - the potato finder meets its target;
 >   - the defect segmenter misses its target;
 >   - the grade check beats the always-C baseline.
->   Scores are in `../TRAINING_PLAN.md` §8. It isn't wired into the grader yet.
+>   Scores are in `../docs/TRAINING_PLAN.md` §8. It isn't wired into the grader yet.
 
 > **Frozen-test rule (applies to every model):** training and validation only ever read the `train` and `val` splits.
 > Each `test` split is opened exactly once, by the evaluation step, after the final checkpoint is chosen. Never tune
@@ -33,7 +33,7 @@ evaluated. For *why* each choice was made (base-model survey, split rules, measu
 | 1 | `krishi-bangla-lora-v2` (v1 before it) | Bangla agri market/storage advisor (text) | Qwen2.5-1.5B-Instruct | generated SFT set: v4 3,200 pairs (v1), v5 4,800 freely worded pairs (v2; `prepare_data.py --version 5`) | three times (Kaggle); v2 (2026-11-10) is deployed, meets every target but storage citation (0.806 vs 0.90) |
 | 2 | `yolov11n-krishi-bd-v2.1` | potato finder + defect segmenter (two stages) | YOLO11n, YOLO11n-seg | Diamant Potato Dataset (DIU) | twice (Kaggle, 2026-11-09); stage 1 meets target and now outlines, stage 2 misses (0.342 vs 0.50) |
 | 3 | `krishi-price-v1` | staple-price forecasts (1–3 months) + wholesale-retail margin flags | LightGBM, GRU, TCN, ensemble | WFP Bangladesh food prices (HDX) | once (Kaggle CPU, 2026-11-09); misses 2 of 3 targets |
-| 4 | `krishi-whisper-bn-v1` | Bangla speech-to-text for the voice pipeline (faster-whisper int8) | Whisper Small | Common Voice 13 Bengali (CC0) | once (Kaggle T4, 2026-11-10): WER 0.435 meets, CER 0.229 misses (both measured with a 128-token cap, so understated); installed in the app; notebook `kaggle/krishinexus_whisper_kaggle.ipynb`, results in `../TRAINING_PLAN.md` §8c |
+| 4 | `krishi-whisper-bn-v1` | Bangla speech-to-text for the voice pipeline (faster-whisper int8) | Whisper Small | Common Voice 13 Bengali (CC0) | once (Kaggle T4, 2026-11-10): WER 0.435 meets, CER 0.229 misses (both measured with a 128-token cap, so understated); installed in the app; notebook `kaggle/krishinexus_whisper_kaggle.ipynb`, results in `../docs/TRAINING_PLAN.md` §8c |
 
 ---
 
@@ -133,7 +133,7 @@ SYSTEM You are KrishiNexus, a Bangla-speaking agricultural market and storage ad
 ollama create krishi-bangla -f Modelfile
 ```
 
-Why this route (measured 2026-11-09, `../TRAINING_PLAN.md` §5):
+Why this route (measured 2026-11-09, `../docs/TRAINING_PLAN.md` §5):
 - The old route merged into the bf16 base and quantised to Q4_K_M. Flood-alert accuracy dropped from 1.000 to 0.757.
 - The NF4 merge at Q8_0 reproduced the training run on every metric.
 - The NF4 merge at Q4_K_M collapsed.
@@ -146,7 +146,7 @@ Score any new GGUF through Ollama before switching the app to it
 Deterministic, no LLM judge: every gold value is recomputed by replaying the example's inputs through the same engines
 that generated it (`market_prices`, `CIRCUIT_BREAKER`, `breach_probability`), generation is greedy (temperature 0,
 fixed seed), and each metric is computed twice — base vs adapter — on identical prompts. Build `training/eval_lora.py`
-per `../TRAINING_PLAN.md` section 6. Metrics and targets:
+per `../docs/TRAINING_PLAN.md` section 6. Metrics and targets:
 
 | Metric (test split) | Rule | Target |
 |---|---|---|
@@ -177,7 +177,7 @@ Read *Known limitations* in [`kaggle/KAGGLE_DATASET.md`](kaggle/KAGGLE_DATASET.m
 ## Model 2 — `yolov11n-krishi-bd-v2.1` (YOLO visual defect detection)
 
 Multimodal track. It replaces the classical-CV grader's visual stage with two trained stages: a potato detector and a
-defect segmenter. Design, pre-registered targets and results: `../TRAINING_PLAN.md` section 8.
+defect segmenter. Design, pre-registered targets and results: `../docs/TRAINING_PLAN.md` section 8.
 
 ### Dataset
 
@@ -201,7 +201,7 @@ defect segmenter. Design, pre-registered targets and results: `../TRAINING_PLAN.
    - It checks the counts against the dataset page, then trains, scores and writes `eval_report.json`.
    - Without a GPU it runs a CPU smoke test whose scores are not results.
 2. Record `eval_report.json` and `run_manifest.json` in `runs/kaggle-t4-<date>-vision/`, and the numbers in
-   `../MEMORY.md`.
+   `../docs/internal/MEMORY.md`.
 3. Install the weights: copy `roi_best.pt`, `defect_best.pt`, `eval_report.json` and the grade check's
    `grade_check.json` into `backend/models/yolo/run2/`, or set `KNX_YOLO_WEIGHTS` to a folder that holds them. Then
    run `.venv/Scripts/python -m pip install ultralytics` in `backend/`.
@@ -220,7 +220,7 @@ defect segmenter. Design, pre-registered targets and results: `../TRAINING_PLAN.
 
 Forecasts monthly retail prices for coarse rice, wheat flour, masur lentils and palm oil in six divisions. It also
 flags unusual Dhaka retail margins over wholesale. Design, pre-registered targets and results:
-`../TRAINING_PLAN.md` section 8b.
+`../docs/TRAINING_PLAN.md` section 8b.
 
 | | |
 |---|---|
@@ -246,4 +246,4 @@ before training, never after seeing scores.
 - [ ] Training logs only `train` + `val`; `test` untouched until the eval step.
 - [ ] Adapter eval compares base vs adapter on identical prompts, greedy, fixed seed.
 - [ ] YOLO test split held out of training; mAP recorded on it.
-- [ ] Measured numbers written to `../MEMORY.md`; no eval number hard-coded in the app.
+- [ ] Measured numbers written to `../docs/internal/MEMORY.md`; no eval number hard-coded in the app.

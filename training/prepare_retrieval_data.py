@@ -1,4 +1,4 @@
-"""Merge the writer agents' question files into the dialect-retriever dataset (TRAINING_PLAN.md section 7b).
+"""Merge the writer agents' question files into the dialect-retriever dataset (docs/TRAINING_PLAN.md section 7b).
 
 Run with the BACKEND venv:
 

@@ -93,7 +93,7 @@ Chatterbox (`chatterbox-tts` 0.1.7 from PyPI, CPU PyTorch 2.6.0, weights from Hu
 
 ## Captions
 
-Demo: 66 cues, worst start 0.01 s and worst end 0.29 s from the voice's own onsets and offsets. Problem video: 5 cues, worst 0.0 s / 0.27 s. The narrator's actual wording is captioned (it differs a little from VIDEO_PLAN.md), with names as written on the site.
+Demo: 66 cues, worst start 0.01 s and worst end 0.29 s from the voice's own onsets and offsets. Problem video: 5 cues, worst 0.0 s / 0.27 s. The narrator's actual wording is captioned (it differs a little from docs/VIDEO_PLAN.md), with names as written on the site.
 
 ## Team intro check (measured on the 1080p master)
 
@@ -139,7 +139,7 @@ playwright chromium 153.0.8010.12, canPlayType probably:
 - Recording on the live site changed demo state, as the draft's flow did: a raised bid on LOT-SEED01 (Bogura Agro Traders), the Accept form opened on Rahim's lot (not submitted), DRIVER-BOG-01 took, loaded, reported 34 °C and delivered the green chili job (payment released), one MCP tool run, one sample-lot certificate (web and app), a flood drill on HIMAGAR-BOG-05 cleared again afterwards, and in the app the driver's Share live location was switched on for a few seconds. A reset from /admin restores the seeds.
 - The app was filmed from mobile/build/web with its API calls answered by https://tanvir.health through Playwright routing (the build points at localhost:8020); nothing was rebuilt and the local backend and emulator were not touched.
 - `.git/info/exclude` has `video/`, which also matches `frontend/public/video/`: the six deliverables are not seen by git until that line is anchored (`/video/`) or the files are added with `git add -f`.
-- Captions carry the narrator's actual words, which differ slightly from VIDEO_PLAN.md's script.
+- Captions carry the narrator's actual words, which differ slightly from docs/VIDEO_PLAN.md's script.
 
 ## Rebuild
 
