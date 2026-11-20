@@ -1,4 +1,4 @@
-"""Score the fresh blind batch once for the frozen dialect retriever (docs/TRAINING_PLAN.md section 7b).
+"""Score the fresh blind batch once for the frozen dialect retriever (docs/training-plan.md section 7b).
 
 Run with the BACKEND venv, after the model is installed in backend/models/retrieval/:
 

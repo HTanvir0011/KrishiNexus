@@ -1,0 +1,9 @@
+Copyright (c) 2026 Team Heat Wave (KrishiNexus). All rights reserved.
+
+This repository and its contents (source code, models, data, documentation, images and videos) are proprietary.
+No permission is granted to copy, modify, distribute, sublicense or use any part of it, in whole or in part, without
+prior written permission from the copyright holders.
+
+Third-party components keep their own licenses: the dependencies listed in backend/requirements.txt,
+frontend/package.json and mobile/pubspec.yaml, the bundled fonts, and the datasets and base models credited in
+docs/training-plan.md (for example the Diamant Potato Dataset, CC BY 4.0, and Common Voice, CC0).

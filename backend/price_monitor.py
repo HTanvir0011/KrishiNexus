@@ -1,7 +1,7 @@
 """Staple price monitor: WFP retail prices, krishi-price-v1 forecasts and Dhaka wholesale-retail margin flags.
 
 Everything here is read from the outputs of the Kaggle run `krishinexus-price-intelligence`, installed in
-`backend/models/price/` (docs/TRAINING_PLAN.md section 8b). The forecast scorecard comes from that run's report, never from
+`backend/models/price/` (docs/training-plan.md section 8b). The forecast scorecard comes from that run's report, never from
 code. When the files are missing, the monitor says so instead of inventing numbers.
 """
 
@@ -68,7 +68,7 @@ def price_monitor(division: str = "Dhaka") -> PriceMonitorReport:
                                   model_chosen_on_validation=None, data_through=None, test_mean_smape=None, targets=None,
                                   margin_flags=[], margin_note=None, source=None,
                                   note="Run the Kaggle notebook krishinexus-price-intelligence and copy its outputs to "
-                                       "backend/models/price/ (docs/TRAINING_PLAN.md section 8b).")
+                                       "backend/models/price/ (docs/training-plan.md section 8b).")
     report, forecasts = loaded
     divisions = sorted({s["division"] for s in forecasts["series"]})
     if division not in divisions:

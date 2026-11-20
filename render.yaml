@@ -1,6 +1,6 @@
 # Render Blueprint: the KrishiNexus OS hosted demo as one free web service, built from deploy/cloudrun/Dockerfile
 # (frontend + API on one origin, serve.py). Render dashboard: New > Blueprint > connect this repository > Deploy Blueprint.
-# Steps, limits and checks: deploy/cloudrun/DEPLOY.md.
+# Steps, limits and checks: docs/deployment.md.
 services:
   - type: web
     name: krishinexus-os

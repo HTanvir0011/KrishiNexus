@@ -1,13 +1,13 @@
 ---
 name: Feature request
-about: Suggest a change or an addition
+about: Suggest an improvement
 labels: enhancement
 ---
 
-**The problem**
+**Who it is for** (farmer, buyer, driver, co-op, cold storage, bank, judge, admin)
 
-**What you would like**
+**The problem it solves**
 
-**Alternatives considered**
+**What you propose**
 
-**Who it helps** (farmer, co-op, buyer, driver, bank, judge, developer)
+**How we will know it works**

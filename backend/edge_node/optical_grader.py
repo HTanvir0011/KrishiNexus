@@ -497,14 +497,14 @@ def classical_cv(request: GradeCropRequest, image: Any) -> list[BoundingBox]:
 # Backend 3: trained YOLO weights (optional)
 # ---------------------------------------------------------------------------
 
-# Two stages trained on DIU's Diamant potato dataset (docs/TRAINING_PLAN.md section 8): roi_best.pt outlines each potato,
+# Two stages trained on DIU's Diamant potato dataset (docs/training-plan.md section 8): roi_best.pt outlines each potato,
 # defect_best.pt segments scab, rot, greening and mechanical damage on a background-removed, green-boosted crop.
 YOLO_DIR = Path(os.getenv("KNX_YOLO_WEIGHTS") or Path(__file__).resolve().parent.parent / "models" / "yolo" / "run2")
 YOLO_CROPS = {GradeableCrop.CARDINAL_POTATO, GradeableCrop.DIAMANT_POTATO}
 BLEMISH_CLASSES, ROT_CLASSES = {"scab", "greening", "mechanical_damage"}, {"rot"}
 _YOLO: dict[str, Any] = {}
 _YOLO_LOCK = threading.Lock()   # grading runs in worker threads, and an Ultralytics model isn't thread-safe
-TILE_GRID, TILE_OVERLAP = 4, 0.15   # chosen on heaps built from validation photos (docs/TRAINING_PLAN.md section 8)
+TILE_GRID, TILE_OVERLAP = 4, 0.15   # chosen on heaps built from validation photos (docs/training-plan.md section 8)
 
 
 def green_boost(rgb: np.ndarray) -> np.ndarray:

@@ -33,7 +33,7 @@ const MATRIX: { category: string; implementation: string; evidence: string; stat
   { category: "Real-time explainability", implementation: "WebSocket stream of every thought, MCP call, CRAG grade and guardrail", evidence: "WS /ws/agent-trace", status: "Live" },
   { category: "Evaluation", implementation: "Measured RAGAS-style metrics + seeded 100-case regression suite + frozen 66-probe blind retrieval holdout", evidence: "/evals/*", status: "Live", note: "Deterministic rubric judge; no LLM judge" },
   { category: "Frontend & visual", implementation: "React + Three.js digital twin, split-screen judge mode, live trace", evidence: "this app", status: "Live" },
-  { category: "AI development lifecycle", implementation: "AGENTS.md / CLAUDE.md spec-driven build in 6 verified steps", evidence: "AGENTS.md", status: "Live", note: "BMAD-METHOD not used" },
+  { category: "AI development lifecycle", implementation: "Architecture contract (docs/architecture.md): spec-driven build in 6 verified steps", evidence: "docs/architecture.md", status: "Live", note: "BMAD-METHOD not used" },
 ];
 
 type Tab = "prompts" | "compress" | "rag" | "guardrails" | "local" | "workflows" | "aidlc";
@@ -320,7 +320,7 @@ const STEPS = [
 function AidlcSteps() {
   return (
     <div className="space-y-3 text-[13.5px] leading-relaxed text-slate-700">
-      <p className="max-w-[760px]">AGENTS.md (mirrored as CLAUDE.md) is the single specification the coding agent reads before every step: mission, non-negotiable rules (no placeholders, strict typing, Bangladeshi seed data) and the target file tree. Each step ends with a verification gate before the next begins.</p>
+      <p className="max-w-[760px]">docs/architecture.md is the single specification the coding agent reads before every step: mission, non-negotiable rules (no placeholders, strict typing, Bangladeshi seed data) and the target file tree. Each step ends with a verification gate before the next begins.</p>
       <ol className="space-y-1.5">{STEPS.map((s) => <li key={s} className="flex gap-2"><CheckCircle2 className="mt-[3px] size-4 shrink-0 text-emerald-600" />{s}</li>)}</ol>
     </div>
   );

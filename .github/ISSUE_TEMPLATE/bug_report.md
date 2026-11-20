@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something does not work as described
+about: Something does not work as expected
 labels: bug
 ---
 
@@ -9,14 +9,9 @@ labels: bug
 **What you expected**
 
 **Steps to reproduce**
-
 1.
 2.
 
-**Where**
+**Where:** web (page and browser) / Android app (version, phone) / API (route)
 
-- Part: backend / web / mobile / training / video
-- Live demo or local run:
-- Browser, phone or OS:
-
-**Logs or screenshots**
+**Screenshots or logs** (remove personal data such as names, phone numbers and NIDs)

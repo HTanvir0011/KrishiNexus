@@ -8,8 +8,18 @@
 
 ## How I tested it
 
-<!-- Commands run (backend check_*.py, npm run build, flutter test) and what you checked by hand. -->
+- [ ] Backend self-checks (`python -m tests.<name>` in `backend/`)
+- [ ] `deploy/cloudrun/tests/check_serve.py`
+- [ ] Frontend `npm run typecheck` and `npm run build`
+- [ ] Mobile `flutter analyze` and `flutter test`
+- [ ] Checked by hand in the browser or on a phone (say which screens)
 
 ## Screenshots
 
 <!-- Required for UI changes (web or mobile). Delete this section otherwise. -->
+
+## Checklist
+
+- [ ] No secrets, `.env` files, model weights or personal data added
+- [ ] `docs/architecture.md` updated if an API, formula or constant changed
+- [ ] `CHANGELOG.md` updated if users will notice the change

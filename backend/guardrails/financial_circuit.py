@@ -1,7 +1,7 @@
 """Deterministic financial and agronomic circuit-breakers.
 
 1. ``validate_arbitrage_recommendation`` evaluates the net farmer surplus of storing
-   versus selling at spot (AGENTS.md section 5):
+   versus selling at spot (docs/architecture.md section 5):
 
        dPi = [Q(1 - lambda_rot) E[P_future] - Q(C_storage + C_handling) - C_transport_storage]
              - [Q P_spot - C_transport_market]

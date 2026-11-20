@@ -3,10 +3,14 @@ backend/.venv/
 __pycache__/
 *.pyc
 
-# Runtime state and secrets
+# Runtime state and secrets: every .env file except the examples
 backend/.state/
 .env
-backend/.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 
 # Frontend
 frontend/node_modules/
@@ -39,11 +43,27 @@ mobile/android/local.properties
 npm-debug.log*
 .eslintcache
 
-# Env files (the example stays tracked)
-.env.*
-!.env.example
-!backend/.env.example
-
 # Logs
 *.log
 !training/runs/**/*.log
+
+# Local AI-assistant state, scratchpads and working notes (kept on the developer's machine, never shared)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.cursor/
+.cursorrules
+.aider*
+.windsurf/
+.continue/
+scratchpad*/
+*.prompt.md
+MEMORY.md
+memory-graph.jsonl
+PRESENTATION_PLAN.md
+VIDEO_PLAN.md
+frontend/design/
+
+# Video production workspace (raw voice recordings, editing tools); the finished videos are in frontend/public/video/
+/video/
+/assets/

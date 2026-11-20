@@ -33,8 +33,6 @@ production security. On the public site, `ADMIN-01` is the exception: it needs t
 (Render → Environment → `KNX_ADMIN_PASSWORD`); quick login and the demo password don't open it. Logins, account changes
 and the heavy AI calls are rate-limited per visitor there, and every response carries the usual security headers.
 
-![Team Roster](assets/team_animation.svg)
-
 ---
 
 ## Contents
@@ -47,9 +45,11 @@ and the heavy AI calls are rate-limited per visitor there, and every response ca
 - [Architecture](#architecture)
 - [API at a glance](#api-at-a-glance)
 - [Evaluation](#evaluation)
+- [Testing](#testing)
 - [Repository layout](#repository-layout)
 - [What is real and what is simulated](#what-is-real-and-what-is-simulated)
 - [Data, consent and field testing](#data-consent-and-field-testing)
+- [Contributing, security and license](#contributing-security-and-license)
 
 ---
 
@@ -98,7 +98,7 @@ The full history is in [`CHANGELOG.md`](CHANGELOG.md).
 Trained 8–13 November 2026 (Phase 9).
 
 Five models are trained on Kaggle and measured against targets set before training. The notebooks are in
-`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `docs/TRAINING_PLAN.md` §6, §7b, §8, §8b
+`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `docs/training-plan.md` §6, §7b, §8, §8b
 and §8c. The weights are not in this repository; without them, the app says so and uses its labelled fallback.
 
 | Model | What it does | Measured on held-out test data | In the app |
@@ -107,7 +107,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
 | `yolov11n-krishi-bd-v2.1`: two-stage YOLO11, Diamant Potato Dataset (CC BY 4.0) | finds each potato, then segments scab, rot, greening and damage | finder mAP50 0.994 (target 0.90); defect mask mAP50 0.342, **missing 0.50**; grade accuracy 0.764 (target 0.70) | yes: potato photo grading, with a size warning signed into the certificate |
 | `krishi-price-v1`: LightGBM, GRU, TCN and an ensemble, on WFP prices | staple price forecasts 1–3 months ahead, plus margin flags | **misses 2 of 3 targets**; it doesn't beat "no change" overall | yes: shown as indicative only |
 | `krishi-whisper-bn-v1`: Whisper Small, Common Voice 13 Bengali | Bangla speech-to-text on the device | word error 0.435 (target 0.45); character error 0.229, **missing 0.15**. Both were measured with a 128-token cap that cut long transcripts; the app's own setup scores 0.335 / 0.110 on 300 test clips | yes: offline, the farmer app records speech and the kiosk transcribes it |
-| `krishi-dialect-e5-small-v1`: multilingual-e5-small, 840 dialect questions, int8 ONNX | reads the farmer's own words and scores each knowledge document; blended 50/50 into the retrieval ranking | 66 fresh blind questions: top-1 0.591 → 0.955, top-3 0.864 → 0.985; the frozen 66-question probe 0.500 → 0.833. It **missed one pre-registered target**: the curated set's context precision fell to 0.974. The owner switched it on anyway (`docs/TRAINING_PLAN.md` §7b) | yes, when its folder is installed; otherwise retrieval runs as before |
+| `krishi-dialect-e5-small-v1`: multilingual-e5-small, 840 dialect questions, int8 ONNX | reads the farmer's own words and scores each knowledge document; blended 50/50 into the retrieval ranking | 66 fresh blind questions: top-1 0.591 → 0.955, top-3 0.864 → 0.985; the frozen 66-question probe 0.500 → 0.833. It **missed one pre-registered target**: the curated set's context precision fell to 0.974. The owner switched it on anyway (`docs/training-plan.md` §7b) | yes, when its folder is installed; otherwise retrieval runs as before |
 
 - **Freely worded questions (SFT prompts v5).** 4,800 generated training questions in colloquial Bangla, Rangpuri,
   Bogura, Sylheti, Banglish and English. The test includes 32 wordings written separately, which no model trained on.
@@ -118,7 +118,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
   questions correctly.
 
 Earlier phases (the frozen blind retrieval probe, the institutional interface, the dialect rewriter and more) are
-recorded in [`docs/internal/MEMORY.md`](docs/internal/MEMORY.md).
+recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -159,7 +159,8 @@ them on in the n8n editor.
 
 Optional settings:
 - `.env` next to `docker-compose.yml` (see `.env.example`): host ports, the Ollama and n8n image tags, and the data-profile passwords (local-demo defaults; set your own for anything else).
-- `backend/.env` (see `backend/.env.example`): application settings. Set `KNX_RECEIPT_SIGNING_KEY` before any shared deployment.
+- `backend/.env` (see `backend/.env.example`): application settings. Any shared deployment sets `KNX_ENV=production`, its own `KNX_RECEIPT_SIGNING_KEY` and
+  `KNX_ADMIN_PASSWORD`; production refuses to start with the public development key.
 
 > A GitHub Actions workflow (`.github/workflows/docker-smoke.yml`) builds the images on a Linux Docker host and starts
 > the default stack and then the `data` profile. Both pass its smoke test:
@@ -193,6 +194,11 @@ curl -X POST http://localhost:8000/evals/run-regression -H "Content-Type: applic
 
 The first returns `"count": 13`; the second runs 100 cases and should pass all of them.
 
+### Mobile app and hosting
+
+- Flutter app: see [`mobile/README.md`](mobile/README.md) (build, emulator, server setting).
+- Hosted demo (Render, or Google Cloud Run): see [`docs/deployment.md`](docs/deployment.md).
+
 ---
 
 ## Architecture
@@ -220,7 +226,7 @@ Key equations:
 - **Flood risk:** haor breach logistic over SAR backscatter and 72-hour upstream rain.
 - **Disease risk:** VPD from the Tetens equation.
 
-The full contracts are in [`AGENTS.md`](AGENTS.md).
+The full contracts are in [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
@@ -268,48 +274,72 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 
 ---
 
+## Testing
+
+Self-checks are plain Python scripts that exit non-zero on the first failure. Run them with the backend's virtual
+environment:
+
+```bash
+cd backend
+.venv/Scripts/python -m tests.check_auth           # logins, signed tokens, admin API
+.venv/Scripts/python -m tests.check_marketplace    # lots, bids, escrow, deliveries, live feed
+.venv/Scripts/python -m tests.check_privacy        # PII vault, scrubbed feedback
+.venv/Scripts/python -m tests.check_grader         # photo grading and the "no produce" refusal
+.venv/Scripts/python -m tests.check_config         # production settings refuse the development key
+cd ..
+backend/.venv/Scripts/python deploy/cloudrun/tests/check_serve.py   # hosted server: limits, headers, downloads
+
+cd frontend && npm run build                       # type-check and build the web app
+cd mobile && flutter analyze && flutter test       # mobile app
+```
+
+CI (`.github/workflows/docker-smoke.yml`) builds the Docker images and runs the smoke test on every change to them.
+
+---
+
 ## Repository layout
 
 ```text
-├── docker-compose.yml          backend + frontend; ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
-├── AGENTS.md / CLAUDE.md       architecture contract (identical copies)
-├── CHANGELOG.md                dated change history
-├── CONTRIBUTING.md             local setup, branch and commit conventions, PR expectations
-├── docs/                       plans and write-ups
-│   ├── TRAINING_PLAN.md        recipes, split rules, pre-registered targets and measured results for every model
-│   ├── FIELD_TEST_KIT.md       plan for the first farmer study
-│   ├── PRESENTATION_PLAN.md  VIDEO_PLAN.md   congress presentation and demo video plans
-│   └── internal/               MEMORY.md (live build state and handover log), memory-graph.jsonl
-├── .github/workflows/          docker-smoke, deploy-render, keep-demo-awake
-├── assets/team_animation.svg   animated team roster
-├── backend/
-│   ├── main.py  config.py      FastAPI app, settings, multi-LLM router
-│   ├── auth.py  check_auth.py  demo accounts, login, signed session tokens, admin API, and its self-check
+├── backend/                    FastAPI service (Python)
+│   ├── main.py  config.py      app, settings, multi-LLM router
+│   ├── auth.py                 demo accounts, login, signed session tokens, admin API
 │   ├── market_bids.py          buyer bids and the simulated 1-tap escrow
 │   ├── marketplace.py          lots, direct bids, deliveries, disputes, ledger, live feed
 │   ├── price_monitor.py        price monitor and margin flags
 │   ├── feedback.py             PII-scrubbed advice feedback
-│   ├── requirements.txt / .lock   minimum versions for local installs / pinned versions for Docker
 │   ├── data_seed.py            seed files for the compose data profile (pgvector SQL, Neo4j Cypher, n8n workflows)
-│   ├── mcp_servers/            3 MCP servers + JSON-RPC hub
-│   ├── rag/                    lexicon, knowledge seed, hybrid retriever, GraphRAG, CRAG pipeline
 │   ├── agents/                 LangGraph supervisor + 4 agents
-│   ├── guardrails/             PII scrubber, financial circuit-breaker
-│   ├── optimization/           token compressor
-│   ├── prompts/                XML prompt registry + optimiser
 │   ├── automation/             durable truck pools, n8n-style jobs
 │   ├── edge_node/              voice, optical grader, local LLM manager
-│   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
-├── training/                   SFT data export (prepare_data.py), Kaggle notebooks (kaggle/), measured run reports (runs/)
-├── render.yaml                 Render Blueprint for the free hosted demo (one Docker web service)
-├── deploy/cloudrun/            one-container hosted demo for Render or Google Cloud Run, with per-visitor write limits
+│   ├── evals/                  metrics engine, 100-case regression suite, 66-question blind holdout
+│   ├── guardrails/             PII scrubber, financial circuit-breaker
+│   ├── mcp_servers/            3 MCP servers + JSON-RPC hub
+│   ├── optimization/           token compressor
+│   ├── prompts/                XML prompt registry + optimiser
+│   ├── rag/                    lexicon, knowledge seed, hybrid retriever, GraphRAG, CRAG pipeline
+│   ├── schemas/                Pydantic models shared by the routes
+│   ├── tests/                  self-check scripts (see Testing)
+│   └── requirements.txt / .lock   minimum versions for local installs / pinned versions for Docker
+├── frontend/                   Vite + React + TypeScript web app
+│   ├── src/                    story/ (overview), os/ (live OS), admin/, pages/, components/, api/, state/, data/, lib/
+│   ├── public/                 icons, team photos, videos, and the Android APKs in download/
+│   ├── scripts/prerender.mjs   static team and guide pages for search engines
+│   └── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
 ├── mobile/                     Flutter app (Android, iOS-ready); see mobile/README.md
-├── video/                      demo video workspace (assets, audio/ narration, photo/ team photos, tools/, out/ renders)
-└── frontend/
-    ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
-    ├── design/                 redesign plan and style tile (not part of the build)
-    ├── public/                 icons, team photos, video, and the Android APKs in download/
-    └── src/                    story/ (overview and its live cards), os/ (live OS), admin/ (admin console), pages/ (incl. login), components/, api/ (typed client), state/, data/, lib/
+├── training/                   data preparation, Kaggle notebooks (kaggle/), measured run reports (runs/)
+├── deploy/cloudrun/            one-container hosted demo (Render, Cloud Run): Dockerfile, serve.py, tests/
+├── docs/
+│   ├── architecture.md         architecture contract: API contracts, formulas, dataset constants
+│   ├── deployment.md           hosting on Render or Cloud Run, limits and checks
+│   ├── training-plan.md        recipes, split rules, pre-registered targets and measured results for every model
+│   ├── field-test-kit.md       plan for the first farmer study
+│   └── design/mobile.md        design direction of the mobile app
+├── .github/                    CI workflows, issue and PR templates, CODEOWNERS, Dependabot
+├── CHANGELOG.md                dated change history
+├── CONTRIBUTING.md  SECURITY.md  LICENSE
+├── docker-compose.yml          backend + frontend; Ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
+├── render.yaml                 Render Blueprint for the hosted demo
+└── .env.example                compose settings (backend settings: backend/.env.example)
 ```
 
 ---
@@ -346,7 +376,13 @@ Figures quoted from the project brief, such as the CPD July 2026 study and partn
   The full table is in the whitepaper at `/docs#data`.
 - **Online voice** uses the browser's own speech service; offline, the kiosk transcribes with its own Whisper model.
 - **Feedback:** every decision can be rated; comments are PII-scrubbed and kept in `backend/.state/feedback.json`.
-- **Field testing:** no study with farmers has been run yet. `docs/FIELD_TEST_KIT.md` sets out the first one: five farmers
+- **Field testing:** no study with farmers has been run yet. `docs/field-test-kit.md` sets out the first one: five farmers
   and an extension officer in Shibganj, Bogura, with the success bar fixed before the test.
-- **Self-checks:** `backend/check_privacy.py` (vault expiry, scrubbed feedback, admin-only summary) and
-  `backend/check_auth.py`.
+- **Self-checks:** `backend/tests/check_privacy.py` (vault expiry, scrubbed feedback, admin-only summary) and
+  `backend/tests/check_auth.py`.
+
+## Contributing, security and license
+
+- How to propose a change: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- How to report a vulnerability, and what the demo deliberately leaves open: [`SECURITY.md`](SECURITY.md).
+- Copyright © 2026 Team Heat Wave. All rights reserved; see [`LICENSE`](LICENSE).

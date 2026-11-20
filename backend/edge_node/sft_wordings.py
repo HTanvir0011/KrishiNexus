@@ -1,4 +1,4 @@
-"""Freely worded farmer questions for SFT prompts v5 (docs/TRAINING_PLAN.md section 6, "Prompts v5").
+"""Freely worded farmer questions for SFT prompts v5 (docs/training-plan.md section 6, "Prompts v5").
 
 v4 asked every question in one template per task, and the deployed model garbled questions worded any other way.
 v5 draws each question from these banks. Each entry is (lang, dialect, template); lang is "bn" (Bangla script),
@@ -153,7 +153,7 @@ TOPIC_BN: dict[str, str] = {
 
 # Prompts v6: each storage question asks about its own sentence's subject, so the gold passage is the one that answers it.
 # v5 asked every sentence of a document about the document's first topic (BARI-CHILI-01's chilling-injury sentence was
-# asked as "pre-cooling"), and the model cited a related document instead (docs/TRAINING_PLAN.md section 6). (English, Bangla)
+# asked as "pre-cooling"), and the model cited a related document instead (docs/training-plan.md section 6). (English, Bangla)
 # per sentence, in the order SemanticChunker.sentences gives for each document; build_sft_dataset(6) asserts the counts.
 SENTENCE_TOPICS: dict[str, tuple[tuple[str, str], ...]] = {
     "BARI-POT-STORE-01": (("potato curing before cold storage", "হিমাগারে তোলার আগে আলুর কিউরিং"),

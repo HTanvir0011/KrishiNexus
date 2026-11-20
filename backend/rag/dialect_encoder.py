@@ -1,4 +1,4 @@
-"""Trained dialect retriever ``krishi-dialect-e5-small-v1`` (docs/TRAINING_PLAN.md section 7b).
+"""Trained dialect retriever ``krishi-dialect-e5-small-v1`` (docs/training-plan.md section 7b).
 
 A fine-tuned multilingual-e5-small, exported to ONNX with int8 weights, that reads the farmer's own words (Standard
 Bangla, Rangpuri, Sylheti, Bogura, Banglish or English) and scores each knowledge document. It runs with onnxruntime and

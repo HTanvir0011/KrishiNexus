@@ -76,7 +76,7 @@ class LocalModelSpec:
 
 LOCAL_MODELS: dict[str, LocalModelSpec] = {m.key: m for m in (
     # The fine-tuned model: krishi-bangla-lora-v2 merged into the de-quantised NF4 base it trained against, as Q8_0
-    # (docs/TRAINING_PLAN.md section 5: the bf16 merge at Q4_K_M lost flood and arbitrage decisions); `ollama create krishi-bangla`.
+    # (docs/training-plan.md section 5: the bf16 merge at Q4_K_M lost flood and arbitrage decisions); `ollama create krishi-bangla`.
     LocalModelSpec("krishi-bangla-1.5b", "krishi-bangla:latest", "KrishiNexus Bangla advisor: Qwen2.5-1.5B + LoRA (Q8_0 GGUF)",
                    "Qwen/Qwen2.5-1.5B-Instruct", 1.54, 28, 2, 128, 1.65, 4096,
                    "Fine-tuned: fair price, store or sell, flood alert and storage answers from the agent's tool results",
@@ -375,7 +375,7 @@ STORAGE_QUESTIONS: tuple[str, ...] = (
     "{topic} নিয়ে বারি/বাউর পরামর্শ কী?", "{crop} এর ক্ষেত্রে {topic} কীভাবে করব?", "{topic} সম্পর্কে নিয়মটা বলুন।",
     "হিমাগারে রাখার আগে {topic} কেন জরুরি?", "{topic} ঠিক না হলে কী ক্ষতি হয়?",
 )
-# Prompts v4 are tool-grounded: the first LoRA run (docs/TRAINING_PLAN.md section 6) showed a 1.5B adapter cannot compute
+# Prompts v4 are tool-grounded: the first LoRA run (docs/training-plan.md section 6) showed a 1.5B adapter cannot compute
 # prices, dPi or breach probabilities in its weights, so each prompt carries what the agent's tool call returned and
 # the model decides and explains from it. A new seed and split salt make the v4 test batch fresh.
 SFT_SEED, SPLIT_SALT = 20_261_109, "split-v4"
@@ -906,12 +906,12 @@ def lora_adapter_spec() -> LoraAdapterSpec:
         eval_summary=json.loads(report.read_text(encoding="utf-8")).get("summary") if present and report.exists() else None,
         deployed_eval_summary=json.loads(deployed.read_text(encoding="utf-8")).get("summary") if deployed.exists() else None,
         training_command=("export splits with training/prepare_data.py, then run training/kaggle/krishinexus_lora_kaggle.ipynb "
-                          "on a Kaggle T4 (docs/TRAINING_PLAN.md sections 4-6)"),
+                          "on a Kaggle T4 (docs/training-plan.md sections 4-6)"),
         # Ollama >= 0.34.2 removed LoRA adapter loading ("LoRA adapters are no longer supported"), so the adapter is
         # merged into the base and shipped as one quantized GGUF instead of an ADAPTER file.
         gguf_export_command="load the base in 4-bit NF4 as trained, dequantize(), merge with peft merge_and_unload, then "
                             "python llama.cpp/convert_hf_to_gguf.py <merged_dir> --outtype q8_0 --outfile "
-                            "krishi-bangla-q8_0.gguf (section 4 of training/kaggle/krishinexus_lora_kaggle.ipynb; docs/TRAINING_PLAN.md section 5)",
+                            "krishi-bangla-q8_0.gguf (section 4 of training/kaggle/krishinexus_lora_kaggle.ipynb; docs/training-plan.md section 5)",
         ollama_modelfile="FROM ./krishi-bangla-q8_0.gguf\nPARAMETER temperature 0.2\n"
                          "SYSTEM You are KrishiNexus, a Bangla-speaking agricultural market and storage advisor.",
     )

@@ -1,6 +1,6 @@
 """Storage citation of the deployed GGUF (krishi-bangla:latest = v2) with and without a node-side citation check.
 
-The check (pre-registered in docs/TRAINING_PLAN.md §6, "Node-side citation check") sets an answer's citation to the
+The check (pre-registered in docs/training-plan.md §6, "Node-side citation check") sets an answer's citation to the
 retrieved passage holding the largest share of the answer's character 4-grams, if that share is at least 0.5; the
 words never change. It changed no answer here, so it is not in the app; it is kept in this script to reproduce the run.
 

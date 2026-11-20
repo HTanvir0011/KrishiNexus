@@ -1,8 +1,11 @@
 # Contributing
 
 KrishiNexus is a FastAPI backend (`backend/`), a Vite React frontend (`frontend/`) and a Flutter app (`mobile/`).
-Read [`AGENTS.md`](AGENTS.md) first: it is the architecture contract (directory tree, API contracts, formulas,
-conventions). [`docs/internal/MEMORY.md`](docs/internal/MEMORY.md) is the live build state.
+Read [`docs/architecture.md`](docs/architecture.md) first: it is the architecture contract (directory tree, API
+contracts, formulas, conventions).
+
+Every push to `main` redeploys https://tanvir.health and resets its demo data, so changes reach `main` through
+reviewed pull requests.
 
 ## Run it locally
 
@@ -28,8 +31,6 @@ Frontend (Node 20.19+ or 22.12+), in a second terminal. It proxies the API to po
 cd frontend
 npm ci
 npm run dev                      # http://localhost:5173
-npm run typecheck
-npm run build
 ```
 
 Mobile (see [`mobile/README.md`](mobile/README.md)):
@@ -38,31 +39,44 @@ Mobile (see [`mobile/README.md`](mobile/README.md)):
 cd mobile
 flutter pub get
 flutter run                      # a connected Android phone or emulator
-flutter analyze; flutter test
 ```
 
-Backend self-checks are the `backend/check_*.py` scripts. The regression suite runs through
-`POST /evals/run-regression` (see the smoke test in the [README](README.md#local-development)).
+Local settings: copy `.env.example` to `.env` (Compose) and `backend/.env.example` to `backend/.env` (backend).
+
+## Checks
+
+| Part | Command |
+|---|---|
+| Backend | from `backend/`: `python -m tests.check_auth`, `python -m tests.check_marketplace`, `python -m tests.check_privacy`, `python -m tests.check_grader`, `python -m tests.check_config` |
+| Regression suite | `POST /evals/run-regression` (see the smoke test in the [README](README.md#local-development)) |
+| Hosted server | from the repository root: `backend/.venv/Scripts/python deploy/cloudrun/tests/check_serve.py` |
+| Frontend | from `frontend/`: `npm run typecheck` and `npm run build` |
+| Mobile | from `mobile/`: `flutter analyze` and `flutter test` |
+| Dependencies | `npm audit` in `frontend/`, `pip-audit -r backend/requirements.lock` |
+
+CI builds the Docker images and runs the smoke test.
 
 ## Rules that matter
 
 - Never tune retrieval rules, prompts or training data against the frozen test sets
   (`backend/evals/holdout_probe.py`, the SFT test split).
 - Eval numbers come from the measured reports in `training/runs/`. Do not type them into the app.
-- A new backend route prefix must be added in the three places listed in `AGENTS.md` section 3.
+- A new backend route prefix must be added in the three places listed in `docs/architecture.md` section 3.
 - Regenerate `backend/requirements.lock` after any dependency change.
-- No secrets in commits. Copy `.env.example` to `.env` for local settings.
+- Never commit secrets, `.env` files, trained model weights (`backend/models/`) or personal data. Report security
+  problems as described in [`SECURITY.md`](SECURITY.md).
 
 ## Branches and commits
 
 - Branch from `main`: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>` or `chore/<short-name>`.
 - One logical change per commit. The subject line is short and imperative ("Fix photo grading", "Add the driver
   dashboard"), with no trailing period. Add a body when the reason is not obvious.
+- Put `[skip render]` in the message of a commit that should not redeploy the hosted demo (documentation only, for
+  example).
 - Add a line to `CHANGELOG.md` for anything a user or a judge would notice.
 
 ## Pull requests
 
 - Keep the PR to one topic. Fill in the PR template: what, why, how you tested it, screenshots for UI changes.
-- Say what you ran: the backend self-checks, `npm run build`, `flutter analyze` and `flutter test`, whichever your
-  change touches.
-- Update `AGENTS.md` (and `CLAUDE.md`, its identical copy) when you change the architecture, a contract or a constant.
+- Update `docs/architecture.md` when you change the architecture, a contract or a constant.
+- A team member reviews; the team lead merges.

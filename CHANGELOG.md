@@ -1,13 +1,23 @@
 # Changelog
 
-Newest first. The live build state and handover log is in [`MEMORY.md`](MEMORY.md). Trained-model results are in [`README.md`](README.md#trained-models) and [`TRAINING_PLAN.md`](TRAINING_PLAN.md).
+Newest first. Trained-model results are in [`README.md`](README.md#trained-models) and [`docs/training-plan.md`](docs/training-plan.md).
+
+## Repository structure and security hardening (20 November 2026)
+
+- Layout: documentation in `docs/` (architecture contract, deployment, training plan, field-test kit, mobile design),
+  self-checks in `backend/tests/` and `deploy/cloudrun/tests/`; `README.md` describes the layout, setup and checks.
+- Added `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, issue and pull-request templates, `CODEOWNERS` and Dependabot.
+- Working notes, assistant files and the video-production workspace are no longer tracked (`.gitignore`).
+- Production (`KNX_ENV=production`, set by the hosted server) refuses the public development signing key and allows
+  no CORS origins unless listed (`backend/tests/check_config.py`); Ollama binds to 127.0.0.1 in Docker Compose;
+  `opentelemetry-api` 1.45.2 (CVE-2026-126360). `backend/.env.example` lists every setting.
 
 ## Mobile app 1.2.0: Krishi Wallet redesign (20 November 2026)
 
 - The Flutter app is redesigned in a trusted mobile-money style, farmers first and Bangla first (PR #1 by Mohammed Mahmud
   Parvez): green header bands, bigger type and 48 dp targets, a labelled bottom bar, confirm sheets and receipts for
   money steps, status as icon + colour + word. Routes, API calls and texts are unchanged. Direction:
-  `mobile/design/DIRECTION.md`. The APKs on https://tanvir.health/download/ are rebuilt from it.
+  `docs/design/mobile.md`. The APKs on https://tanvir.health/download/ are rebuilt from it.
 
 ## Mobile app in Flutter (19 November 2026)
 
@@ -71,7 +81,7 @@ Newest first. The live build state and handover log is in [`MEMORY.md`](MEMORY.m
 - Every decision ends with "Was this advice useful?"; comments are PII-scrubbed, and admins read them at `/admin/feedback`.
 - The whitepaper adds per-truck unit economics, a district break-even point and a dated pilot plan (`/docs#economics`),
   and a data, consent and safety section (`/docs#data`).
-- `FIELD_TEST_KIT.md` is the plan for the first study with farmers. No study has been run yet.
+- `docs/field-test-kit.md` is the plan for the first study with farmers. No study has been run yet.
 - `render.yaml` deploys the hosted demo on Render's free plan, with gzipped responses and an optional keep-awake
   workflow (`DEMO_URL`). Deploying it is a dashboard step for the repository owner.
 
@@ -81,7 +91,7 @@ Newest first. The live build state and handover log is in [`MEMORY.md`](MEMORY.m
 - `/admin`: an admin console with a sidebar for accounts (add, edit, disable, delete, restore the seeds), escrows and
   overview counts. The last active admin can't be removed.
 - Passwords are stored as salted PBKDF2 hashes and never returned by the API. Session tokens are HMAC-signed and last
-  12 hours. `backend/check_auth.py` checks forged, tampered and expired tokens.
+  12 hours. `backend/tests/check_auth.py` checks forged, tampered and expired tokens.
 - `deploy/cloudrun/` packages the frontend and API in one container for a hosted demo, with per-visitor limits on
   writes that every visitor would see.
 
@@ -116,4 +126,4 @@ Newest first. The live build state and handover log is in [`MEMORY.md`](MEMORY.m
   - Prompts v7, where the circuit breaker states whether today's price is below the floor, fixed those verdicts
     (1.000 in every check). But storage citation fell to 0.85–0.89 on 14 unseen sentences, so that model was not
     shipped either.
-  - The deployed model is unchanged. All results are in `TRAINING_PLAN.md` §6.
+  - The deployed model is unchanged. All results are in `docs/training-plan.md` §6.

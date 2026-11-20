@@ -28,6 +28,8 @@ import time
 from collections import deque
 from pathlib import Path
 
+# A public host: config.py then refuses the public development signing key.
+os.environ.setdefault("KNX_ENV", "production")
 # Page and API share one origin, so no other site needs CORS; a host variable can still list origins.
 os.environ.setdefault("KNX_CORS_ORIGINS", "")
 # The default signing key is public on GitHub: sign receipts and certificates with a per-boot secret unless one is set.

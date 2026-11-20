@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * KrishiNexus Institutional Design System v2 (Phase 8; frontend/design/DESIGN_PLAN.md §11).
+ * KrishiNexus Institutional Design System v2 (Phase 8).
  * Daylight first. Tailwind's default palette is used with its real meaning:
  *   emerald-700 #047857  primary brand, growth, active state   (soft fill emerald-50 #ECFDF5, text emerald-800 #065F46)
  *   amber-600   #D97706  action and farmer-quota accent         (soft fill amber-100 #FEF3C7)
