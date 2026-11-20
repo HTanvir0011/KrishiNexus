@@ -32,8 +32,6 @@ const COPY = {
     measured: "Measured on this backend just now, not typed in.",
     leakTitle: "Where the money and the harvest leak",
     leakLede: "Three live views of the failures KrishiNexus targets. Every figure is an MCP tool call you can repeat in the whitepaper.",
-    problem: "The problem in 30 seconds",
-    problemLabel: "Video: the problem KrishiNexus solves, in 30 seconds",
     demoTitle: "Watch the demo",
     demoLede: "Three minutes on the live site: a farmer asks in his dialect, the agents decide, a buyer bids, a driver delivers and the payment is released.",
     demoLabel: "Video: KrishiNexus OS demo",
@@ -57,8 +55,6 @@ const COPY = {
     measured: "এই ব্যাকএন্ডে এইমাত্র মাপা, হাতে লেখা নয়।",
     leakTitle: "টাকা আর ফসল কোথায় হারায়",
     leakLede: "কৃষিনেক্সাস যে তিনটি সমস্যার সমাধান করে, তার লাইভ চিত্র। প্রতিটি সংখ্যা একটি এমসিপি টুল কল, যা শ্বেতপত্রে আবার চালানো যায়।",
-    problem: "৩০ সেকেন্ডে সমস্যাটি",
-    problemLabel: "ভিডিও: কৃষিনেক্সাস যে সমস্যার সমাধান করে, ৩০ সেকেন্ডে",
     demoTitle: "ডেমো দেখুন",
     demoLede: "চালু সাইটে তিন মিনিট: কৃষক নিজের ভাষায় প্রশ্ন করেন, এজেন্টরা সিদ্ধান্ত দেয়, ক্রেতা দর দেন, চালক পৌঁছে দেন, আর টাকা ছাড় হয়।",
     demoLabel: "ভিডিও: কৃষিনেক্সাস ওএস ডেমো",
@@ -129,10 +125,6 @@ export default function StoryPage() {
             </Link>
           </div>
           <HeroMetrics />
-          <LandingVideo name="problem-30s" label={c.problemLabel} className="mt-8 max-w-[640px]"
-            title={<h2 className="m-0 mb-2 text-[15px] font-semibold text-slate-900">{c.problem}</h2>}>
-            {c.captions}
-          </LandingVideo>
         </div>
         <div className="min-w-0 space-y-4 lg:col-span-5">
           <LiveDecisionCard onRahim={(facts) => setRahim((prev) => ({ facts, run: (prev?.run ?? 0) + 1 }))} />
