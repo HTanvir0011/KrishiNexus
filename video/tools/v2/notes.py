@@ -182,7 +182,7 @@ def main():
               "from the voice's own onsets and offsets. Problem video: "
               f"{qp.get('captions', {}).get('cues')} cues, worst {qp.get('captions', {}).get('max_start_err_s')} s / "
               f"{qp.get('captions', {}).get('max_end_err_s')} s. The narrator's actual wording is captioned (it "
-              "differs a little from VIDEO_PLAN.md), with names as written on the site."]
+              "differs a little from docs/VIDEO_PLAN.md), with names as written on the site."]
     it = qd.get("intro", {})
     if it:
         L += ["", "## Team intro check (measured on the 1080p master)", "",
@@ -228,7 +228,7 @@ def main():
           "emulator were not touched.",
           "- `.git/info/exclude` has `video/`, which also matches `frontend/public/video/`: the six deliverables are "
           "not seen by git until that line is anchored (`/video/`) or the files are added with `git add -f`.",
-          "- Captions carry the narrator's actual words, which differ slightly from VIDEO_PLAN.md's script."]
+          "- Captions carry the narrator's actual words, which differ slightly from docs/VIDEO_PLAN.md's script."]
     L += ["", "## Rebuild", "",
           "```", "cd video/tools/v2",
           "python -I rec_site.py           # website shots (system python, Playwright)",

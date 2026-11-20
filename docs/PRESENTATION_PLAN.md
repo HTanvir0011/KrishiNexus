@@ -72,7 +72,7 @@ Status: **draft for review** (16 November 2026). Nothing has been changed or pus
 
 - Update the route count, the layout tree, and "What is real and what is simulated" (the escrow and the login are
   demo-only).
-- Shorten "Recent changes" to the last two phases and point to `MEMORY.md` for the full history.
+- Shorten "Recent changes" to the last two phases and point to `docs/internal/MEMORY.md` for the full history.
 - Check every figure against the code or a report before it goes in.
 
 ### Step 3: Build the deck (9 slides, 16:9, following the five criteria)

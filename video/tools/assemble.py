@@ -43,7 +43,7 @@ PATHS = {"S01": "/", "S02": "/login", "S03": "/os/field", "S04": "/os/field", "S
          "S06a": "/os/coop", "S06b": "/os/himagar", "S07a": "/os/trade", "S07b": "/os/trade", "S07c": "/os/driver",
          "S08": "/os/market", "S09": "/docs", "S10": "/docs"}
 
-# (clips, slot s, title, narration, callouts [(start fraction, big, small)]). Narration: VIDEO_PLAN.md.
+# (clips, slot s, title, narration, callouts [(start fraction, big, small)]). Narration: docs/VIDEO_PLAN.md.
 SEGMENTS = [
     (["S01"], 16, "The problem", "In Bangladesh, a potato farmer often sells below cost, while five tiers of middlemen mark produce up by as much as 116%. Traders hold 77% of cold-storage space, and one flash flood can wipe out a season.",
      [(0.18, "Up to 116%", "middleman markup (green chili)"), (0.62, "77.32%", "of cold storage held by traders and owners")]),

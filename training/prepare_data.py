@@ -6,7 +6,7 @@ Run with the BACKEND venv (it imports the backend's deterministic generators):
     backend/.venv/Scripts/python training/prepare_data.py [--version 5]
 
 --version 4 and 5 rebuild the data the v1 and v2 models trained on; 6 (the default) is prompts v6: freely worded
-questions, with each storage question about its own sentence's subject (TRAINING_PLAN.md section 6). Writes training/data/{train,val,test}.jsonl plus split_report.json. Each line
+questions, with each storage question about its own sentence's subject (docs/TRAINING_PLAN.md section 6). Writes training/data/{train,val,test}.jsonl plus split_report.json. Each line
 is TRL-ready: {"messages": [{"role": "system"|"user"|"assistant", ...}], "example_id", "category", "dialect", "subset"}
 where subset marks the held-out generalisation families inside test:
 iid | ood_dialect | ood_months | ood_upazila, plus ood_wording from v5.

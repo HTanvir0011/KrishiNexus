@@ -98,7 +98,7 @@ The full history is in [`CHANGELOG.md`](CHANGELOG.md).
 Trained 8–13 November 2026 (Phase 9).
 
 Five models are trained on Kaggle and measured against targets set before training. The notebooks are in
-`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `TRAINING_PLAN.md` §6, §7b, §8, §8b
+`training/kaggle/` and the measured reports in `training/runs/`. Full write-ups are in `docs/TRAINING_PLAN.md` §6, §7b, §8, §8b
 and §8c. The weights are not in this repository; without them, the app says so and uses its labelled fallback.
 
 | Model | What it does | Measured on held-out test data | In the app |
@@ -107,7 +107,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
 | `yolov11n-krishi-bd-v2.1`: two-stage YOLO11, Diamant Potato Dataset (CC BY 4.0) | finds each potato, then segments scab, rot, greening and damage | finder mAP50 0.994 (target 0.90); defect mask mAP50 0.342, **missing 0.50**; grade accuracy 0.764 (target 0.70) | yes: potato photo grading, with a size warning signed into the certificate |
 | `krishi-price-v1`: LightGBM, GRU, TCN and an ensemble, on WFP prices | staple price forecasts 1–3 months ahead, plus margin flags | **misses 2 of 3 targets**; it doesn't beat "no change" overall | yes: shown as indicative only |
 | `krishi-whisper-bn-v1`: Whisper Small, Common Voice 13 Bengali | Bangla speech-to-text on the device | word error 0.435 (target 0.45); character error 0.229, **missing 0.15**. Both were measured with a 128-token cap that cut long transcripts; the app's own setup scores 0.335 / 0.110 on 300 test clips | yes: offline, the farmer app records speech and the kiosk transcribes it |
-| `krishi-dialect-e5-small-v1`: multilingual-e5-small, 840 dialect questions, int8 ONNX | reads the farmer's own words and scores each knowledge document; blended 50/50 into the retrieval ranking | 66 fresh blind questions: top-1 0.591 → 0.955, top-3 0.864 → 0.985; the frozen 66-question probe 0.500 → 0.833. It **missed one pre-registered target**: the curated set's context precision fell to 0.974. The owner switched it on anyway (`TRAINING_PLAN.md` §7b) | yes, when its folder is installed; otherwise retrieval runs as before |
+| `krishi-dialect-e5-small-v1`: multilingual-e5-small, 840 dialect questions, int8 ONNX | reads the farmer's own words and scores each knowledge document; blended 50/50 into the retrieval ranking | 66 fresh blind questions: top-1 0.591 → 0.955, top-3 0.864 → 0.985; the frozen 66-question probe 0.500 → 0.833. It **missed one pre-registered target**: the curated set's context precision fell to 0.974. The owner switched it on anyway (`docs/TRAINING_PLAN.md` §7b) | yes, when its folder is installed; otherwise retrieval runs as before |
 
 - **Freely worded questions (SFT prompts v5).** 4,800 generated training questions in colloquial Bangla, Rangpuri,
   Bogura, Sylheti, Banglish and English. The test includes 32 wordings written separately, which no model trained on.
@@ -118,7 +118,7 @@ and §8c. The weights are not in this repository; without them, the app says so 
   questions correctly.
 
 Earlier phases (the frozen blind retrieval probe, the institutional interface, the dialect rewriter and more) are
-recorded in [`MEMORY.md`](MEMORY.md).
+recorded in [`docs/internal/MEMORY.md`](docs/internal/MEMORY.md).
 
 ---
 
@@ -273,10 +273,13 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 ```text
 ├── docker-compose.yml          backend + frontend; ollama under profile local-llm; pgvector, Neo4j, Redis, n8n under profile data
 ├── AGENTS.md / CLAUDE.md       architecture contract (identical copies)
-├── MEMORY.md                   live build state and handover log
 ├── CHANGELOG.md                dated change history
-├── FIELD_TEST_KIT.md           plan for the first farmer study
-├── PRESENTATION_PLAN.md  VIDEO_PLAN.md   congress presentation and demo video plans
+├── CONTRIBUTING.md             local setup, branch and commit conventions, PR expectations
+├── docs/                       plans and write-ups
+│   ├── TRAINING_PLAN.md        recipes, split rules, pre-registered targets and measured results for every model
+│   ├── FIELD_TEST_KIT.md       plan for the first farmer study
+│   ├── PRESENTATION_PLAN.md  VIDEO_PLAN.md   congress presentation and demo video plans
+│   └── internal/               MEMORY.md (live build state and handover log), memory-graph.jsonl
 ├── .github/workflows/          docker-smoke, deploy-render, keep-demo-awake
 ├── assets/team_animation.svg   animated team roster
 ├── backend/
@@ -298,11 +301,10 @@ set has 19 questions, so treat the retrieval scores as measured on a small set.
 │   ├── edge_node/              voice, optical grader, local LLM manager
 │   └── evals/                  metrics engine + 100-case regression suite + 66-probe blind holdout
 ├── training/                   SFT data export (prepare_data.py), Kaggle notebooks (kaggle/), measured run reports (runs/)
-├── TRAINING_PLAN.md            recipes, split rules, pre-registered targets and measured results for every model
 ├── render.yaml                 Render Blueprint for the free hosted demo (one Docker web service)
 ├── deploy/cloudrun/            one-container hosted demo for Render or Google Cloud Run, with per-visitor write limits
 ├── mobile/                     Flutter app (Android, iOS-ready); see mobile/README.md
-├── video/                      demo video workspace (assets, narration audio, renders)
+├── video/                      demo video workspace (assets, audio/ narration, photo/ team photos, tools/, out/ renders)
 └── frontend/
     ├── nginx.conf  Dockerfile  production serving + API/WebSocket proxy
     ├── design/                 redesign plan and style tile (not part of the build)
@@ -344,7 +346,7 @@ Figures quoted from the project brief, such as the CPD July 2026 study and partn
   The full table is in the whitepaper at `/docs#data`.
 - **Online voice** uses the browser's own speech service; offline, the kiosk transcribes with its own Whisper model.
 - **Feedback:** every decision can be rated; comments are PII-scrubbed and kept in `backend/.state/feedback.json`.
-- **Field testing:** no study with farmers has been run yet. `FIELD_TEST_KIT.md` sets out the first one: five farmers
+- **Field testing:** no study with farmers has been run yet. `docs/FIELD_TEST_KIT.md` sets out the first one: five farmers
   and an extension officer in Shibganj, Bogura, with the success bar fixed before the test.
 - **Self-checks:** `backend/check_privacy.py` (vault expiry, scrubbed feedback, admin-only summary) and
   `backend/check_auth.py`.
