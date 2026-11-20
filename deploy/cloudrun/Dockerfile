@@ -6,7 +6,7 @@
 # deploys; the root .dockerignore keeps it to backend/, frontend/ and this folder.
 # Trained models are git-ignored, so the demo runs the labelled fallbacks (classical CV, modelled and offline paths).
 
-FROM python:3.14-slim AS source
+FROM python:3.15-slim AS source
 COPY . /src
 
 FROM node:24-bookworm-slim AS web
@@ -17,7 +17,7 @@ COPY --from=source /src/frontend/ ./
 # VITE_API_BASE stays unset: the app calls same-origin paths, which serve.py hands to the API.
 RUN npm run build
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 # FORWARDED_ALLOW_IPS: Cloud Run's proxy terminates TLS; trusting its X-Forwarded-Proto makes the API report https URLs.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
