@@ -34,7 +34,7 @@ const fontFaces = (builtCss.match(/@font-face\{[^}]*\}/g) ?? []).filter((rule) =
 const WORDMARK = `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" fill="#047857"/><rect x="6" y="6" width="5" height="12" rx="1.2" fill="#ecfdf5"/><rect x="13" y="6" width="5" height="5" rx="1.2" fill="#fbbf24"/><rect x="13" y="13" width="5" height="5" rx="1.2" fill="#7dd3fc"/></svg>`;
 const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='5' fill='%23047857'/%3E%3Crect x='6' y='6' width='5' height='12' rx='1.2' fill='%23ecfdf5'/%3E%3Crect x='13' y='6' width='5' height='5' rx='1.2' fill='%23fbbf24'/%3E%3Crect x='13' y='13' width='5' height='5' rx='1.2' fill='%237dd3fc'/%3E%3C/svg%3E";
 
-// Design tokens from src/index.css (DESIGN_PLAN.md §11): canvas, white surfaces, emerald brand, slate text.
+// Design tokens from src/index.css: canvas, white surfaces, emerald brand, slate text.
 const CSS = `
 :root{--canvas:#f6f8f5;--em7:#047857;--em8:#065f46;--em50:#ecfdf5;--s9:#0f172a;--s7:#334155;--s6:#475569;--s5:#64748b;--s3:#cbd5e1;--s2:#e2e8f0;--s1:#f1f5f9;--card:0 1px 3px rgba(15,23,42,.04),0 8px 24px -4px rgba(15,23,42,.06)}
 *{box-sizing:border-box}

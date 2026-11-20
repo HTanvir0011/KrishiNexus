@@ -58,7 +58,7 @@ services:
     image: ollama/ollama:${OLLAMA_IMAGE_TAG:-latest}
     profiles: ["local-llm"]
     ports:
-      - "${KNX_OLLAMA_PORT:-11434}:11434"
+      - "127.0.0.1:${KNX_OLLAMA_PORT:-11434}:11434"   # no authentication: never expose it to the network
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:

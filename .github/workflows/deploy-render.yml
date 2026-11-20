@@ -1,7 +1,7 @@
 # Redeploys https://tanvir.health after every push to main. The Render service was created from the public repository
 # URL, so Render doesn't see pushes by itself; this calls the service's deploy hook instead. It does nothing until the
 # repository secret RENDER_DEPLOY_HOOK holds the hook URL (Render: service > Settings > Deploy Hook; GitHub: Settings >
-# Secrets and variables > Actions > New repository secret). See deploy/cloudrun/DEPLOY.md.
+# Secrets and variables > Actions > New repository secret). See docs/deployment.md.
 name: Deploy to Render
 
 on:

@@ -1,4 +1,4 @@
-"""In-app feedback: was this advice useful? The evidence a field test collects (FIELD_TEST_KIT.md).
+"""In-app feedback: was this advice useful? The evidence a field test collects (docs/field-test-kit.md).
 
 Anyone may send feedback; a logged-in account's id and role are attached from its token. Comments are PII-scrubbed
 before they are stored, and only the latest MAX_ITEMS are kept, in .state/feedback.json. Admins read a summary.

@@ -61,7 +61,7 @@ the truck's location).
 
 ## Design
 
-"Krishi Wallet" direction (`design/DIRECTION.md`, with the research behind it): a trusted mobile-money feel, farmers
+"Krishi Wallet" direction (`../docs/design/mobile.md`, with the research behind it): a trusted mobile-money feel, farmers
 first, Bangla first. Flag green `#006A4E` header bands and primary buttons, mustard `#EDB723` reserved for voice and
 money to receive, warm canvas `#F7F5EE`, soft-shadow cards; amber, rose, sky for status, always icon + colour + word.
 Amounts are the biggest text on money screens, and every commit shows amount and receiver before a confirm, then a

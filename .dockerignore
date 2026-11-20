@@ -6,6 +6,8 @@ mobile
 video
 training
 assets
+docs
+**/tests
 *.md
 !frontend/**/*.md
 **/node_modules

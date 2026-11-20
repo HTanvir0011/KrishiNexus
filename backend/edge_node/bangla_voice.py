@@ -2,7 +2,7 @@
 
 Speech-to-text runs on-device with ``faster-whisper`` when the package is installed and a CTranslate2 Whisper model is
 found: ``KNX_WHISPER_MODEL``, else ``backend/models/whisper/krishi-whisper-bn-v1-ct2-int8`` (the fine-tuned
-``krishi-whisper-bn-v1``, TRAINING_PLAN.md section 8c).
+``krishi-whisper-bn-v1``, docs/training-plan.md section 8c).
 Without it the node accepts typed Bangla/Banglish text or one of five recorded-farmer presets.
 
 The normaliser maps Rangpuri, Bogura (Varendri), Sylheti, Chittagonian and Standard Bangla speech onto
@@ -243,7 +243,7 @@ PHONETIC_GUIDE: dict[str, tuple[str, str]] = {
 # ---------------------------------------------------------------------------
 
 _WHISPER: Any = None
-# krishi-whisper-bn-v1 as the Kaggle run exported it: int8 CTranslate2, scored on CPU with beam 5 (TRAINING_PLAN.md 8c).
+# krishi-whisper-bn-v1 as the Kaggle run exported it: int8 CTranslate2, scored on CPU with beam 5 (docs/training-plan.md 8c).
 WHISPER_DIR = Path(__file__).resolve().parent.parent / "models" / "whisper" / "krishi-whisper-bn-v1-ct2-int8"
 
 

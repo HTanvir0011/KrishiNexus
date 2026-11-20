@@ -39,7 +39,7 @@ const UNIT = {
 };
 
 const PILOT = [
-  { when: "Dec 2026", what: "Field validation in Shibganj, Bogura: 5 farmers and a DAE agriculture officer use the app on a phone and the kiosk (FIELD_TEST_KIT.md); every answer is rated in the app." },
+  { when: "Dec 2026", what: "Field validation in Shibganj, Bogura: 5 farmers and a DAE agriculture officer use the app on a phone and the kiosk (docs/field-test-kit.md); every answer is rated in the app." },
   { when: "Jan–Mar 2027", what: "Potato-harvest pilot in one union: one kiosk, one co-op, one cold storage and one buyer. Target: break-even truck volume by March." },
   { when: "Apr–May 2027", what: "Boro harvest in the Sunamganj haor: flood alerts and early-harvest windows for the same co-op model." },
   { when: "From Jul 2027", what: "A second district only if the pilot meets its targets: farmers net at least Tk 5/kg more, 70% of answers rated useful, and break-even reached." },

@@ -56,19 +56,30 @@ class Settings(BaseModel):
     ollama_host: str = "http://localhost:11434"
 
 
+# Local development only: this key is public in the repository, so receipts signed with it prove nothing.
+DEV_SIGNING_KEY = "knx-dev-receipt-signing-key-change-me"
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    environment = os.getenv("KNX_ENV", "development")
+    production = environment == "production"
+    signing_key = os.getenv("KNX_RECEIPT_SIGNING_KEY", "")
+    if production and signing_key in ("", DEV_SIGNING_KEY):
+        raise RuntimeError(
+            "KNX_ENV=production needs its own KNX_RECEIPT_SIGNING_KEY (32 or more random characters); "
+            "the development key is public."
+        )
     return Settings(
-        environment=os.getenv("KNX_ENV", "development"),
+        environment=environment,
         open_meteo_forecast_url=os.getenv(
             "KNX_OPEN_METEO_URL", "https://api.open-meteo.com/v1/forecast"
         ),
         http_timeout_seconds=float(os.getenv("KNX_HTTP_TIMEOUT_SECONDS", "8.0")),
         force_offline_weather=_env_bool("KNX_FORCE_OFFLINE_WEATHER", False),
-        receipt_signing_key=os.getenv(
-            "KNX_RECEIPT_SIGNING_KEY", "knx-dev-receipt-signing-key-change-me"
-        ),
-        cors_origins=_env_list("KNX_CORS_ORIGINS", ["*"]),
+        receipt_signing_key=signing_key or DEV_SIGNING_KEY,
+        # Any origin while developing; in production only the origins listed in KNX_CORS_ORIGINS.
+        cors_origins=_env_list("KNX_CORS_ORIGINS", [] if production else ["*"]),
         ollama_host=os.getenv("KNX_OLLAMA_HOST", "http://localhost:11434"),
     )
 

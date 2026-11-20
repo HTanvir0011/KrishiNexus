@@ -33,7 +33,7 @@ EMBEDDING_DIM = 384
 RRF_K = 60
 CANDIDATE_POOL = 20
 # Share of the final score given to the trained dialect retriever when it is installed; 0.5 was chosen on dev. On 13 Nov
-# 2026 the project owner switched it on despite its missed curated-eval target (TRAINING_PLAN.md 7b); 0 turns it off.
+# 2026 the project owner switched it on despite its missed curated-eval target (docs/training-plan.md 7b); 0 turns it off.
 DIALECT_WEIGHT = 0.5
 
 STOPWORDS = frozenset(

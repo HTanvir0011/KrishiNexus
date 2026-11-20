@@ -112,10 +112,10 @@ Download these from the version's Output tab:
    ollama create krishi-bangla -f Modelfile
    ```
 
-3. Copy the measured numbers from `eval_report.json` into `MEMORY.md`, and never type them into the app (AGENTS.md §2).
+3. Copy the measured numbers from `eval_report.json` into `CHANGELOG.md`, and never type them into the app (docs/architecture.md §2).
 4. Done on 2026-11-09: `lora_adapter_spec` and `LOCAL_MODELS` now describe the 1.5B model (`krishi-bangla-1.5b`), and
    the app grounds its prompts the same way the training data does (`ollama_local.ground_prompt`).
-5. Dialect retriever (`krishi-dialect-e5-small-v1`, TRAINING_PLAN.md §7b): from the output of the private kernel
+5. Dialect retriever (`krishi-dialect-e5-small-v1`, docs/training-plan.md §7b): from the output of the private kernel
    `krishinexus-dialect-retriever-training` (version 2), copy the folder `krishi-dialect-e5-small-v1/`
    (`model_int8.onnx`, `tokenizer.json`, `krishi_retriever.json`, about 135 MB) to
    `backend/models/retrieval/krishi-dialect-e5-small-v1/`, and check each file's SHA-256 against the kernel's
@@ -133,7 +133,7 @@ Download these from the version's Output tab:
 | The data cell says it is rebuilding from GitHub | The dataset isn't attached, or Kaggle converted the JSONL files. Re-upload with `-t`, or let it rebuild (Internet on). |
 | CUDA out of memory | Set `BATCH, GRAD_ACCUM = 2, 8` (the effective batch stays 16). |
 | Loss becomes `nan` in fp16 | Set `LEARNING_RATE = 1e-4` and run again. |
-| The GGUF step fails | Training and evaluation outputs are already saved. Set `EXPORT_GGUF = False` and convert locally per `TRAINING_PLAN.md` §5. |
+| The GGUF step fails | Training and evaluation outputs are already saved. Set `EXPORT_GGUF = False` and convert locally per `docs/training-plan.md` §5. |
 
 ---
 

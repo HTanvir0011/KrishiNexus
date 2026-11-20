@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # KrishiNexus OS public demo for Render (render.yaml at the repo root) or Google Cloud Run: one container that serves
 # the built frontend and the API on one origin (deploy/cloudrun/serve.py) on $PORT. Render builds it on its side, so no
-# local Docker is needed (Cloud Run: build from the repository root with -f deploy/cloudrun/Dockerfile; DEPLOY.md).
+# local Docker is needed (Cloud Run: build from the repository root with -f deploy/cloudrun/Dockerfile; docs/deployment.md).
 # The build context is the repository root (render.yaml dockerContext: .), Render's own checkout, since the GitHub
 # repository is private; the root .dockerignore keeps it to backend/, frontend/ and this folder.
 # Trained models are git-ignored, so the demo runs the labelled fallbacks (classical CV, modelled and offline paths).

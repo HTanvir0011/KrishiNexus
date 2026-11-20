@@ -1,7 +1,0 @@
-# Kept out of GitHub: too large or rebuilt locally (see out/EDIT_NOTES.md).
-.venv-tts/
-models/
-work/
-__pycache__/
-KrishiNexus_demo_draft.webm
-out/*.mp4
